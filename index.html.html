@@ -1,0 +1,3197 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ROYAL CARD GAME - 大富豪 (Character AI Edition)</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Noto+Serif+JP:wght@400;600&display=swap');
+
+    :root {
+      --card-height: clamp(50px, 12vh, 115px);
+      --card-width: calc(var(--card-height) * 0.7);
+      --card-overlap: calc(var(--card-width) * -0.38);
+    }
+
+    @media (max-width: 900px) { :root { --card-height: clamp(45px, 11vh, 95px); } }
+    @media (max-width: 600px) { :root { --card-height: clamp(40px, 9.5vh, 75px); } }
+
+    @media (max-height: 850px) {
+      #header-area { padding-top: 4px !important; }
+      .main-title { font-size: clamp(16px, 2.8vh, 26px) !important; }
+      #bottom-bar { padding: 6px 10px !important; }
+      .btn { height: clamp(30px, 5vh, 38px) !important; font-size: 13px !important; min-width: 75px !important; }
+      #status-area { min-height: 20px !important; margin-bottom: 2px !important; }
+      .status-badge { font-size: 15px !important; }
+      #rules-panel { padding: 4px 6px !important; }
+      .rules-list { font-size: 11px !important; }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100vh; height: 100dvh;
+      overflow: hidden;
+      font-family: 'Times New Roman', 'Noto Serif JP', serif;
+      background: radial-gradient(circle at center, #1b2838 0%, #0d131d 100%);
+      color: #e0e6ed; font-size: 15px;
+    }
+
+    body { display: flex; flex-direction: column; justify-content: space-between; align-items: center; position: relative; }
+
+    #header-area {
+      text-align: center;
+      padding-top: 6px;
+      z-index: 10;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      width: 100%;
+    }
+
+    .main-title {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(18px, 3.5vw, 32px);
+      letter-spacing: 3px;
+      color: #d4af37;
+      background: linear-gradient(180deg, #fff3a8 0%, #d4af37 50%, #aa7c11 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 2px 10px rgba(212, 175, 55, 0.3);
+      font-weight: 700; text-transform: uppercase;
+      line-height: 1.2;
+    }
+
+    #rules-panel {
+      position: relative;
+      background: rgba(15, 23, 36, 0.92);
+      border: 1px solid rgba(212, 175, 55, 0.4);
+      border-radius: 8px; padding: 4px 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(6px); z-index: 50; max-width: 90%;
+    }
+
+    @media (min-width: 768px) {
+      #rules-panel {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        max-width: 280px;
+      }
+    }
+
+    .rules-header {
+      display: flex; justify-content: center; align-items: center; gap: 6px;
+    }
+
+    .rules-header-btns { display: flex; gap: 6px; justify-content: center; }
+
+    .rules-list-container {
+      display: none; margin-top: 6px; border-top: 1px solid rgba(212, 175, 55, 0.3); padding-top: 6px;
+    }
+
+    .rules-panel.open .rules-list-container { display: block; }
+
+    .rules-list {
+      list-style: none; font-size: 11px; color: #b0bec5; line-height: 1.4;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px;
+    }
+
+    .rules-list li { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+    .rules-list li::before { content: "•"; color: #d4af37; }
+
+    .btn-rule-help {
+      padding: 4px 10px; font-size: 11px;
+      background: linear-gradient(180deg, #d4af37 0%, #aa7c11 100%);
+      color: #0d131d; border: none; border-radius: 4px; font-weight: bold;
+      cursor: pointer; letter-spacing: 0.5px; transition: all 0.2s ease;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3); white-space: nowrap;
+    }
+
+    .btn-rule-help:hover {
+      background: linear-gradient(180deg, #fff3a8 0%, #d4af37 100%);
+      box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+    }
+
+    .modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px); z-index: 1000;
+      justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease;
+    }
+
+    .modal-overlay.active { display: flex; opacity: 1; }
+
+    .modal-content {
+      background: #151d2a; border: 1px solid rgba(212, 175, 55, 0.4); border-radius: 12px;
+      width: 90%; max-width: 520px; padding: 18px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(212, 175, 55, 0.15);
+      transform: translateY(-20px); transition: transform 0.3s ease;
+    }
+
+    .modal-overlay.active .modal-content { transform: translateY(0); }
+
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid rgba(212, 175, 55, 0.3); padding-bottom: 8px; margin-bottom: 12px;
+    }
+
+    .modal-title { font-family: 'Cinzel', serif; font-size: 17px; color: #d4af37; font-weight: bold; letter-spacing: 2px; }
+    .modal-close { background: none; border: none; color: #8c9ba5; font-size: 22px; cursor: pointer; transition: color 0.2s; }
+    .modal-close:hover { color: #ffffff; }
+
+    .modal-body { font-size: 13px; color: #d0d7de; line-height: 1.6; max-height: 60vh; overflow-y: auto; padding-right: 6px; }
+    .rule-item { margin-bottom: 12px; }
+    .rule-item-title { color: #fff3a8; font-weight: bold; font-size: 14px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+    .rule-item-title::before { content: "◆"; color: #d4af37; font-size: 10px; }
+
+    .char-intro-item { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 14px; }
+    .char-intro-portrait {
+      width: clamp(48px, 14vw, 64px); aspect-ratio: 2 / 3; object-fit: cover; flex-shrink: 0;
+      border-radius: 6px; border: 1px solid rgba(212, 175, 55, 0.5);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    }
+    .char-intro-text { flex: 1; min-width: 0; }
+    .char-intro-text .rule-item-title { margin-bottom: 4px; }
+
+    .modal-footer { margin-top: 14px; text-align: right; display: flex; justify-content: flex-end; gap: 10px; }
+
+    .btn-modal-close {
+      padding: 6px 16px; background: linear-gradient(180deg, #3a4856 0%, #25313d 100%);
+      color: #e0e6ed; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 4px;
+      cursor: pointer; font-size: 13px; transition: all 0.2s;
+    }
+
+    .btn-modal-close:hover { background: linear-gradient(180deg, #485869 0%, #2f3e4d 100%); color: #fff; }
+
+    @media (max-width: 480px) {
+      #next-game-modal .modal-content { width: 92%; padding: 14px; }
+      #next-game-modal .modal-footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+      #next-game-modal .modal-footer .btn {
+        width: 100%;
+        min-width: 0;
+        height: auto;
+        min-height: clamp(42px, 7vh, 54px);
+        white-space: normal;
+        word-break: keep-all;
+        line-height: 1.4;
+        padding: 8px 10px;
+        font-size: clamp(12px, 3.6vw, 14px);
+      }
+      .final-rank-row { padding: 5px 8px; gap: 8px; }
+      .final-rank-name { font-size: 13px; }
+    }
+
+    #game-board {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      grid-template-columns: minmax(70px, 140px) minmax(0, 1fr) minmax(70px, 140px);
+      width: 100%; max-width: 1200px; flex: 1; padding: 2px 6px; position: relative; gap: 4px; min-height: 0;
+    }
+
+    .player-box {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      position: relative; padding: 1px; transition: all 0.3s ease; min-height: 0;
+    }
+
+    .player-box.active-turn { filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.4)); }
+
+    .char-badge {
+      font-size: clamp(18px, 3vh, 24px); color: #fff3a8;
+      background: rgba(212, 175, 55, 0.2); border: 1px solid rgba(212, 175, 55, 0.5);
+      border-radius: 6px; padding: 2px 10px; margin-bottom: 4px; font-weight: bold; white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    .turn-badge-container { height: clamp(20px, 2.8vh, 28px); display: flex; align-items: center; justify-content: center; margin-bottom: 2px; }
+
+    .turn-badge {
+      visibility: hidden; opacity: 0;
+      background: linear-gradient(180deg, #fff3a8 0%, #d4af37 100%); color: #0b1017;
+      font-family: 'Cinzel', serif; font-size: clamp(11px, 2vh, 14px); font-weight: bold;
+      padding: 2px 8px; border-radius: 5px; letter-spacing: 1px;
+      box-shadow: 0 0 10px rgba(212, 175, 55, 0.6); transition: opacity 0.2s ease, visibility 0.2s ease;
+      z-index: 20; line-height: 1.2;
+    }
+
+    .turn-badge.is-pass {
+      visibility: visible !important; opacity: 1 !important;
+      background: linear-gradient(180deg, #607d8b 0%, #37474f 100%) !important;
+      color: #eceff1 !important; box-shadow: 0 0 8px rgba(0, 0, 0, 0.6) !important;
+    }
+
+    .player-box.active-turn .turn-badge { visibility: visible; opacity: 1; }
+
+    #cpu2 { grid-row: 1; grid-column: 2; }
+    #cpu1 { grid-row: 2; grid-column: 1; align-items: flex-start; justify-content: center; }
+    #cpu3 { grid-row: 2; grid-column: 3; align-items: flex-end; justify-content: center; }
+
+    .dialogue-bubble {
+      position: absolute;
+      background: rgba(15, 23, 36, 0.95);
+      border: 1px solid rgba(212, 175, 55, 0.8);
+      color: #fff3a8;
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: clamp(10px, 1.6vh, 13px);
+      font-weight: 600;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 200;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), 0 0 8px rgba(212, 175, 55, 0.3);
+      opacity: 0;
+      transform: scale(0.85);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    .dialogue-bubble.show {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    #cpu2 .dialogue-bubble { top: 100%; left: 50%; transform: translate(-50%, 6px); }
+    #cpu2 .dialogue-bubble.show { transform: translate(-50%, 0); }
+
+    #cpu1 .dialogue-bubble { top: 50%; left: 100%; transform: translate(6px, -50%); }
+    #cpu1 .dialogue-bubble.show { transform: translate(0, -50%); }
+
+    #cpu3 .dialogue-bubble { top: 50%; right: 100%; transform: translate(-6px, -50%); }
+    #cpu3 .dialogue-bubble.show { transform: translate(0, -50%); }
+
+    #field-area {
+      grid-row: 2; grid-column: 2;
+      display: grid;
+      grid-template-rows: clamp(22px, 2.8vh, 28px) minmax(calc(var(--card-height) + 12px), calc(var(--card-height) + 12px)) minmax(clamp(16px, 2.2vh, 20px), auto);
+      align-items: center;
+      justify-items: center;
+      position: relative;
+      min-height: 0;
+    }
+
+    #status-area {
+      display: flex; gap: 8px; align-items: center; justify-content: center;
+      min-height: 0; height: 100%; margin-bottom: 0;
+    }
+
+    .status-badge { font-family: 'Cinzel', serif; font-size: clamp(13px, 2.5vh, 20px); font-weight: 700; letter-spacing: 1px; display: none; transition: all 0.3s ease; }
+
+    @keyframes blink-rev {
+      0%, 100% { opacity: 1; text-shadow: 0 0 15px rgba(212, 175, 55, 1), 0 0 25px rgba(255, 243, 168, 0.8); }
+      50% { opacity: 0.2; text-shadow: 0 0 4px rgba(212, 175, 55, 0.2); }
+    }
+
+    @keyframes blink-eb {
+      0%, 100% { opacity: 1; text-shadow: 0 0 15px rgba(255, 107, 107, 1), 0 0 25px rgba(255, 150, 150, 0.8); }
+      50% { opacity: 0.2; text-shadow: 0 0 4px rgba(255, 107, 107, 0.2); }
+    }
+
+    #revolution-status.active { display: block; color: #d4af37; animation: blink-rev 1s infinite ease-in-out; }
+    #eleven-back-status.active { display: block; color: #ff6b6b; animation: blink-eb 1s infinite ease-in-out; }
+
+    .field-container {
+      background: rgba(15, 23, 36, 0.6); border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: inset 0 0 15px rgba(0,0,0,0.8), 0 6px 24px rgba(0,0,0,0.5);
+      border-radius: 8px; padding: 6px 12px;
+      width: clamp(220px, 55vw, 420px);
+      height: calc(var(--card-height) + 12px);
+      min-width: 0; min-height: 0;
+      display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(5px); position: relative;
+      overflow: hidden;
+    }
+
+    #field-cards {
+      display: flex; gap: 6px; align-items: center; justify-content: center;
+      width: 100%; height: 100%;
+      transition: transform 0.4s ease, opacity 0.4s ease;
+    }
+    #field-cards.clear-animation { transform: translateY(-30px) scale(0.8); opacity: 0; }
+    #field-cards .card { flex-shrink: 0; }
+
+    #message-text { font-size: clamp(11px, 1.8vh, 14px); color: #b0bec5; letter-spacing: 1px; min-height: 16px; font-weight: 400; margin-top: 4px; text-align: center; line-height: 1.2; }
+
+    #player-area { grid-row: 3; grid-column: 1 / span 3; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; }
+
+    .your-turn-badge {
+      visibility: hidden; opacity: 0;
+      background: linear-gradient(180deg, #fff3a8 0%, #d4af37 100%); color: #0b1017;
+      font-size: clamp(12px, 2.2vh, 15px); font-weight: bold; padding: 3px 12px; border-radius: 6px;
+      letter-spacing: 1px; box-shadow: 0 0 10px rgba(212, 175, 55, 0.6); transition: opacity 0.2s ease, visibility 0.2s ease;
+      z-index: 100; animation: pulse 1.5s infinite alternate; line-height: 1.2;
+    }
+
+    .your-turn-badge.is-pass {
+      visibility: visible !important; opacity: 1 !important; animation: none !important;
+      background: linear-gradient(180deg, #607d8b 0%, #37474f 100%) !important;
+      color: #eceff1 !important; box-shadow: 0 0 8px rgba(0, 0, 0, 0.6) !important;
+    }
+
+    @keyframes pulse { 0% { transform: scale(1); box-shadow: 0 0 6px rgba(212, 175, 55, 0.5); } 100% { transform: scale(1.05); box-shadow: 0 0 12px rgba(212, 175, 55, 0.9); } }
+
+    #player-area.active-turn .your-turn-badge { visibility: visible; opacity: 1; }
+
+    #player-hand { display: flex; justify-content: center; align-items: center; height: calc(var(--card-height) + 32px); margin-bottom: 2px; max-width: 100%; padding: 0 4px; }
+
+    .card {
+      width: var(--card-width); height: var(--card-height);
+      background: linear-gradient(135deg, #ffffff 0%, #f2f4f7 100%); border-radius: 4px;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+      display: flex; flex-direction: column; justify-content: space-between; padding: 3px 4px;
+      font-family: 'Georgia', serif; font-weight: bold; user-select: none;
+      transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s ease, opacity 0.25s ease;
+      position: relative; flex-shrink: 0;
+    }
+
+    #player-hand { flex-wrap: nowrap; overflow: visible; }
+    #player-hand .card { cursor: pointer; margin-left: var(--hand-overlap, var(--card-overlap)); }
+    #player-hand .card.draw-anim { animation: drawCard 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    #player-hand .card:first-child { margin-left: 0; }
+
+    @keyframes drawCard { from { transform: translateY(20px) scale(0.9); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+
+    .card-top { display: flex; flex-direction: column; align-items: flex-start; line-height: 0.85; }
+    .card-suit-symbol { font-size: clamp(10px, 1.8vh, 15px); }
+    .card-rank { font-size: clamp(10px, 1.8vh, 15px); font-weight: bold; }
+
+    .card.spade, .card.club { color: #11161d; }
+    .card.heart, .card.diamond { color: #d32f2f; }
+
+    .card.joker {
+      color: #8a6a00;
+      background: linear-gradient(135deg, #fff8e1 0%, #ffe9a8 45%, #f2f4f7 100%);
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(212, 175, 55, 0.9);
+    }
+    .card.joker .card-rank { font-size: clamp(8px, 1.4vh, 11px); letter-spacing: 0.5px; }
+    .card.joker .card-center-icon {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      font-size: clamp(16px, 3.4vh, 30px); opacity: 0.9;
+    }
+
+    #player-hand .card:hover { transform: translateY(-8px); z-index: 50 !important; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6); }
+
+    #player-hand .card.selected {
+      transform: translateY(-24px) !important;
+      box-shadow: 0 0 15px rgba(212, 175, 55, 0.9), 0 12px 20px rgba(0,0,0,0.7);
+      border: 1px solid #d4af37; z-index: 60 !important;
+    }
+
+    .card-play-anim { position: fixed !important; z-index: 999 !important; transition: all calc(0.35s / var(--speed-factor, 1)) cubic-bezier(0.25, 1, 0.5, 1) !important; pointer-events: none; }
+
+    .card-back {
+      width: calc(var(--card-width) * 0.65); height: calc(var(--card-height) * 0.65);
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 3px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.4); transition: transform 0.2s ease; flex-shrink: 0;
+    }
+
+    .cpu-card-stack { display: flex; align-items: center; justify-content: center; margin: 1px 0; min-height: calc(var(--card-height) * 0.65); }
+    #cpu2 .cpu-card-stack { display: flex; justify-content: center; width: 100%; }
+    #cpu2 .cpu-card-stack .card-back { margin-left: calc(var(--card-overlap) * 0.65); }
+    #cpu2 .cpu-card-stack .card-back:first-child { margin-left: 0; }
+
+    #cpu1 .cpu-card-stack .card-back, #cpu3 .cpu-card-stack .card-back { margin-left: calc(var(--card-width) * -0.45); }
+    #cpu1 .cpu-card-stack .card-back:first-child, #cpu3 .cpu-card-stack .card-back:first-child { margin-left: 0; }
+
+    #bottom-bar {
+      width: 100%; background: rgba(11, 16, 23, 0.95); border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 8px 12px; padding-bottom: max(8px, env(safe-area-inset-bottom));
+      display: flex; justify-content: space-between; align-items: center;
+      backdrop-filter: blur(10px); z-index: 100; flex-shrink: 0;
+    }
+
+    .action-group { display: flex; align-items: center; gap: 6px; margin: 0 auto; flex-wrap: nowrap; justify-content: center; }
+
+    .btn {
+      min-width: clamp(75px, 12vw, 115px); height: clamp(32px, 5vh, 40px);
+      border-radius: 5px; border: 1px solid rgba(255, 255, 255, 0.15);
+      background: linear-gradient(180deg, #3a4856 0%, #25313d 100%);
+      color: #d0d7de; font-family: 'Noto Serif JP', serif;
+      font-size: clamp(12px, 1.8vh, 14px); letter-spacing: 1px; cursor: pointer;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3); transition: all 0.2s ease;
+      display: flex; align-items: center; justify-content: center; padding: 0 6px; white-space: nowrap;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: linear-gradient(180deg, #485869 0%, #2f3e4d 100%);
+      border-color: rgba(212, 175, 55, 0.5); color: #ffffff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+
+    .btn-gold {
+      background: linear-gradient(180deg, #d4af37 0%, #aa7c11 100%);
+      color: #0d131d; font-weight: bold; border-color: rgba(255, 243, 168, 0.5);
+    }
+
+    .btn-gold:hover:not(:disabled) {
+      background: linear-gradient(180deg, #fff3a8 0%, #d4af37 100%);
+      color: #000; box-shadow: 0 0 10px rgba(212, 175, 55, 0.6);
+    }
+
+    .rank-badge {
+      font-size: clamp(17px, 3vh, 23px); color: #d4af37; letter-spacing: 1px;
+      margin-top: 2px; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.5); line-height: 1;
+    }
+
+    .pass-count { font-size: clamp(10px, 1.6vh, 12px); color: #8c9ba5; margin-top: 2px; line-height: 1; }
+  
+    .char-row {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      margin-bottom: 3px;
+    }
+
+    .char-portrait {
+      width: clamp(30px, 6vh, 52px);
+      aspect-ratio: 2 / 3;
+      object-fit: cover;
+      border-radius: 5px;
+      border: 1px solid rgba(212, 175, 55, 0.6);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+      transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s ease, z-index 0s;
+      position: relative;
+      background: #0d131d;
+      flex-shrink: 0;
+    }
+
+    .char-portrait.portrait-talk {
+      transform: scale(2.1);
+      z-index: 250;
+      box-shadow: 0 0 24px rgba(212, 175, 55, 0.95), 0 10px 26px rgba(0, 0, 0, 0.85);
+      border-color: #fff3a8;
+    }
+
+    #cpu1 .char-portrait.portrait-talk { transform: scale(2.1) translateX(10%); }
+    #cpu3 .char-portrait.portrait-talk { transform: scale(2.1) translateX(-10%); }
+
+    #cpu2 .char-portrait.portrait-talk {
+      transform-origin: 50% 0%;
+      transform: scale(2.1) translateY(6%);
+    }
+
+    #player-area .char-row { flex-direction: row; margin-bottom: 4px; }
+    #player-area .char-portrait { width: clamp(26px, 4.2vh, 38px); }
+
+    .char-select-overlay {
+      position: fixed; inset: 0; z-index: 1000;
+      background: radial-gradient(circle at center, #1b2838 0%, #0d131d 100%);
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px; overflow-y: auto;
+    }
+
+    .char-select-overlay:not(.active) { display: none; }
+
+    .char-select-panel { max-width: 960px; width: 100%; text-align: center; }
+
+    .char-select-title {
+      font-family: 'Cinzel', serif; font-size: clamp(20px, 4vw, 30px);
+      letter-spacing: 2px; color: #d4af37; margin-bottom: 4px;
+      background: linear-gradient(180deg, #fff3a8 0%, #d4af37 50%, #aa7c11 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    .char-select-sub { color: #b0bec5; font-size: 13px; margin-bottom: 18px; letter-spacing: 1px; }
+
+    .char-select-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 12px; max-height: 74vh; overflow-y: auto; padding: 6px;
+    }
+
+    .char-select-card {
+      background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(212, 175, 55, 0.3);
+      border-radius: 10px; padding: 8px; cursor: pointer; transition: all 0.2s ease;
+    }
+
+    .char-select-card:hover, .char-select-card:focus {
+      border-color: #d4af37; transform: translateY(-5px);
+      box-shadow: 0 10px 22px rgba(212, 175, 55, 0.35);
+      background: rgba(212, 175, 55, 0.08);
+    }
+
+    .char-select-card img {
+      width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 6px;
+      margin-bottom: 6px; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+    }
+
+    .char-select-card .csc-name { font-weight: 700; color: #fff3a8; font-size: 14px; letter-spacing: 0.5px; }
+    .char-select-card .csc-desc { font-size: 10px; color: #8c9ba5; margin-top: 3px; line-height: 1.35; }
+
+    .victory-popup-overlay {
+      position: fixed; inset: 0; z-index: 500;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(5, 8, 13, 0.7);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+
+    .victory-popup-overlay.active { opacity: 1; }
+
+    .victory-popup-content {
+      text-align: center;
+      transform: scale(0.85);
+      transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .victory-popup-overlay.active .victory-popup-content { transform: scale(1); }
+
+    .victory-popup-content img {
+      width: clamp(140px, 30vw, 220px); aspect-ratio: 2 / 3; object-fit: cover;
+      border-radius: 12px; border: 2px solid #d4af37;
+      box-shadow: 0 0 40px rgba(212, 175, 55, 0.8), 0 20px 40px rgba(0, 0, 0, 0.8);
+    }
+
+    .victory-popup-label {
+      font-family: 'Cinzel', serif; font-size: clamp(16px, 3vw, 22px); font-weight: 700;
+      letter-spacing: 3px; color: #d4af37; margin-top: 14px;
+      text-shadow: 0 0 12px rgba(212, 175, 55, 0.8);
+    }
+
+    .victory-popup-name {
+      font-size: clamp(16px, 3vw, 22px); font-weight: 700; color: #fff3a8; margin-top: 4px;
+    }
+
+    .final-ranking-list { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+
+    .final-rank-row {
+      display: flex; align-items: center; gap: 12px;
+      background: rgba(212, 175, 55, 0.07); border: 1px solid rgba(212, 175, 55, 0.3);
+      border-radius: 8px; padding: 6px 12px;
+    }
+
+    .final-rank-row.rank-1 { background: rgba(212, 175, 55, 0.18); border-color: #d4af37; }
+
+    .final-rank-position {
+      font-family: 'Cinzel', serif; font-weight: 700; color: #d4af37;
+      font-size: 13px; width: 52px; text-align: center; flex-shrink: 0; letter-spacing: 0.5px;
+    }
+
+    .final-rank-row img {
+      width: 38px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 5px;
+      border: 1px solid rgba(212, 175, 55, 0.5); flex-shrink: 0;
+    }
+
+    .final-rank-name { flex: 1; text-align: left; font-weight: 600; color: #e0e6ed; font-size: 14px; }
+
+  </style>
+</head>
+<body>
+
+  <!-- キャラクター選択画面（ゲーム開始前） -->
+  <div class="char-select-overlay active" id="char-select-overlay">
+    <div class="char-select-panel">
+
+      <div class="main-title" style="margin-bottom:8px;">
+        ROYAL CARD GAME（大富豪王 2026）
+      </div>
+
+      <div class="char-select-title">キャラクターを選択</div>
+      <div class="char-select-sub">あなたの分身となるキャラクターを1人選んでください</div>
+      <div class="char-select-grid" id="char-select-grid"></div>
+    </div>
+  </div>
+
+  <!-- 勝利演出ポップアップ -->
+  <div class="victory-popup-overlay" id="victory-popup">
+    <div class="victory-popup-content">
+      <img id="victory-portrait" src="" alt="">
+      <div class="victory-popup-label">🏆 WINNER 🏆</div>
+      <div class="victory-popup-name" id="victory-name"></div>
+    </div>
+  </div>
+
+  <div id="header-area">
+    <div class="main-title">ROYAL CARD GAME</div>
+
+    <div id="rules-panel">
+      <div class="rules-header">
+        <div class="rules-header-btns">
+          <button class="btn-rule-help" id="char-help-btn">キャラ紹介</button>
+          <button class="btn-rule-help" id="rule-toggle-btn">ルール解説</button>
+        </div>
+      </div>
+      <div class="rules-list-container">
+        <ul class="rules-list">
+          <li>♦3保持者が最初の親</li>
+          <li>カード交換</li>
+          <li>革命</li>
+          <li>8切</li>
+          <li>11バック</li>
+          <li>ジョーカー / スペード3返し</li>
+          <li id="rule-list-pass">パス制限なし</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- キャラクター紹介モーダル -->
+  <div class="modal-overlay" id="char-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">キャラクター紹介</div>
+        <button class="modal-close" id="modal-char-close-x">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="char-intro-item">
+          <img class="char-intro-portrait" data-char-img="DUKE" src="" alt="👑 公爵 (Duke) - 温存型">
+          <div class="char-intro-text">
+            <div class="rule-item-title">👑 公爵 (Duke) - 温存型</div>
+            <div>強力なカード（Aや2）を温存し、手札後半で一気に勝負をかけます。また、次の相手をアシストするような安易な温存プレイは避けます。</div>
+          </div>
+        </div>
+        <div class="char-intro-item">
+          <img class="char-intro-portrait" data-char-img="MARQUIS" src="" alt="🍷 侯爵 (Marquis) - スコア重視">
+          <div class="char-intro-text">
+            <div class="rule-item-title">🍷 侯爵 (Marquis) - スコア重視</div>
+            <div>一枚ごとの価値と手札の枚数バランスを計算し、最も効果的で無駄のない手を選択します。</div>
+          </div>
+        </div>
+        <div class="char-intro-item">
+          <img class="char-intro-portrait" data-char-img="COUNT" src="" alt="📜 伯爵 (Count) - 変則展開">
+          <div class="char-intro-text">
+            <div class="rule-item-title">📜 伯爵 (Count) - 変則展開</div>
+            <div>序盤は温存し、手札が5枚以下になると強力なカードを積極的に使い始める、状況に応じた戦術の変化が得意です。</div>
+          </div>
+        </div>
+        <div class="char-intro-item">
+          <img class="char-intro-portrait" data-char-img="KNIGHT" src="" alt="⚔️ 騎士 (Knight) - 愚直・最弱順">
+          <div class="char-intro-text">
+            <div class="rule-item-title">⚔️ 騎士 (Knight) - 愚直・最弱順</div>
+            <div>駆け引きをせず、常に自分が持っている「今出せる中で最も弱いカード」を直直に出していきます。</div>
+          </div>
+        </div>
+        <div class="char-intro-item">
+          <img class="char-intro-portrait" data-char-img="MERCHANT" src="" alt="⚖️ 商人 (Merchant) - ペア重視">
+          <div class="char-intro-text">
+            <div class="rule-item-title">⚖️ 商人 (Merchant) - ペア重視</div>
+            <div>ペア（2枚出し）やセット（3枚出し以上）の構築を好み、同じ数字のカードを分解して単発で出すことを嫌います。</div>
+          </div>
+        </div>
+        <div class="char-intro-item">
+          <img class="char-intro-portrait" data-char-img="SCHOLAR" src="" alt="📖 学者 (Scholar) - 慎重・観察">
+          <div class="char-intro-text">
+            <div class="rule-item-title">📖 学者 (Scholar) - 慎重・観察</div>
+            <div>場の流れを分析し、相手が複数出しをしてきた場合に合わせて強力なカードでカウンターを狙います。</div>
+          </div>
+        </div>
+        <div class="char-intro-item">
+          <img class="char-intro-portrait" data-char-img="STRATEGIST" src="" alt="♟️ 軍師 (Strategist) - 妨害・コントロール">
+          <div class="char-intro-text">
+            <div class="rule-item-title">♟️ 軍師 (Strategist) - 妨害・コントロール</div>
+            <div>他プレイヤーの手札が残り少なくなると「8切り」や「A/2」を使って親権を奪い、あがりを阻止します。</div>
+          </div>
+        </div>
+        <div class="char-intro-item">
+          <img class="char-intro-portrait" data-char-img="REVOLUTIONARY" src="" alt="🔥 革命家 (Revolutionary) - 革命特化">
+          <div class="char-intro-text">
+            <div class="rule-item-title">🔥 革命家 (Revolutionary) - 革命特化</div>
+            <div>4枚以上のペアがあれば最優先で「革命」を狙い、さらに「8切り」を多用して場を支配します。</div>
+          </div>
+        </div>
+        <div class="char-intro-item">
+          <img class="char-intro-portrait" data-char-img="JESTER" src="" alt="🤡 道化師 (Jester) - 予測不能">
+          <div class="char-intro-text">
+            <div class="rule-item-title">🤡 道化師 (Jester) - 予測不能</div>
+            <div>気まぐれに強カードを突然出したり、突然パスしたりと、読めないトリッキーな動きをします。</div>
+          </div>
+        </div>
+        <div class="char-intro-item">
+          <img class="char-intro-portrait" data-char-img="KING" src="" alt="🏰 王 (King) - 完全読み（最強AI）">
+          <div class="char-intro-text">
+            <div class="rule-item-title">🏰 王 (King) - 完全読み（最強AI）</div>
+            <div>未見のカードや全員の手札状況を完璧に計算し、確定勝ちルートを計算して最適手を指す最強AIです。</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-modal-close" id="modal-char-close-btn">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ルール解説モーダル -->
+  <div class="modal-overlay" id="rule-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">追加ルール解説</div>
+        <button class="modal-close" id="modal-close-x">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="rule-item">
+          <div class="rule-item-title">♦3保持者が最初の親 (Diamond 3 First)</div>
+          <div>ゲーム開始時（交換完了後）、手札に「♦3」を持っているプレイヤーが自動的に最初の親となり、ターンが開始されます。</div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-item-title">配札 (Dealing)</div>
+          <div>ジョーカー2枚を含む54枚を1人ずつ順番に配るため、4人のうち2人が14枚、2人が13枚となります。</div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-item-title">カード交換 (Card Exchange)</div>
+          <div>2ゲーム目以降の開始時、前ゲームの階級に応じてカードを交換します。（※メンバー交代時は交換なし）<br>・大富豪 ⇄ 大貧民：大貧民は最も強い2枚を献上、大富豪は任意の2枚を譲渡。<br>・富豪 ⇄ 貧民：貧民は最も強い1枚を献上、富豪は任意の1枚を譲渡。</div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-item-title">革命 (Revolution)</div>
+          <div>同じ数字のカードを同時に4枚以上出すと「革命」が発生します。ゲーム終了までカードの強さが逆転します。</div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-item-title">8切り (Eight Stop)</div>
+          <div>数字の「8」を含むカードを出すと、即座にその場のカードが流れて自分のターン（親）から再開されます。</div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-item-title">11バック (Eleven Back)</div>
+          <div>「J (11)」を含むカードが出されると、その場のカードが流れるまでの間一時的にカードの強さが逆転します。</div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-item-title">🃏 ジョーカー (Joker)</div>
+          <div>デッキには2枚のジョーカーが含まれます。単騎で出すと革命中でも常に最強のカードとして場を支配します。複数枚出し（ペア・トリプルなど）では、他のカードの代わりとなるワイルドカードとしても使用できます。</div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-item-title">♠3返し (Spade 3 Return)</div>
+          <div>場に「ジョーカー単騎」が出ている時に限り、「♠3」を単騎で出すことでジョーカーに勝つことができる特殊ルールです。</div>
+        </div>
+        <div class="rule-item" id="rule-item-pass-block">
+          <div class="rule-item-title" id="rule-item-pass-title">パスの制限 (Pass Rules)</div>
+          <div id="rule-item-pass-desc">パスは回数制限がなく、何度でも無制限に行うことができます。</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-modal-close" id="modal-close-btn">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- キャラクター交代選択ダイアログ -->
+  <div class="modal-overlay" id="next-game-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">次ゲームの準備</div>
+      </div>
+      <div class="modal-body" style="text-align: center; padding: 10px 0;">
+        <p style="font-size: 15px; margin-bottom: 8px; color: #fff3a8;">ゲームが終了しました！</p>
+        <div class="final-ranking-list" id="final-ranking-list"></div>
+        <p>対戦相手のキャラクター（CPU）をどうしますか？</p>
+      </div>
+      <div class="modal-footer" style="justify-content: center; gap: 15px;">
+        <button class="btn btn-gold" id="btn-keep-char">同じメンバーで続行<br><span style="font-size: 10px;">(カード交換あり)</span></button>
+        <button class="btn" id="btn-change-char">メンバーを再抽選<br><span style="font-size: 10px;">(カード交換なし)</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="game-board">
+    <!-- CPU 2 (対面) -->
+    <div class="player-box" id="cpu2">
+      <div class="turn-badge-container">
+        <div class="turn-badge" id="cpu2-badge">THINKING</div>
+      </div>
+      <div class="char-row"><img class="char-portrait" id="cpu2-portrait" src="" alt=""><div class="char-badge" id="cpu2-char-title">---</div></div>
+      <div class="cpu-card-stack" id="cpu2-stack"></div>
+      <div class="pass-count"><span id="cpu2-pass-label">パス: </span><span id="cpu2-pass">0</span></div>
+      <div class="rank-badge" id="cpu2-rank"></div>
+    </div>
+
+    <!-- CPU 1 (左) -->
+    <div class="player-box" id="cpu1">
+      <div class="turn-badge-container">
+        <div class="turn-badge" id="cpu1-badge">THINKING</div>
+      </div>
+      <div class="char-row"><img class="char-portrait" id="cpu1-portrait" src="" alt=""><div class="char-badge" id="cpu1-char-title">---</div></div>
+      <div class="cpu-card-stack" id="cpu1-stack"></div>
+      <div class="pass-count"><span id="cpu1-pass-label">パス: </span><span id="cpu1-pass">0</span></div>
+      <div class="rank-badge" id="cpu1-rank"></div>
+    </div>
+
+    <!-- 中央：場 -->
+    <div id="field-area">
+      <div id="status-area">
+        <div id="revolution-status" class="status-badge">Revolution!</div>
+        <div id="eleven-back-status" class="status-badge">11 Back!</div>
+      </div>
+
+      <div class="field-container" id="field-container-el">
+        <div id="field-cards"></div>
+      </div>
+
+      <div id="message-text">ゲーム開始！</div>
+    </div>
+
+    <!-- CPU 3 (右) -->
+    <div class="player-box" id="cpu3">
+      <div class="turn-badge-container">
+        <div class="turn-badge" id="cpu3-badge">THINKING</div>
+      </div>
+      <div class="char-row"><img class="char-portrait" id="cpu3-portrait" src="" alt=""><div class="char-badge" id="cpu3-char-title">---</div></div>
+      <div class="cpu-card-stack" id="cpu3-stack"></div>
+      <div class="pass-count"><span id="cpu3-pass-label">パス: </span><span id="cpu3-pass">0</span></div>
+      <div class="rank-badge" id="cpu3-rank"></div>
+    </div>
+
+    <!-- プレイヤー (自分) -->
+    <div class="player-box" id="player-area">
+      <div class="turn-badge-container">
+        <div class="your-turn-badge" id="player-badge">あなたの順番です</div>
+      </div>
+      <div class="char-row"><img class="char-portrait" id="player-portrait" src="" alt=""><div class="char-badge" id="player-char-title">---</div></div>
+      <div id="player-hand"></div>
+      <div class="pass-count"><span id="player-pass-label">パス: </span><span id="player-pass">0</span></div>
+      <div class="rank-badge" id="player-rank"></div>
+    </div>
+  </div>
+
+  <!-- 下部操作バー -->
+  <div id="bottom-bar">
+    <div class="action-group">
+      <button class="btn" id="play-btn">カードを出す</button>
+      <button class="btn btn-gold" id="go-exchange-btn" style="display: none;">カード交換へ</button>
+      <button class="btn btn-gold" id="exchange-btn" style="display: none;">交換決定</button>
+      <button class="btn" id="next-game-btn" disabled>次ゲーム</button>
+      <button class="btn" id="pass-btn">パス</button>
+    </div>
+    <button class="btn" id="reset-btn">リセット</button>
+  </div>
+
+  <script>
+    /* ----------------------------------------------------
+     * 設定・定数
+     * ---------------------------------------------------- */
+    const ALLOW_LIMIT_PASS = false;
+    const MAX_PASS_LIMIT = 6;
+
+    const COST_TABLE = {
+      '3': 1, '4': 2, '5': 3, '6': 4, '7': 5, '8': 6,
+      '9': 7, '10': 8, 'J': 9, 'Q': 10, 'K': 11, 'A': 12, '2': 13, 'JOKER': 14
+    };
+
+    /* ----------------------------------------------------
+     * 音効（SE）管理クラス (Web Audio API)
+     * ---------------------------------------------------- */
+    class SoundManager {
+      constructor() { 
+        this.ctx = null;
+        const initAudio = () => {
+          this.init();
+          window.removeEventListener('click', initAudio);
+          window.removeEventListener('touchstart', initAudio);
+        };
+        window.addEventListener('click', initAudio);
+        window.addEventListener('touchstart', initAudio);
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      playSelect() {
+        this.init();
+        if (this.ctx.state !== 'running') return;
+        const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+        osc.type = 'sine'; osc.frequency.setValueAtTime(440, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, this.ctx.currentTime + 0.05);
+        gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(); osc.stop(this.ctx.currentTime + 0.05);
+      }
+
+      playDeselect() {
+        this.init();
+        if (this.ctx.state !== 'running') return;
+        const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+        osc.type = 'sine'; osc.frequency.setValueAtTime(660, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(330, this.ctx.currentTime + 0.04);
+        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.04);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(); osc.stop(this.ctx.currentTime + 0.04);
+      }
+
+      playCardPlay() {
+        this.init();
+        if (this.ctx.state !== 'running') return;
+        const bufferSize = this.ctx.sampleRate * 0.1;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+        const noise = this.ctx.createBufferSource(); noise.buffer = buffer;
+        const filter = this.ctx.createBiquadFilter(); filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(1000, this.ctx.currentTime);
+        filter.frequency.exponentialRampToValueAtTime(400, this.ctx.currentTime + 0.1);
+        filter.Q.value = 3;
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+        noise.connect(filter); filter.connect(gain); gain.connect(this.ctx.destination);
+        noise.start();
+      }
+
+      playPass() {
+        this.init();
+        if (this.ctx.state !== 'running') return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(130, now);
+        osc.frequency.exponentialRampToValueAtTime(40, now + 0.4);
+        const filter = this.ctx.createBiquadFilter(); filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(300, now);
+        filter.frequency.exponentialRampToValueAtTime(80, now + 0.4);
+        gain.gain.setValueAtTime(0.4, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        osc.connect(filter); filter.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.4);
+      }
+
+      playSpecial() {
+        this.init();
+        if (this.ctx.state !== 'running') return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+        osc.type = 'triangle'; osc.frequency.setValueAtTime(220, now);
+        osc.frequency.setValueAtTime(440, now + 0.08); osc.frequency.setValueAtTime(880, now + 0.16);
+        gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.3);
+      }
+
+      playWin() {
+        this.init();
+        if (this.ctx.state !== 'running') return;
+        const now = this.ctx.currentTime;
+        [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+          osc.type = 'sine'; osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0.15, now + idx * 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.3);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.08); osc.stop(now + idx * 0.08 + 0.3);
+        });
+      }
+
+      playJoker() {
+        this.init();
+        if (this.ctx.state !== 'running') return;
+        const now = this.ctx.currentTime;
+        [880, 1108.73, 1318.51].forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+          osc.type = 'triangle'; osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0.18, now + idx * 0.06);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.35);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.06); osc.stop(now + idx * 0.06 + 0.35);
+        });
+      }
+
+      playSpade3Return() {
+        this.init();
+        if (this.ctx.state !== 'running') return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+        osc.type = 'square'; osc.frequency.setValueAtTime(1046.5, now);
+        osc.frequency.exponentialRampToValueAtTime(261.6, now + 0.25);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.25);
+      }
+    }
+
+    const soundMgr = new SoundManager();
+
+    /* ----------------------------------------------------
+     * BGM管理クラス
+     * ---------------------------------------------------- */
+    class BgmManager {
+      constructor() {
+        this.audio = new Audio();
+        this.audio.loop = true;
+        this.audio.volume = 0.3; // BGMの音量（0.0 ～ 1.0）
+        this.currentTrack = null;
+        
+        // ※音楽ファイルの拡張子が .mp3 でない場合（.wav や .m4a など）は、ここを変更してください。
+        this.tracks = {
+          charSelect: '宮廷の戦略_キャラ選択.mp3',
+          normal: 'bgm_normal.mp3',
+          revolution: 'bgm_kakumei.mp3',
+          elevenBack: 'bgm_11back.mp3'
+        };
+        this.isCharSelectPhase = true;
+
+        // ブラウザの自動再生制限対策：ユーザーの初回クリック時に再生を開始する
+        const startBgm = () => {
+          if (this.currentTrack) {
+            this.audio.play().catch(e => console.log("BGM再生待機中:", e));
+          }
+          window.removeEventListener('click', startBgm);
+          window.removeEventListener('touchstart', startBgm);
+        };
+        window.addEventListener('click', startBgm);
+        window.addEventListener('touchstart', startBgm);
+      }
+
+      play(trackName) {
+        if (this.currentTrack === trackName) return;
+        this.currentTrack = trackName;
+        this.audio.src = this.tracks[trackName];
+        this.audio.play().catch(e => console.log("BGM自動再生制限:", e));
+      }
+
+      update(isRev, isEb) {
+        if (this.isCharSelectPhase) {
+          this.play('charSelect');
+        } else if (isEb) {
+          this.play('elevenBack');
+        } else if (isRev) {
+          this.play('revolution');
+        } else {
+          this.play('normal');
+        }
+      }
+
+      setCharSelectPhase(isCharSelect) {
+        this.isCharSelectPhase = isCharSelect;
+        // グローバル変数の isRevolution, isElevenBack を参照
+        this.update(typeof isRevolution !== 'undefined' ? isRevolution : false, 
+                    typeof isElevenBack !== 'undefined' ? isElevenBack : false);
+      }
+    }
+
+    const bgmMgr = new BgmManager();
+
+    /* ----------------------------------------------------
+     * トランプ・基本構造
+     * ---------------------------------------------------- */
+    const SUITS = [
+      { symbol: '♠', class: 'spade' }, { symbol: '♥', class: 'heart' },
+      { symbol: '♦', class: 'diamond' }, { symbol: '♣', class: 'club' }
+    ];
+
+    const RANKS = [
+      { display: '3', strength: 0 }, { display: '4', strength: 1 },
+      { display: '5', strength: 2 }, { display: '6', strength: 3 },
+      { display: '7', strength: 4 }, { display: '8', strength: 5 },
+      { display: '9', strength: 6 }, { display: '10', strength: 7 },
+      { display: 'J', strength: 8 }, { display: 'Q', strength: 9 },
+      { display: 'K', strength: 10 }, { display: 'A', strength: 11 },
+      { display: '2', strength: 12 }
+    ];
+
+    const PLAYERS = ['player', 'cpu1', 'cpu2', 'cpu3'];
+
+    /* ----------------------------------------------------
+     * 10種類のキャラクター定義 & AIロジック
+     * ---------------------------------------------------- */
+    const CHARACTER_DEFS = {
+      DUKE: { id: 'DUKE', name: '公爵', icon: '👑' },
+      MARQUIS: { id: 'MARQUIS', name: '侯爵', icon: '🍷' },
+      COUNT: { id: 'COUNT', name: '伯爵', icon: '📜' },
+      KNIGHT: { id: 'KNIGHT', name: '騎士', icon: '⚔️' },
+      MERCHANT: { id: 'MERCHANT', name: '商人', icon: '⚖️' },
+      SCHOLAR: { id: 'SCHOLAR', name: '学者', icon: '📖' },
+      STRATEGIST: { id: 'STRATEGIST', name: '軍師', icon: '♟️' },
+      REVOLUTIONARY: { id: 'REVOLUTIONARY', name: '革命家', icon: '🔥' },
+      JESTER: { id: 'JESTER', name: '道化師', icon: '🤡' },
+      KING: { id: 'KING', name: '王', icon: '🏰' }
+    };
+
+    /* キャラクター立ち絵（「fugo-絵柄」フォルダから読み込み） */
+    const CHAR_IMAGES = {
+      DUKE: "fugo-絵柄/duke.png",
+      MARQUIS: "fugo-絵柄/marquis.png",
+      COUNT: "fugo-絵柄/count.png",
+      KNIGHT: "fugo-絵柄/knight.png",
+      MERCHANT: "fugo-絵柄/merchant.png",
+      SCHOLAR: "fugo-絵柄/scholar.png",
+      STRATEGIST: "fugo-絵柄/strategist.png",
+      REVOLUTIONARY: "fugo-絵柄/revolutionary.png",
+      JESTER: "fugo-絵柄/jester.png",
+      KING: "fugo-絵柄/king.png"
+    };
+
+    /* キャラクター選択画面用の短い説明文 */
+    const CHAR_SHORT_DESC = {
+      DUKE: '強カードを温存する慎重派',
+      MARQUIS: 'スコア計算重視のエレガント派',
+      COUNT: '状況次第で戦術を変える策略家',
+      KNIGHT: '駆け引きなしの直球勝負',
+      MERCHANT: 'ペア・セット構築を好む商売人',
+      SCHOLAR: '場を分析する慎重な観察者',
+      STRATEGIST: '妨害重視のコントロール型',
+      REVOLUTIONARY: '革命特化の攻撃型',
+      JESTER: '読めないトリッキー派',
+      KING: '完全読みの最強AI'
+    };
+
+    let assignedCharacters = { player: null, cpu1: null, cpu2: null, cpu3: null };
+    let playedCardsHistory = [];
+    let lastActionLog = { player: null, cards: [] };
+
+    let hasPassedInRound = { player: false, cpu1: false, cpu2: false, cpu3: false };
+
+    /* ----------------------------------------------------
+     * キャラクター会話システム（セリフ定義 & 状態管理）
+     * ---------------------------------------------------- */
+    const CHARACTER_DIALOGUES = {
+      DUKE: {
+        NORMAL: ['ふむ、これでいい。', '悪くない一手だ。', 'ふむ。'],
+        STRONG: ['これは取っておこう。', '我が力を見せる時か。', '余計な手出しは無用。'],
+        MULTI: ['揃えていくとしよう。', 'これでいかがかな。'],
+        EIGHT_CUT: ['ここで流す。', '場を仕切り直そう。'],
+        ELEVEN_BACK: ['流れを変える。', '逆風もまた一興。'],
+        REVOLUTION: ['世を覆すとしよう。', '時代の変わり目だな。'],
+        PASS: ['ここは様子見だ。', '見送るとしよう。', '好きにするが良い。'],
+        ENEMY_FEW: ['もう後がないようだな。', '焦りが見えるぞ。'],
+        MY_FEW: ['勝負はもう決まったようだな。', '詰めに入るとしよう。'],
+        WIN: ['当然の結果だな。', '私が勝つのは必然だ。'],
+        LOSE: ['……今回は私の判断ミスだ。', '見事と言っておこう。'],
+        GAME_START: ['始めようか。', '私の手腕を見せるとしよう。'],
+        EXCHANGE: ['良いカードを期待しているよ。', '礼を言っておこう。'],
+        NEXT_GAME: ['次の勝負と行こう。', 'いつでも相手になろう。']
+      },
+      MARQUIS: {
+        NORMAL: ['ほう、そう来ましたか。', 'よろしいでしょう。', 'ふふ、まずまずですね。'],
+        STRONG: ['その程度の手では、私には届きませんよ。', '極上のカードをお見せしましょう。'],
+        MULTI: ['重ねて差し上げましょう。', 'エレガントに行きますよ。'],
+        EIGHT_CUT: ['ここで一度リセットですな。', '流させていただきます。'],
+        ELEVEN_BACK: ['おや、秩序が乱れましたね。', '逆転の兆しです。'],
+        REVOLUTION: ['素晴らしい！ 世界がひっくり返りました！', 'これぞ真の変革！'],
+        PASS: ['ここは紳士的にお譲りしましょう。', 'おや、パスにしておきます。'],
+        ENEMY_FEW: ['おや、もう残り僅かですか。警戒が必要です（笑）。', '詰めが甘いのでは？'],
+        MY_FEW: ['私の勝利へのシナリオは完成しています。', '申し訳ないが勝ち上がらせていただきます。'],
+        WIN: ['私の勝利です。完璧な計算通りでしたね。', 'オーホホホ！ ごめんあそばせ！'],
+        LOSE: ['これは少々計算が狂いましたな。', 'くっ、私のエレガンスが……！'],
+        GAME_START: ['優雅なる勝負を楽しみましょう。', 'よろしくお願いいたしますね。'],
+        EXCHANGE: ['素敵なカードをいただけると嬉しいのですが。', 'お互い良い取引を。'],
+        NEXT_GAME: ['次のゲームも華麗に舞うとしましょう。', 'さあ、参りましょうか。']
+      },
+      COUNT: {
+        NORMAL: ['なるほど。この場面ならこれが最善でしょう。', '確率通りです。', '分析の一手です。'],
+        STRONG: ['この手を残しておく価値は高い。', 'ここが勝負の分岐点ですね。'],
+        MULTI: ['枚数差を作るのは基本です。', '効率的な展開です。'],
+        EIGHT_CUT: ['ここで場をクリアするのが最適解。', '計算通りの8切りです。'],
+        ELEVEN_BACK: ['評価値が逆転しましたね。', '流動的な展開です。'],
+        REVOLUTION: ['確率論を打ち破る革命ですね。', '強弱の基準が反転しました。'],
+        PASS: ['期待値が低い。ここはパスです。', 'リソースを温存します。'],
+        ENEMY_FEW: ['相手の残り枚数を考えると、ここは慎重に。', '詰みのパターンを計算中……'],
+        MY_FEW: ['勝利確率90%以上。詰みですね。', '残りのカードで確定です。'],
+        WIN: ['計算通りの勝利です。', '全ては理論通りに進みました。'],
+        LOSE: ['……確率が悪いですね。', '想定外の変数が多すぎました。'],
+        GAME_START: ['勝率はすでに算出されています。', 'ゲームを開始しましょう。'],
+        EXCHANGE: ['カードの価値を正しく評価しましょう。', '期待値の高い交換を。'],
+        NEXT_GAME: ['次の試行に移りましょう。', 'データを再構築します。']
+      },
+      KNIGHT: {
+        NORMAL: ['いざ、勝負！', '俺のターンだ！', '真っ向勝負！'],
+        STRONG: ['これでどうだ！', '我が剣を受け止めてみよ！', '全力で行くぞ！'],
+        MULTI: ['一気に攻め込む！', '連撃だ！'],
+        EIGHT_CUT: ['場を制する！', 'ここで断ち切る！'],
+        ELEVEN_BACK: ['流れを変えてみせる！', '押し返すぞ！'],
+        REVOLUTION: ['革命だ！！', '世界をひっくり返す！！'],
+        PASS: ['くっ、ここは引く！', '一時撤退だ！', 'ここは耐える！'],
+        ENEMY_FEW: ['敵のあがりが近い！ 全力を尽くせ！', '逃がしはせん！'],
+        MY_FEW: ['勝利への道は見えた！', '覚悟はいいか！'],
+        WIN: ['勝ったぞ！ 我が勝利だ！', '正義は勝つ！'],
+        LOSE: ['まだだ！ まだ終わっていない！', '無念……だが見事な戦いだった！'],
+        GAME_START: ['騎士道に恥じぬ勝負を！', 'いざ出陣！'],
+        EXCHANGE: ['良いカードを頼むぞ！', '感謝する！'],
+        NEXT_GAME: ['次の戦いへ向かうぞ！', '次は負けん！']
+      },
+      MERCHANT: {
+        NORMAL: ['これはいい取引だ。', '安く買っておこう。', '損のない一手。'],
+        STRONG: ['これはまだ使わない。温存だ。', '掘り出し物ですよ。', '大きな投資です！'],
+        MULTI: ['まとめ売りとお買い得です。', 'セットで価値倍増！'],
+        EIGHT_CUT: ['これは大きな利益だ。', 'ここで清算します！'],
+        ELEVEN_BACK: ['相場が動きましたね。', '価値が逆転しました！'],
+        REVOLUTION: ['大暴落！ いや大高騰ですか！？', 'これぞ市場の革命だ！'],
+        PASS: ['そのカード、今使うのはもったいない。', '損切りと行きましょう。', '見送りです。'],
+        ENEMY_FEW: ['相手の資産（手札）が底をつきそうだ！', '警戒コストを払いましょう。'],
+        MY_FEW: ['私の総資産が勝利に届きます！', '完売御礼まであと少し！'],
+        WIN: ['うまく利益を取れましたね。大儲けだ！', 'まいどあり！'],
+        LOSE: ['……損をしたな。', '倒産寸前ですよ……トホホ。'],
+        GAME_START: ['商談開始と行きましょう。', '良いゲームにしましょう。'],
+        EXCHANGE: ['価値ある物物交換を。', '投資の成果が出ると良いですが。'],
+        NEXT_GAME: ['次のビジネスチャンスです！', 'もう一儲けしましょう！']
+      },
+      SCHOLAR: {
+        NORMAL: ['興味深い展開ですね。', 'ふむ、このカードか。', '理論的に行きましょう。'],
+        STRONG: ['理論上、この手が最も効率的です。', '極めて高い数値を提示しましょう。'],
+        MULTI: ['組合せの美学ですね。', '複数学説の提示です。'],
+        EIGHT_CUT: ['理論的には、ここで流すのが最適です。', '事象の強制終了。'],
+        ELEVEN_BACK: ['法則が一時的に反転しました。', '面白い現象だ。'],
+        REVOLUTION: ['これは興味深い。革命です。', '常識が覆る瞬間ですね！'],
+        PASS: ['観察に専念しましょう。', 'あえて手を出さない選択。'],
+        ENEMY_FEW: ['相手の手に法則性が見えます。警戒を。', '終盤のデータが集まりました。'],
+        MY_FEW: ['私の仮説は証明されつつあります。', '結論が出そうですね。'],
+        WIN: ['私の理論の正しさが証明されました。', '素晴らしい実験結果です。'],
+        LOSE: ['これは予想外ですね。実に面白い。', '研究不足でしたか……'],
+        GAME_START: ['さあ、検証を始めましょう。', 'どんなデータが得られるか楽しみです。'],
+        EXCHANGE: ['カードの移動データを観察中……', '有用な素材だと良いのですが。'],
+        NEXT_GAME: ['次の検証段階へ進みましょう。', '再現性を確かめます。']
+      },
+      STRATEGIST: {
+        NORMAL: ['……ここだ。', '予定通り。', '想定内だ。'],
+        STRONG: ['詰みに一手近づいた。', '相手の手を読む。'],
+        MULTI: ['一布石だ。', '面で押す。'],
+        EIGHT_CUT: ['ここで流す。', '盤面をリセットする。'],
+        ELEVEN_BACK: ['裏をかく。', '戦局変化。'],
+        REVOLUTION: ['戦局を一変させる。', '天地返しだ。'],
+        PASS: ['静観する。', 'あせり（焦り）は禁物。'],
+        ENEMY_FEW: ['逃がさない。', 'あがり目を塞ぐ。'],
+        MY_FEW: ['勝ち筋は見えた。', '詰めだ。'],
+        WIN: ['詰みだ。勝利は我が手に。', '計略通り。'],
+        LOSE: ['……読み違えたか。', '見事な一手だった。'],
+        GAME_START: ['盤上の戦いを始めよう。', '一手一手慎重にな。'],
+        EXCHANGE: ['策の一環だ。', 'この交換が響く。'],
+        NEXT_GAME: ['次なる策を練るか。', '次の盤面へ。']
+      },
+      REVOLUTIONARY: {
+        NORMAL: ['これで変わる！', 'まだまだ行くぜ！', '押し通す！'],
+        STRONG: ['全部ひっくり返してやる！', '圧倒的力を見よ！'],
+        MULTI: ['束になってかかってこい！', '勢いを増していくぞ！'],
+        EIGHT_CUT: ['支配を終わらせる！', '強制終了だ！'],
+        ELEVEN_BACK: ['世の理を揺るがす！', 'ひっくり返るぞ！'],
+        REVOLUTION: ['革命だあああ！！', 'ここからが本番だ！！'],
+        PASS: ['これくらいの逆境、望むところだ！', '今は力を溜める！'],
+        ENEMY_FEW: ['追いつめてやる！', '逃げ切れると思うなよ！'],
+        MY_FEW: ['野望成就まであと少し！', '逆転勝利だ！'],
+        WIN: ['勝利をつかみ取ったぞ！', '時代の変革者だ！'],
+        LOSE: ['まだ終わってない！', '次こそはひっくり返す！'],
+        GAME_START: ['変革の風を吹かせてやる！', 'さあ暴れるぞ！'],
+        EXCHANGE: ['いいカードを回せ！', '革命の準備だ！'],
+        NEXT_GAME: ['次の戦いでも暴れてやる！', 'まだまだ行くぜ！']
+      },
+      JESTER: {
+        NORMAL: ['なんとなく、これ！', 'へへへ～', 'どうしようかな～'],
+        STRONG: ['えいっ！びっくりした？', 'じゃじゃ～ん！'],
+        MULTI: ['いっぱい出してみる！', 'ペアペア～♪'],
+        EIGHT_CUT: ['わーい、流れた♪', 'ばいばーい！'],
+        ELEVEN_BACK: ['あべこべにな～れ！', 'ひっくり返っちゃえ！'],
+        REVOLUTION: ['わー！ ひっくり返った！', 'めちゃくちゃだ～！'],
+        PASS: ['うーん、やーめた♪', '内緒♪', 'おやすみ～'],
+        ENEMY_FEW: ['おや？ ピンチかな？', 'そろそろ危ないかも～？'],
+        MY_FEW: ['えへへ、あと少し～！', '勝っちゃうかも！？'],
+        WIN: ['えへへ、勝っちゃった♪', '大成功～！'],
+        LOSE: ['あちゃー、負けちゃった！', 'まあいっか♪'],
+        GAME_START: ['たのしくやろうね～！', 'うふふ、何が出せるかな～'],
+        EXCHANGE: ['いいやつちょうだいね！', 'プレゼントかな～？'],
+        NEXT_GAME: ['もう一回あそぼー！', '次は何しようかな～']
+      },
+      KING: {
+        NORMAL: ['……これだ。', '進めよ。', 'ふむ。'],
+        STRONG: ['終わりに近づいたな。', '屈服せよ。', '王の力だ。'],
+        MULTI: ['重なる波となれ。', '余の攻勢だ。'],
+        EIGHT_CUT: ['場を支配する。', '静寂を戻す。'],
+        ELEVEN_BACK: ['流れを変える。', '反転せよ。'],
+        REVOLUTION: ['……革命か。', '天意は我にあり。'],
+        PASS: ['……見送ろう。', '余談は不要。'],
+        ENEMY_FEW: ['逃がさん。', '王手だ。'],
+        MY_FEW: ['チェックメイトだ。', '王者の刻が来た。'],
+        WIN: ['当然 Result だ。（当然の結果だ。）', '余が王である。'],
+        LOSE: ['……認めよう。', '見事な剣筋であった。'],
+        GAME_START: ['王の戦いを始めよう。', '全力で参れ。'],
+        EXCHANGE: ['望むものを差し出せ。', '受け取ろう。'],
+        NEXT_GAME: ['次の余興と参ろう。', '挑戦を受け入れよう。']
+      }
+    };
+
+    let cpuCooldowns = { cpu1: 0, cpu2: 0, cpu3: 0 };
+    let lastDialogues = {};
+
+    function getCharacterDialogue(characterId, eventType, gameState) {
+      const charDialogues = CHARACTER_DIALOGUES[characterId];
+      if (!charDialogues) return null;
+
+      let category = 'NORMAL';
+
+      switch (eventType) {
+        case 'WIN': category = 'WIN'; break;
+        case 'LOSE': category = 'LOSE'; break;
+        case 'GAME_START': category = 'GAME_START'; break;
+        case 'EXCHANGE': category = 'EXCHANGE'; break;
+        case 'NEXT_GAME': category = 'NEXT_GAME'; break;
+        case 'REVOLUTION': category = 'REVOLUTION'; break;
+        case 'EIGHT_CUT': category = 'EIGHT_CUT'; break;
+        case 'ELEVEN_BACK': category = 'ELEVEN_BACK'; break;
+        case 'PASS': category = 'PASS'; break;
+        case 'PLAY_CARD': {
+          const cards = gameState.lastCards || [];
+          const isMulti = cards.length >= 2;
+          const isStrong = cards.some(c => c.display === '2' || c.display === 'A');
+
+          if (gameState.myHandCount <= 2) category = 'MY_FEW';
+          else if (gameState.enemyMinHandCount <= 2) category = 'ENEMY_FEW';
+          else if (isStrong) category = 'STRONG';
+          else if (isMulti) category = 'MULTI';
+          else category = 'NORMAL';
+          break;
+        }
+      }
+
+      const list = charDialogues[category] || charDialogues['NORMAL'];
+      if (!list || list.length === 0) return null;
+
+      const lastUsed = lastDialogues[`${characterId}_${category}`];
+      let available = list.filter(text => text !== lastUsed);
+      if (available.length === 0) available = list;
+
+      const chosen = available[Math.floor(Math.random() * available.length)];
+      lastDialogues[`${characterId}_${category}`] = chosen;
+      return chosen;
+    }
+
+    function showCharacterDialogue(player, text) {
+      if (!text || player === 'player') return;
+
+      const playerBox = document.getElementById(player);
+      if (!playerBox) return;
+
+      let bubble = playerBox.querySelector('.dialogue-bubble');
+      if (!bubble) {
+        bubble = document.createElement('div');
+        bubble.className = 'dialogue-bubble';
+        playerBox.appendChild(bubble);
+      }
+
+      if (bubble.timeoutId) clearTimeout(bubble.timeoutId);
+
+      bubble.textContent = `「${text}」`;
+      bubble.classList.add('show');
+
+      const displayTime = Math.min(3000, Math.max(1500, text.length * 150));
+
+      const portraitEl = document.getElementById(`${player}-portrait`);
+      if (portraitEl) {
+        if (portraitEl.timeoutId) clearTimeout(portraitEl.timeoutId);
+        portraitEl.classList.add('portrait-talk');
+        portraitEl.timeoutId = setTimeout(() => {
+          portraitEl.classList.remove('portrait-talk');
+        }, displayTime);
+      }
+
+      bubble.timeoutId = setTimeout(() => {
+        bubble.classList.remove('show');
+      }, displayTime);
+    }
+
+    function checkAndTriggerDialogue(player, eventType, extraCards = []) {
+      if (player === 'player') return;
+      const charDef = assignedCharacters[player];
+      if (!charDef) return;
+
+      const rateMap = {
+        'NORMAL': 0.25,
+        'MULTI': 0.35,
+        'STRONG': 0.45,
+        'PASS': 0.35,
+        'EIGHT_CUT': 0.90,
+        'ELEVEN_BACK': 0.90,
+        'REVOLUTION': 1.0,
+        'ENEMY_FEW': 0.70,
+        'MY_FEW': 0.80,
+        'WIN': 1.0,
+        'LOSE': 1.0,
+        'GAME_START': 1.0,
+        'EXCHANGE': 1.0,
+        'NEXT_GAME': 1.0
+      };
+
+      if (cpuCooldowns[player] > 0 && ['NORMAL', 'MULTI', 'STRONG', 'PASS'].includes(eventType)) {
+        cpuCooldowns[player]--;
+        return;
+      }
+
+      const enemyHands = PLAYERS.filter(p => p !== player && !finishedPlayers.includes(p)).map(p => hands[p].length);
+      const enemyMinHandCount = enemyHands.length > 0 ? Math.min(...enemyHands) : 99;
+
+      const gameState = {
+        myHandCount: hands[player].length,
+        enemyMinHandCount: enemyMinHandCount,
+        lastCards: extraCards
+      };
+
+      let evaluatedCategory = eventType;
+      if (eventType === 'PLAY_CARD') {
+        const isMulti = extraCards.length >= 2;
+        const isStrong = extraCards.some(c => c.display === '2' || c.display === 'A');
+        if (hands[player].length <= 2) evaluatedCategory = 'MY_FEW';
+        else if (enemyMinHandCount <= 2) evaluatedCategory = 'ENEMY_FEW';
+        else if (isStrong) evaluatedCategory = 'STRONG';
+        else if (isMulti) evaluatedCategory = 'MULTI';
+        else evaluatedCategory = 'NORMAL';
+      }
+
+      const speakRate = rateMap[evaluatedCategory] || 0.3;
+      if (Math.random() <= speakRate) {
+        const text = getCharacterDialogue(charDef.id, eventType, gameState);
+        if (text) {
+          showCharacterDialogue(player, text);
+          cpuCooldowns[player] = 2;
+        }
+      }
+    }
+
+    function pickRandomCPUCharacters() {
+      const keys = Object.keys(CHARACTER_DEFS).filter(k => !assignedCharacters.player || k !== assignedCharacters.player.id);
+      const shuffled = shuffle([...keys]);
+      assignedCharacters.cpu1 = CHARACTER_DEFS[shuffled[0]];
+      assignedCharacters.cpu2 = CHARACTER_DEFS[shuffled[1]];
+      assignedCharacters.cpu3 = CHARACTER_DEFS[shuffled[2]];
+
+      updateCharacterUI();
+    }
+
+    function updateCharacterUI() {
+      const map = { player: assignedCharacters.player, cpu1: assignedCharacters.cpu1, cpu2: assignedCharacters.cpu2, cpu3: assignedCharacters.cpu3 };
+      Object.keys(map).forEach(p => {
+        const def = map[p];
+        if (!def) return;
+        const titleEl = document.getElementById(`${p}-char-title`);
+        const imgEl = document.getElementById(`${p}-portrait`);
+        if (titleEl) titleEl.textContent = `${def.icon} ${def.name}`;
+        if (imgEl) imgEl.src = CHAR_IMAGES[def.id] || '';
+      });
+    }
+
+    function populateCharIntroPortraits() {
+      document.querySelectorAll('#char-modal img[data-char-img]').forEach(img => {
+        const key = img.getAttribute('data-char-img');
+        img.src = CHAR_IMAGES[key] || '';
+      });
+    }
+
+    function buildCharSelectGrid() {
+      const grid = document.getElementById('char-select-grid');
+      if (!grid) return;
+      grid.innerHTML = '';
+      Object.keys(CHARACTER_DEFS).forEach(key => {
+        const def = CHARACTER_DEFS[key];
+        const card = document.createElement('div');
+        card.className = 'char-select-card';
+        card.innerHTML = `
+          <img src="${CHAR_IMAGES[def.id] || ''}" alt="${def.name}">
+          <div class="csc-name">${def.icon} ${def.name}</div>
+          <div class="csc-desc">${CHAR_SHORT_DESC[def.id] || ''}</div>
+        `;
+        card.addEventListener('click', () => selectPlayerCharacter(def.id));
+        grid.appendChild(card);
+      });
+    }
+
+    function selectPlayerCharacter(id) {
+      soundMgr.playSelect();
+      assignedCharacters.player = CHARACTER_DEFS[id];
+      const overlay = document.getElementById('char-select-overlay');
+      if (overlay) overlay.classList.remove('active');
+      bgmMgr.setCharSelectPhase(false); // BGMを通常時に切り替え
+      resetGame(true, false);
+    }
+
+    function showVictoryPopup(player) {
+      const def = assignedCharacters[player];
+      if (!def) return;
+      const nameLabel = player === 'player' ? `${def.name}（あなた）` : def.name;
+      const portraitEl = document.getElementById('victory-portrait');
+      const nameEl = document.getElementById('victory-name');
+      const popup = document.getElementById('victory-popup');
+      if (!portraitEl || !nameEl || !popup) return;
+
+      portraitEl.src = CHAR_IMAGES[def.id] || '';
+      nameEl.textContent = nameLabel;
+      popup.classList.add('active');
+
+      if (popup.timeoutId) clearTimeout(popup.timeoutId);
+      popup.timeoutId = setTimeout(() => {
+        popup.classList.remove('active');
+      }, 2600);
+    }
+
+    function renderFinalRanking() {
+      const container = document.getElementById('final-ranking-list');
+      if (!container) return;
+      const order = ['大富豪', '富豪', '貧民', '大貧民'];
+      let rowsHtml = '';
+      order.forEach((rankName, idx) => {
+        const p = PLAYERS.find(pl => playerStatusMap[pl] === rankName);
+        if (!p) return;
+        const def = assignedCharacters[p];
+        const img = def ? (CHAR_IMAGES[def.id] || '') : '';
+        const name = (p === 'player' ? 'あなた' : (def ? def.name : p)) + (p === 'player' ? '' : '');
+        rowsHtml += `
+          <div class="final-rank-row${idx === 0 ? ' rank-1' : ''}">
+            <div class="final-rank-position">${rankName}</div>
+            <img src="${img}" alt="">
+            <div class="final-rank-name">${name}${p === 'player' ? ' (You)' : ''}</div>
+          </div>`;
+      });
+      container.innerHTML = rowsHtml;
+    }
+
+    function getAllValidMoves(hand) {
+      const moves = [];
+      const jokers = hand.filter(c => c.isJoker);
+      const nonJokerHand = hand.filter(c => !c.isJoker);
+
+      const groups = {};
+      nonJokerHand.forEach(c => {
+        if (!groups[c.display]) groups[c.display] = [];
+        groups[c.display].push(c);
+      });
+
+      if (fieldCards.length === 0) {
+        for (let disp in groups) {
+          const cards = groups[disp];
+          const maxLen = cards.length + jokers.length;
+          for (let len = 1; len <= maxLen; len++) {
+            const naturalNeed = Math.min(len, cards.length);
+            const jokerNeed = len - naturalNeed;
+            if (jokerNeed > jokers.length) continue;
+            moves.push([...cards.slice(0, naturalNeed), ...jokers.slice(0, jokerNeed)]);
+          }
+        }
+        if (jokers.length >= 1) moves.push([jokers[0]]);
+      } else {
+        const reqLen = fieldCards.length;
+
+        if (reqLen === 1 && fieldCards[0].isJoker) {
+          const spade3 = nonJokerHand.find(c => c.suitSymbol === '♠' && c.display === '3');
+          if (spade3) moves.push([spade3]);
+          return moves;
+        }
+
+        for (let disp in groups) {
+          const cards = groups[disp];
+          const naturalNeed = Math.min(reqLen, cards.length);
+          const jokerNeed = reqLen - naturalNeed;
+          if (naturalNeed === 0) continue;
+          if (jokerNeed > jokers.length) continue;
+          const cand = [...cards.slice(0, naturalNeed), ...jokers.slice(0, jokerNeed)];
+          if (isValidPlay(cand)) moves.push(cand);
+        }
+
+        if (reqLen === 1 && jokers.length >= 1 && isValidPlay([jokers[0]])) {
+          moves.push([jokers[0]]);
+        }
+      }
+      return moves;
+    }
+
+    function evaluateMoveDefault(move) {
+      const count = move.length;
+      const cost = COST_TABLE[move[0].display];
+      return (count * 10) - cost;
+    }
+
+    function decideCpuMove(cpu) {
+      const charDef = assignedCharacters[cpu];
+      const hand = hands[cpu];
+      const validMoves = getAllValidMoves(hand);
+      const canPass = (fieldCards.length > 0);
+
+      if (validMoves.length === 0) return null;
+
+      switch (charDef.id) {
+        case 'DUKE': {
+          const highCards = hand.filter(c => c.display === 'A' || c.display === '2');
+          const otherCards = hand.filter(c => c.display !== 'A' && c.display !== '2');
+          const canClearAll = (highCards.length >= otherCards.length);
+
+          let filteredMoves = validMoves;
+          if (!canClearAll) {
+            filteredMoves = validMoves.filter(m => !m.some(c => c.display === 'A' || c.display === '2'));
+          }
+
+          if (fieldCards.length > 0) {
+            const topCost = COST_TABLE[fieldCards[0].display];
+            const nextPlayer = PLAYERS[(PLAYERS.indexOf(cpu) + 1) % PLAYERS.length];
+            if (topCost >= 1 && topCost <= 7 && hands[nextPlayer].length >= 8) {
+              return null;
+            }
+          }
+
+          if (filteredMoves.length === 0) return canPass ? null : validMoves[0];
+          filteredMoves.sort((a, b) => evaluateMoveDefault(b) - evaluateMoveDefault(a));
+          return filteredMoves[0];
+        }
+
+        case 'MARQUIS': {
+          let bestMove = validMoves[0];
+          let bestScore = -999;
+          for (let move of validMoves) {
+            let score = evaluateMoveDefault(move);
+            if (score > bestScore) {
+              bestScore = score;
+              bestMove = move;
+            }
+          }
+          if (canPass && bestScore < -5) return null;
+          return bestMove;
+        }
+
+        case 'COUNT': {
+          let bestMove = validMoves[0];
+          let bestScore = -999;
+          const isLate = hand.length <= 5;
+
+          for (let move of validMoves) {
+            const count = move.length;
+            const cost = COST_TABLE[move[0].display];
+            let score = isLate ? (count * 10) + (cost * 2) : (count * 10) - (cost * 3);
+            if (score > bestScore) {
+              bestScore = score;
+              bestMove = move;
+            }
+          }
+          return bestMove;
+        }
+
+        case 'KNIGHT': {
+          validMoves.sort((a, b) => {
+            const cA = COST_TABLE[a[0].display];
+            const cB = COST_TABLE[b[0].display];
+            return effectiveReverse() ? cB - cA : cA - cB;
+          });
+          return validMoves[0];
+        }
+
+        case 'MERCHANT': {
+          let bestMove = validMoves[0];
+          let bestScore = -999;
+
+          const groups = {};
+          hand.forEach(c => {
+            if (!groups[c.display]) groups[c.display] = [];
+            groups[c.display].push(c);
+          });
+
+          for (let move of validMoves) {
+            const count = move.length;
+            const cost = COST_TABLE[move[0].display];
+            let score = (count * 10) - cost;
+
+            if (count === 2) score += 15;
+            if (count >= 3) score += 25;
+
+            const originalGroupSize = groups[move[0].display].length;
+            if (count === 1 && originalGroupSize >= 2) score -= 20;
+
+            if (score > bestScore) {
+              bestScore = score;
+              bestMove = move;
+            }
+          }
+          return bestMove;
+        }
+
+        case 'SCHOLAR': {
+          let moves = validMoves;
+          if (fieldCards.length === 0) moves = validMoves.filter(m => m.length < 4);
+
+          if (lastActionLog.cards && lastActionLog.cards.length === 3 && fieldCards.length === 3) {
+            const strongMoves = [...moves].sort((a, b) => {
+              const cA = COST_TABLE[a[0].display];
+              const cB = COST_TABLE[b[0].display];
+              return effectiveReverse() ? cA - cB : cB - cA;
+            });
+            if (strongMoves.length > 0) return strongMoves[0];
+          }
+
+          if (moves.length === 0) return canPass ? null : validMoves[0];
+          moves.sort((a, b) => evaluateMoveDefault(b) - evaluateMoveDefault(a));
+          return moves[0];
+        }
+
+        case 'STRATEGIST': {
+          const dangerPlayer = PLAYERS.some(p => p !== cpu && !finishedPlayers.includes(p) && hands[p].length <= 3);
+          let bestMove = null, bestScore = -999;
+
+          for (let move of validMoves) {
+            let score = evaluateMoveDefault(move);
+            if (dangerPlayer) {
+              if (move[0].display === '8') score += 40;
+              if (move[0].display === 'A' || move[0].display === '2') score += 30;
+            }
+            if (score > bestScore) {
+              bestScore = score;
+              bestMove = move;
+            }
+          }
+
+          if (dangerPlayer && canPass && bestScore < 0) {
+          } else if (canPass && bestScore < -10) {
+            return null;
+          }
+
+          return bestMove || validMoves[0];
+        }
+
+        case 'REVOLUTIONARY': {
+          const quadMove = validMoves.find(m => m.length >= 4);
+          if (quadMove && fieldCards.length === 0) return quadMove;
+
+          let bestMove = validMoves[0], bestScore = -999;
+          for (let move of validMoves) {
+            let score = evaluateMoveDefault(move);
+            if (move[0].display === '8') score += 50;
+            if (score > bestScore) {
+              bestScore = score;
+              bestMove = move;
+            }
+          }
+          return bestMove;
+        }
+
+        case 'JESTER': {
+          const isChaos = Math.random() < 0.4;
+          if (isChaos) {
+            if (canPass && Math.random() < 0.5) return null;
+            const moveWith2 = validMoves.find(m => m.some(c => c.display === '2'));
+            if (moveWith2) return moveWith2;
+            return validMoves[Math.floor(Math.random() * validMoves.length)];
+          }
+          validMoves.sort((a, b) => evaluateMoveDefault(b) - evaluateMoveDefault(a));
+          return validMoves[0];
+        }
+
+        case 'KING': {
+          return kingDecideMove(cpu, hand, validMoves, canPass);
+        }
+
+        default:
+          validMoves.sort((a, b) => evaluateMoveDefault(b) - evaluateMoveDefault(a));
+          return validMoves[0];
+      }
+    }
+
+    function getUnrevealedCards(myHand) {
+      const known = [...myHand, ...playedCardsHistory, ...fieldCards];
+      const allDeck = createDeck();
+      return allDeck.filter(c => !known.some(k => {
+        if (c.isJoker || k.isJoker) return k.isJoker && c.isJoker && k.jokerId === c.jokerId;
+        return k.suitSymbol === c.suitSymbol && k.display === c.display;
+      }));
+    }
+
+    /* ======================================================================
+     * 王(KING) AI — 終盤特化・勝率最大化・ミニマックス＋αβ枝刈り
+     * ----------------------------------------------------------------------
+     * ・評価関数の抜本的改善: 「上がりまでの最短手数」「相手の危険度」を最優先。
+     * ・A/2/JOKERの無駄打ち防止: 単純な強さではなく「親を取る」「確実に上がれる」
+     *   など明確な戦略的優位性がある場合のみ評価を高くする。
+     * ・パスの高度化: 自分の手札を崩してまで無理に出さず、機をうかがう。
+     * ・8切り/11バック/革命: 実行後の自分と相手の有利不利を計算して使用。
+     * ・可変探索深度: 終盤や相手が少ない場合は深く読み、最適解を見つける。
+     * ==================================================================== */
+
+    const KING_AI_DEBUG = false; // コンソール出力フラグ
+    const KING_TIME_BUDGET_MS = 150; // 制限時間（UIフリーズ防止）
+
+    function kingLog(...args) {
+      if (KING_AI_DEBUG && typeof console !== 'undefined') console.log('[王AI]', ...args);
+    }
+
+    function kingDescribeMove(move) {
+      if (!move) return 'パス';
+      return move.map(c => c.isJoker ? `${c.suitSymbol}JOKER` : `${c.suitSymbol}${c.display}`).join(' ');
+    }
+
+    // ---- 実ルール再現（make/unmake）低レベル関数 ----
+
+    function simDoMove(player, move) {
+      const undo = {
+        type: 'move', player,
+        prevHand: hands[player],
+        prevField: fieldCards,
+        prevRevolution: isRevolution,
+        prevElevenBack: isElevenBack,
+        prevConsecutivePasses: consecutivePasses,
+        prevLastPlayedPlayer: lastPlayedPlayer,
+        finishedPushed: false
+      };
+      hands[player] = hands[player].filter(c => !move.includes(c));
+      fieldCards = move;
+      lastPlayedPlayer = player;
+      consecutivePasses = 0;
+      if (move.length >= 4) isRevolution = !isRevolution;
+      if (move[0].display === 'J') isElevenBack = true;
+      if (hands[player].length === 0 && !finishedPlayers.includes(player)) {
+        finishedPlayers.push(player);
+        undo.finishedPushed = true;
+      }
+      return undo;
+    }
+
+    function simUndoMove(undo) {
+      hands[undo.player] = undo.prevHand;
+      fieldCards = undo.prevField;
+      isRevolution = undo.prevRevolution;
+      isElevenBack = undo.prevElevenBack;
+      consecutivePasses = undo.prevConsecutivePasses;
+      lastPlayedPlayer = undo.prevLastPlayedPlayer;
+      if (undo.finishedPushed) finishedPlayers.pop();
+    }
+
+    function simDoPass() {
+      return { type: 'pass', prevConsecutivePasses: consecutivePasses };
+    }
+    function applyPassCount() { consecutivePasses++; }
+
+    function simUndoPass(undo) {
+      consecutivePasses = undo.prevConsecutivePasses;
+    }
+
+    function simAdvanceTurn(currentIdx, wasEightGiri) {
+      const activePlayers = PLAYERS.filter(p => !finishedPlayers.includes(p));
+      const info = { cleared: false, prevField: null, prevElevenBack: null, prevConsecutivePasses: null };
+
+      if (wasEightGiri) {
+        info.cleared = true;
+        info.prevField = fieldCards; info.prevElevenBack = isElevenBack; info.prevConsecutivePasses = consecutivePasses;
+        fieldCards = []; isElevenBack = false; consecutivePasses = 0;
+        info.nextIdx = currentIdx;
+        return info;
+      }
+
+      if (lastPlayedPlayer && (consecutivePasses >= activePlayers.length - 1 || consecutivePasses >= 3)) {
+        info.cleared = true;
+        info.prevField = fieldCards; info.prevElevenBack = isElevenBack; info.prevConsecutivePasses = consecutivePasses;
+        fieldCards = []; isElevenBack = false; consecutivePasses = 0;
+        let nIdx = PLAYERS.indexOf(lastPlayedPlayer);
+        let guard = 0;
+        while (finishedPlayers.includes(PLAYERS[nIdx]) && guard < 8) { nIdx = (nIdx + 1) % PLAYERS.length; guard++; }
+        info.nextIdx = nIdx;
+        return info;
+      }
+
+      let nIdx = (currentIdx + 1) % PLAYERS.length;
+      let guard = 0;
+      while (finishedPlayers.includes(PLAYERS[nIdx]) && guard < 8) { nIdx = (nIdx + 1) % PLAYERS.length; guard++; }
+      info.nextIdx = nIdx;
+      return info;
+    }
+
+    function simUnadvanceTurn(info) {
+      if (info.cleared) {
+        fieldCards = info.prevField;
+        isElevenBack = info.prevElevenBack;
+        consecutivePasses = info.prevConsecutivePasses;
+      }
+    }
+
+    // ---- 最短あがり手数の推定 ----
+
+    function estimateTurnsToWin(hand, reverse) {
+      if (hand.length === 0) return 0;
+      let turns = 0;
+      let controlCards = 0; 
+      
+      const groups = {};
+      let jokerCount = 0;
+      hand.forEach(c => {
+        if (c.isJoker) { jokerCount++; return; }
+        if (!groups[c.display]) groups[c.display] = 0;
+        groups[c.display]++;
+      });
+      
+      const groupKeys = Object.keys(groups);
+      turns = groupKeys.length; // グループ数が基本のターン数
+      
+      if (groups['8']) controlCards += groups['8']; // 8は親を取れる
+      
+      groupKeys.forEach(k => {
+        if (k === '8') return;
+        const cost = COST_TABLE[k];
+        const isStrong = reverse ? cost <= 4 : cost >= 12; // 革命時は弱カードが制圧力を持つ
+        if (isStrong) controlCards++;
+      });
+      
+      controlCards += jokerCount;
+      
+      return Math.max(1, turns - Math.floor(controlCards * 0.8));
+    }
+
+    // ---- 候補手のヒューリスティック評価（枝刈り用） ----
+
+    function kingHeuristicMoveScore(move, hand, reverse) {
+      if (!move || move.length === 0) return 0;
+      let score = 0;
+      const disp = move[0].isJoker ? 'JOKER' : move[0].display;
+      const cost = COST_TABLE[disp];
+      const effCost = reverse ? (14 - cost) : cost;
+      
+      // 弱いカードから優先的に消化させるためのベーススコア（強カードの無駄撃ち防止）
+      score -= effCost; 
+      
+      if (disp === '8') score += 50; 
+      if (disp === 'J') score += 40; 
+      if (move.length >= 4) score += 60; // 革命
+      score += move.length * 10; 
+      
+      if (move.length === hand.length) score += 10000; // 上がれる手は絶対優先
+      
+      return score;
+    }
+
+    function getCandidateMovesForPlayer(player, branchLimit, reverse) {
+      const h = hands[player];
+      const moves = getAllValidMoves(h);
+      const list = [];
+      
+      if (moves.length > 0) {
+        const scored = moves.map(m => ({ m, s: kingHeuristicMoveScore(m, h, reverse) }));
+        scored.sort((a, b) => b.s - a.s);
+        
+        let addedTypes = new Set();
+        const addCand = (m, type) => {
+            const key = m.map(c=>c.isJoker?'J':c.display).join('');
+            if (!addedTypes.has(key)) {
+                list.push(m);
+                addedTypes.add(key);
+            }
+        };
+
+        // 最短で上がれる手
+        const finish = scored.find(x => x.m.length === h.length);
+        if(finish) addCand(finish.m, 'finish');
+
+        // 最小カード・最大カード
+        addCand(scored[scored.length - 1].m, 'min');
+        addCand(scored[0].m, 'max');
+
+        // 8切り
+        const eight = scored.find(x => x.m[0].display === '8');
+        if(eight) addCand(eight.m, '8');
+
+        // 11バック
+        const eleven = scored.find(x => x.m[0].display === 'J');
+        if(eleven) addCand(eleven.m, '11');
+
+        // 革命
+        const rev = scored.find(x => x.m.length >= 4);
+        if(rev) addCand(rev.m, 'rev');
+
+        // ペア・3枚
+        const pair = scored.find(x => x.m.length === 2);
+        if(pair) addCand(pair.m, 'pair');
+        const triple = scored.find(x => x.m.length === 3);
+        if(triple) addCand(triple.m, 'triple');
+
+        // 足りない分をスコア順で埋める
+        for(const item of scored) {
+            if(list.length >= branchLimit) break;
+            addCand(item.m, 'fill');
+        }
+      }
+      
+      if (fieldCards.length > 0) list.push(null); // パス
+      if (list.length === 0) list.push(null);
+      return list;
+    }
+
+    // ---- 局面評価関数（AIの判断のコア） ----
+
+    function kingEvaluateState(kingCpu) {
+      if (finishedPlayers.includes(kingCpu)) {
+        const rankIdx = finishedPlayers.indexOf(kingCpu);
+        return 100000 - rankIdx * 20000; 
+      }
+
+      let score = 0;
+      const kingHand = hands[kingCpu];
+      const reverse = effectiveReverse();
+      
+      const myTurns = estimateTurnsToWin(kingHand, reverse);
+      score -= myTurns * 500; // 最短手数を強力に評価
+      score -= kingHand.length * 20;
+
+      // 手役維持の評価
+      const rankCounts = {};
+      kingHand.forEach(c => { const k = c.isJoker ? 'JOKER' : c.display; rankCounts[k] = (rankCounts[k] || 0) + 1; });
+      Object.values(rankCounts).forEach(cnt => { if (cnt >= 2) score += cnt * 15; });
+
+      // 強カードの将来価値
+      kingHand.forEach(c => {
+        const cost = COST_TABLE[c.isJoker ? 'JOKER' : c.display];
+        const effCost = reverse ? (14 - cost) : cost;
+        score += effCost * 3;
+      });
+
+      // 相手の評価
+      PLAYERS.forEach(p => {
+        if (p === kingCpu) return;
+        if (finishedPlayers.includes(p)) {
+          const rankIdx = finishedPlayers.indexOf(p);
+          score -= (100000 - rankIdx * 20000) / 3;
+          return;
+        }
+        const cnt = hands[p].length;
+        const eTurns = estimateTurnsToWin(hands[p], reverse);
+        score += eTurns * 50;
+        score += cnt * 10;
+        
+        // 相手が上がりそうな場合は深刻なペナルティ（上がり阻止優先）
+        if (cnt <= 3) score -= (4 - cnt) * 500; 
+        if (cnt === 1) score -= 3000;
+      });
+
+      // 親番評価
+      if (fieldCards.length === 0 && lastPlayedPlayer === kingCpu) score += 300;
+
+      return score;
+    }
+
+    // ---- ミニマックス探索（時間制限付き） ----
+
+    function kingMinimax(kingCpu, playerIdx, remainingDepth, alpha, beta, startTime, budgetMs, nodeCounter) {
+      nodeCounter.n++;
+      
+      const now = performance.now();
+      if ((nodeCounter.n & 31) === 0 && (now - startTime) > budgetMs) {
+        nodeCounter.timeout = true;
+        return kingEvaluateState(kingCpu);
+      }
+
+      const activePlayers = PLAYERS.filter(p => !finishedPlayers.includes(p));
+      if (activePlayers.length <= 1 || remainingDepth <= 0) {
+        return kingEvaluateState(kingCpu);
+      }
+
+      let idx = playerIdx, guard = 0;
+      while (finishedPlayers.includes(PLAYERS[idx]) && guard < 8) { idx = (idx + 1) % PLAYERS.length; guard++; }
+      const player = PLAYERS[idx];
+      const isMaximizing = (player === kingCpu);
+
+      const branchLimit = remainingDepth >= 7 ? 2 : (remainingDepth >= 4 ? 4 : 8);
+      const candidates = getCandidateMovesForPlayer(player, branchLimit, effectiveReverse());
+
+      let bestVal = isMaximizing ? -Infinity : Infinity;
+
+      for (const move of candidates) {
+        let undo, wasEightGiri = false;
+        if (move === null) {
+          undo = simDoPass(); applyPassCount();
+        } else {
+          undo = simDoMove(player, move);
+          wasEightGiri = move[0].display === '8';
+        }
+
+        const turnInfo = simAdvanceTurn(idx, wasEightGiri);
+        const val = kingMinimax(kingCpu, turnInfo.nextIdx, remainingDepth - 1, alpha, beta, startTime, budgetMs, nodeCounter);
+        simUnadvanceTurn(turnInfo);
+
+        if (move === null) simUndoPass(undo); else simUndoMove(undo);
+
+        if (nodeCounter.timeout) {
+          if (bestVal === Infinity || bestVal === -Infinity) bestVal = val;
+          break;
+        }
+
+        if (isMaximizing) {
+          if (val > bestVal) bestVal = val;
+          alpha = Math.max(alpha, val);
+        } else {
+          if (val < bestVal) bestVal = val;
+          beta = Math.min(beta, val);
+        }
+        if (beta <= alpha) break; 
+      }
+
+      return bestVal === Infinity || bestVal === -Infinity ? kingEvaluateState(kingCpu) : bestVal;
+    }
+
+    // ---- 仮想手札（world）の生成 ----
+
+    function kingPartitionWorld(unrevealed, players, handSizes, profile) {
+      const world = {};
+      players.forEach(p => world[p] = []);
+      const remaining = {}; players.forEach(p => remaining[p] = handSizes[p]);
+
+      let biasedPool = [], normalPool = [];
+      const mostDangerPlayer = players.reduce((a,b) => handSizes[a] < handSizes[b] ? a : b);
+
+      if (profile === 'danger_focused' || profile === 'worst_for_me') {
+        unrevealed.forEach(c => {
+          const disp = c.isJoker ? 'JOKER' : c.display;
+          if (disp === '8' || disp === '2' || disp === 'A' || disp === 'JOKER') {
+            biasedPool.push(c);
+          } else {
+            normalPool.push(c);
+          }
+        });
+      } else if (profile === 'pair_heavy') {
+        const groups = {};
+        unrevealed.forEach(c => {
+          const k = c.isJoker ? 'JOKER' : c.display;
+          if (!groups[k]) groups[k] = [];
+          groups[k].push(c);
+        });
+        const groupKeys = shuffle(Object.keys(groups));
+        groupKeys.forEach(k => {
+          const group = shuffle(groups[k]);
+          const candidatePlayers = shuffle(players.slice());
+          let assigned = false;
+          for (const p of candidatePlayers) {
+            if (remaining[p] >= group.length) {
+              group.forEach(c => { world[p].push(c); remaining[p]--; });
+              assigned = true;
+              break;
+            }
+          }
+          if (!assigned) normalPool.push(...group);
+        });
+      } else {
+        normalPool = [...unrevealed];
+      }
+
+      if ((profile === 'danger_focused' || profile === 'worst_for_me') && biasedPool.length > 0) {
+        biasedPool = shuffle(biasedPool);
+        for(let i = biasedPool.length - 1; i >= 0; i--) {
+          if (remaining[mostDangerPlayer] > 0) {
+            world[mostDangerPlayer].push(biasedPool[i]);
+            remaining[mostDangerPlayer]--;
+            biasedPool.splice(i, 1);
+          }
+        }
+        normalPool.push(...biasedPool);
+      }
+
+      function assignRoundRobin(pool) {
+        const order = shuffle(pool);
+        let pi = 0;
+        for (const c of order) {
+          let attempts = 0;
+          while (remaining[players[pi % players.length]] <= 0 && attempts < players.length) { pi++; attempts++; }
+          const p = players[pi % players.length];
+          if (remaining[p] > 0) { world[p].push(c); remaining[p]--; }
+          pi++;
+        }
+      }
+
+      assignRoundRobin(normalPool);
+
+      return world;
+    }
+
+    function kingGenerateSampleWorlds(activeOthers, unrevealed, numWorlds) {
+      const profiles = ['balanced', 'danger_focused', 'worst_for_me', 'pair_heavy', 'balanced'];
+      const handSizes = {}; activeOthers.forEach(p => handSizes[p] = hands[p].length);
+      const worlds = [];
+      for (let i = 0; i < numWorlds; i++) {
+        worlds.push(kingPartitionWorld(unrevealed, activeOthers, handSizes, profiles[i % profiles.length]));
+      }
+      return worlds;
+    }
+
+    // 絶対に負けない手（絶対安全手）を判定
+    function isGuaranteedAbsoluteWin(move, unrevealed) {
+      if (move.length === 1 && move[0].isJoker) return true;
+      
+      const moveCost = COST_TABLE[move[0].isJoker ? 'JOKER' : move[0].display];
+      const count = move.length;
+      
+      const groups = {};
+      let jokerCount = 0;
+      unrevealed.forEach(c => {
+        if (c.isJoker) { jokerCount++; return; }
+        groups[c.display] = (groups[c.display] || 0) + 1;
+      });
+      
+      if (count === 1 && move[0].isJoker && groups['3'] && unrevealed.some(c => c.suitSymbol === '♠' && c.display === '3')) {
+        return false;
+      }
+      
+      const rev = effectiveReverse();
+      for (const disp in groups) {
+        const cost = COST_TABLE[disp];
+        const isStronger = rev ? cost < moveCost : cost > moveCost;
+        if (isStronger) {
+          if (groups[disp] + jokerCount >= count) return false;
+        }
+      }
+      
+      if (jokerCount >= count && moveCost < COST_TABLE['JOKER']) return false;
+      return true;
+    }
+
+    function findWinningMoveMinimax(cpu, hand) {
+      const moves = getAllValidMoves(hand);
+      for (let move of moves) {
+        if (move.length === hand.length) return move;
+      }
+      return null;
+    }
+
+    // ---- 探索エントリーポイント ----
+
+    function kingDecideMove(cpu, hand, validMoves, canPass) {
+      const startTime = performance.now();
+
+      const totalCardsInPlay = PLAYERS.reduce((sum, p) => sum + hands[p].length, 0);
+      const unrevealedForCheck = getUnrevealedCards(hand);
+      const strongMoves = validMoves.filter(m => isGuaranteedAbsoluteWin(m, unrevealedForCheck));
+      
+      // 直ちに上がれる場合は即座に出す
+      if (totalCardsInPlay <= 15) {
+        const winMove = findWinningMoveMinimax(cpu, hand);
+        if (winMove) return winMove;
+      }
+      
+      const myTurns = estimateTurnsToWin(hand, effectiveReverse());
+      if (strongMoves.length > 0 && myTurns <= 2) {
+        // 残り手数が少なく、絶対勝てる手があれば優先的に出して親を取る
+        strongMoves.sort((a, b) => b.length - a.length);
+        return strongMoves[0];
+      }
+
+      // ゲーム進行度に応じて探索の深さを可変
+      let searchDepth;
+      if (totalCardsInPlay > 35) searchDepth = 4;
+      else if (totalCardsInPlay > 20) searchDepth = 5;
+      else if (totalCardsInPlay > 12) searchDepth = 7;
+      else searchDepth = 9;
+
+      const activeOthers = PLAYERS.filter(p => p !== cpu && !finishedPlayers.includes(p));
+      const minEnemyHand = activeOthers.length > 0 ? Math.min(...activeOthers.map(p => hands[p].length)) : 99;
+      if (minEnemyHand <= 3) {
+        searchDepth += 2; // 誰かが上がりそうな時は深く警戒して読む
+      }
+
+      if (activeOthers.length === 0) {
+        validMoves.sort((a, b) => evaluateMoveDefault(b) - evaluateMoveDefault(a));
+        return validMoves[0];
+      }
+
+      const unrevealed = getUnrevealedCards(hand);
+      const numWorlds = totalCardsInPlay > 30 ? 2 : (totalCardsInPlay > 12 ? 3 : 5);
+      const worlds = kingGenerateSampleWorlds(activeOthers, unrevealed, numWorlds);
+
+      // ルート候補手の絞り込み
+      const rootBranchLimit = 10;
+      const reverse = effectiveReverse();
+      const scoredRoot = validMoves.map(m => ({ m, s: kingHeuristicMoveScore(m, hand, reverse) }));
+      scoredRoot.sort((a, b) => b.s - a.s);
+      
+      let candidateMoves = [];
+      let addedTypes = new Set();
+      for (const item of scoredRoot) {
+        const m = item.m;
+        const disp = m[0].isJoker ? 'JOKER' : m[0].display;
+        let type = disp + '_' + m.length;
+        if (disp === '8') type = '8_cut';
+        if (m.length >= 4) type = 'revolution';
+        if (disp === 'J') type = '11_back';
+        if (m.length === hand.length) type = 'finish';
+        
+        if (!addedTypes.has(type)) {
+          candidateMoves.push(m);
+          addedTypes.add(type);
+        }
+        if (candidateMoves.length >= rootBranchLimit) break;
+      }
+      if (canPass) candidateMoves.push(null);
+
+      const kingIdx = PLAYERS.indexOf(cpu);
+      const nodeCounter = { n: 0, timeout: false };
+
+      let bestMove = candidateMoves[0] || null;
+      let bestBlended = -Infinity;
+
+      for (const move of candidateMoves) {
+        if (nodeCounter.timeout || (performance.now() - startTime) > KING_TIME_BUDGET_MS) break;
+
+        let total = 0, worst = Infinity, evaluated = 0;
+
+        for (const world of worlds) {
+          if (nodeCounter.timeout || (performance.now() - startTime) > KING_TIME_BUDGET_MS) break;
+
+          const savedHands = {};
+          activeOthers.forEach(p => { savedHands[p] = hands[p]; hands[p] = world[p]; });
+
+          let undo, wasEightGiri = false;
+          if (move === null) { undo = simDoPass(); applyPassCount(); }
+          else { undo = simDoMove(cpu, move); wasEightGiri = move[0].display === '8'; }
+
+          const turnInfo = simAdvanceTurn(kingIdx, wasEightGiri);
+          const val = kingMinimax(cpu, turnInfo.nextIdx, searchDepth - 1, -Infinity, Infinity, startTime, KING_TIME_BUDGET_MS, nodeCounter);
+          simUnadvanceTurn(turnInfo);
+          if (move === null) simUndoPass(undo); else simUndoMove(undo);
+
+          // 手札を元に戻す
+          activeOthers.forEach(p => { hands[p] = savedHands[p]; });
+
+          total += val; worst = Math.min(worst, val); evaluated++;
+        }
+
+        if (evaluated === 0) continue;
+        const avg = total / evaluated;
+        // 平均評価と最悪ケース評価をブレンド (最悪ケース重視で手堅く立ち回る)
+        const blended = avg * 0.3 + worst * 0.7;
+
+        if (blended > bestBlended) { bestBlended = blended; bestMove = move; }
+      }
+
+      kingLog('思考完了', { nodes: nodeCounter.n, timeout: nodeCounter.timeout, best: kingDescribeMove(bestMove) });
+
+      if (bestMove === undefined) bestMove = null;
+      if (bestMove === null && !canPass) {
+        validMoves.sort((a, b) => evaluateMoveDefault(b) - evaluateMoveDefault(a));
+        return validMoves[0];
+      }
+      return bestMove;
+    }
+
+    /* ----------------------------------------------------
+     * ゲーム状態・変数
+     * ---------------------------------------------------- */
+    let hands = { player: [], cpu1: [], cpu2: [], cpu3: [] };
+    let playerPassCounts = { player: 0, cpu1: 0, cpu2: 0, cpu3: 0 };
+    let fieldCards = [];
+    let lastPlayedPlayer = null;
+    let currentTurnIndex = 0;
+    let consecutivePasses = 0;
+    let selectedIndices = [];
+    let isProcessing = false;
+    let finishedPlayers = [];
+    let playerStatusMap = {};
+    let previousRanks = {};
+    let isRevolution = false;
+    let isElevenBack = false;
+    let isExchangePhase = false;
+    let isPreExchangePhase = false;
+    let requiredExchangeCount = 0;
+    let gameEnded = false;
+
+    function getSpeedMultiplier() {
+      return finishedPlayers.includes('player') ? 2 : 1;
+    }
+
+    function effectiveReverse() { return isRevolution !== isElevenBack; }
+
+    function createDeck() {
+      const deck = [];
+      for (const suit of SUITS) {
+        for (const rank of RANKS) {
+          deck.push({ suitSymbol: suit.symbol, suitClass: suit.class, display: rank.display, strength: rank.strength, isJoker: false });
+        }
+      }
+      deck.push({ suitSymbol: '★', suitClass: 'joker', display: 'JOKER', strength: 99, isJoker: true, jokerId: 'J1' });
+      deck.push({ suitSymbol: '☆', suitClass: 'joker', display: 'JOKER', strength: 99, isJoker: true, jokerId: 'J2' });
+      return deck;
+    }
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function compareStrength(a, b) {
+      if (a.isJoker && b.isJoker) return 0;
+      if (a.isJoker) return 1;
+      if (b.isJoker) return -1;
+      return effectiveReverse() ? b.strength - a.strength : a.strength - b.strength;
+    }
+
+    function sortHand(hand) { return hand.sort((a, b) => compareStrength(a, b)); }
+
+    function setFirstTurnByDiamond3() {
+      const charNameMap = {
+        player: 'あなた',
+        cpu1: assignedCharacters.cpu1 ? assignedCharacters.cpu1.name : 'CPU 1',
+        cpu2: assignedCharacters.cpu2 ? assignedCharacters.cpu2.name : 'CPU 2',
+        cpu3: assignedCharacters.cpu3 ? assignedCharacters.cpu3.name : 'CPU 3'
+      };
+
+      for (let i = 0; i < PLAYERS.length; i++) {
+        const player = PLAYERS[i];
+        if (hands[player].some(c => c.suitSymbol === '♦' && c.display === '3')) {
+          currentTurnIndex = i;
+          setMessage(`${charNameMap[player]}が「♦3」を所持しています。${charNameMap[player]}のターンからスタートします！`);
+          if (player !== 'player') {
+            checkAndTriggerDialogue(player, 'GAME_START');
+          }
+          return;
+        }
+      }
+      currentTurnIndex = 0;
+      setMessage('ゲーム開始！あなたのターンです。');
+    }
+
+    function resetGame(reshuffleCharacters = false, keepRanks = false) {
+      if (!keepRanks || reshuffleCharacters) {
+        previousRanks = {};
+      }
+      initRuleTexts();
+      if (reshuffleCharacters || !assignedCharacters.cpu1) {
+        pickRandomCPUCharacters();
+      }
+      startNewGame();
+    }
+
+    function initRuleTexts() {
+      const ruleListPass = document.getElementById('rule-list-pass');
+      const ruleItemPassTitle = document.getElementById('rule-item-pass-title');
+      const ruleItemPassDesc = document.getElementById('rule-item-pass-desc');
+
+      if (ALLOW_LIMIT_PASS) {
+        ruleListPass.textContent = `パス${MAX_PASS_LIMIT}回でドボン`;
+        ruleItemPassTitle.textContent = `パス${MAX_PASS_LIMIT}回でドボン (Pass Penalty)`;
+        ruleItemPassDesc.textContent = `1ゲーム中に通算${MAX_PASS_LIMIT}回パスを行うと「ドボン（強制最下位）」となります。`;
+      } else {
+        ruleListPass.textContent = 'パス制限なし';
+        ruleItemPassTitle.textContent = 'パスの制限 (Pass Rules)';
+        ruleItemPassDesc.textContent = 'パスは回数制限がなく、何度でも無制限に行うことができます。';
+      }
+    }
+
+    function startNewGame() {
+      const deck = shuffle(createDeck());
+      isRevolution = false; isElevenBack = false;
+      playedCardsHistory = [];
+      lastActionLog = { player: null, cards: [] };
+      cpuCooldowns = { cpu1: 0, cpu2: 0, cpu3: 0 };
+
+      const dealOrder = shuffle([...PLAYERS]);
+      hands.player = []; hands.cpu1 = []; hands.cpu2 = []; hands.cpu3 = [];
+      deck.forEach((card, i) => { hands[dealOrder[i % dealOrder.length]].push(card); });
+      PLAYERS.forEach(p => sortHand(hands[p]));
+
+      playerPassCounts = { player: 0, cpu1: 0, cpu2: 0, cpu3: 0 };
+      hasPassedInRound = { player: false, cpu1: false, cpu2: false, cpu3: false };
+      fieldCards = []; lastPlayedPlayer = null; currentTurnIndex = 0;
+      consecutivePasses = 0; selectedIndices = []; isProcessing = false;
+      finishedPlayers = []; gameEnded = false; playerStatusMap = {};
+
+      updateStatusUI();
+      bgmMgr.update(isRevolution, isElevenBack);
+
+      if (Object.keys(previousRanks).length > 0) {
+        isPreExchangePhase = true; isExchangePhase = false;
+        setMessage('カードが配布されました。「カード交換へ」ボタンを押してカード交換を開始してください。');
+        render(true);
+      } else {
+        isPreExchangePhase = false; isExchangePhase = false;
+        setFirstTurnByDiamond3();
+        render(true);
+        checkTurn();
+      }
+    }
+
+    function proceedToExchange() {
+      soundMgr.playSelect();
+      isPreExchangePhase = false; isExchangePhase = true;
+
+      let daifugo = null, fugo = null, hinmin = null, daihinmin = null;
+      for (let p of PLAYERS) {
+        if (previousRanks[p] === '大富豪') daifugo = p;
+        if (previousRanks[p] === '富豪') fugo = p;
+        if (previousRanks[p] === '貧民') hinmin = p;
+        if (previousRanks[p] === '大貧民') daihinmin = p;
+      }
+
+      if (daihinmin && daifugo) {
+        hands[daihinmin].sort((a, b) => b.strength - a.strength);
+        hands[daifugo].push(...hands[daihinmin].splice(0, 2));
+        sortHand(hands[daifugo]);
+      }
+
+      if (hinmin && fugo) {
+        hands[hinmin].sort((a, b) => b.strength - a.strength);
+        hands[fugo].push(...hands[hinmin].splice(0, 1));
+        sortHand(hands[fugo]);
+      }
+
+      if (daifugo && daifugo !== 'player') {
+        hands[daifugo].sort((a, b) => a.strength - b.strength);
+        hands[daihinmin].push(...hands[daifugo].splice(0, 2));
+        sortHand(hands[daihinmin]);
+        checkAndTriggerDialogue(daifugo, 'EXCHANGE');
+      }
+
+      if (fugo && fugo !== 'player') {
+        hands[fugo].sort((a, b) => a.strength - b.strength);
+        hands[hinmin].push(...hands[fugo].splice(0, 1));
+        sortHand(hands[hinmin]);
+        checkAndTriggerDialogue(fugo, 'EXCHANGE');
+      }
+
+      if (previousRanks['player'] === '大富豪') {
+        requiredExchangeCount = 2;
+        setMessage('【カード交換】手札から大貧民へ渡すカードを2枚選んで「交換決定」を押してください。');
+        render(true);
+      } else if (previousRanks['player'] === '富豪') {
+        requiredExchangeCount = 1;
+        setMessage('【カード交換】手札から貧民へ渡すカードを1枚選んで「交換決定」を押してください。');
+        render(true);
+      } else {
+        isExchangePhase = false;
+        PLAYERS.forEach(p => sortHand(hands[p]));
+        setFirstTurnByDiamond3();
+        render(true);
+        checkTurn();
+      }
+    }
+
+    function confirmExchange() {
+      if (selectedIndices.length !== requiredExchangeCount) {
+        setMessage(`カードを正しく${requiredExchangeCount}枚選択してください。`);
+        return;
+      }
+      soundMgr.playCardPlay();
+      let targetPlayer = (previousRanks['player'] === '大富豪') ? 
+        PLAYERS.find(p => previousRanks[p] === '大貧民') : PLAYERS.find(p => previousRanks[p] === '貧民');
+
+      selectedIndices.sort((a, b) => b - a);
+      let givenCards = [];
+      for (let idx of selectedIndices) givenCards.push(hands.player.splice(idx, 1)[0]);
+
+      if (targetPlayer) {
+        hands[targetPlayer].push(...givenCards);
+        sortHand(hands[targetPlayer]);
+      }
+
+      selectedIndices = []; isExchangePhase = false;
+      PLAYERS.forEach(p => sortHand(hands[p]));
+      setFirstTurnByDiamond3();
+      render(true);
+      checkTurn();
+    }
+
+    function setMessage(msg) { document.getElementById('message-text').textContent = msg; }
+
+    function updateStatusUI() {
+      document.getElementById('revolution-status').classList.toggle('active', isRevolution);
+      document.getElementById('eleven-back-status').classList.toggle('active', isElevenBack);
+    }
+
+    function getPlayStrength(cards) {
+      if (cards.length === 1 && cards[0].isJoker) return 9999;
+      const nonJoker = cards.filter(c => !c.isJoker);
+      if (nonJoker.length === 0) return 9999;
+      return nonJoker[0].strength;
+    }
+
+    function isValidPlay(cards) {
+      if (!cards || cards.length === 0) return false;
+
+      if (fieldCards.length === 1 && fieldCards[0].isJoker &&
+          cards.length === 1 && !cards[0].isJoker &&
+          cards[0].suitSymbol === '♠' && cards[0].display === '3') {
+        return true;
+      }
+
+      const nonJokerCards = cards.filter(c => !c.isJoker);
+      if (nonJokerCards.length > 0) {
+        const firstDisplay = nonJokerCards[0].display;
+        if (!nonJokerCards.every(c => c.display === firstDisplay)) return false;
+      }
+
+      if (fieldCards.length === 0) return true;
+      if (cards.length !== fieldCards.length) return false;
+
+      if (fieldCards.length === 1 && fieldCards[0].isJoker) return false;
+
+      const selectedStrength = getPlayStrength(cards);
+      const topFieldStrength = getPlayStrength(fieldCards);
+      return effectiveReverse() ? selectedStrength < topFieldStrength : selectedStrength > topFieldStrength;
+    }
+
+    function toggleSelectCardByCard(card) {
+      const index = hands.player.indexOf(card);
+      if (index < 0) return;
+      toggleSelectCard(index);
+    }
+
+    function toggleSelectCard(index) {
+      if (isProcessing && !isExchangePhase) return;
+      if (isPreExchangePhase) return;
+      if (!isExchangePhase && PLAYERS[currentTurnIndex] !== 'player') return;
+
+      const handEl = document.getElementById('player-hand');
+      const cardEls = handEl ? handEl.children : [];
+      const selPos = selectedIndices.indexOf(index);
+
+      if (selPos > -1) {
+        selectedIndices.splice(selPos, 1);
+        soundMgr.playDeselect();
+        if (cardEls[index]) cardEls[index].classList.remove('selected');
+      } else {
+        if (isExchangePhase && selectedIndices.length >= requiredExchangeCount) {
+          const removedIndex = selectedIndices.shift();
+          if (cardEls[removedIndex]) cardEls[removedIndex].classList.remove('selected');
+        }
+        selectedIndices.push(index);
+        soundMgr.playSelect();
+        if (cardEls[index]) cardEls[index].classList.add('selected');
+      }
+      updateControlsOnly();
+    }
+
+    function playerPlayCard() {
+      if (isProcessing || PLAYERS[currentTurnIndex] !== 'player') return;
+      if (selectedIndices.length === 0) { setMessage('出したいカードを選択してください。'); return; }
+
+      const selectedCards = selectedIndices.map(i => hands.player[i]);
+      if (!isValidPlay(selectedCards)) { setMessage('選択したカードはルール上出すことができません。'); return; }
+
+      const playedIndices = [...selectedIndices];
+
+      animateCardMovement('player', playedIndices, selectedCards, () => {
+        playedIndices.sort((a, b) => b - a).forEach(i => hands.player.splice(i, 1));
+        playCardSuccess('player', selectedCards, false, playedIndices);
+      });
+    }
+
+    function playerPass() {
+      if (isProcessing || PLAYERS[currentTurnIndex] !== 'player') return;
+      selectedIndices = []; soundMgr.playPass(); processPass('player');
+    }
+
+    function animateCardMovement(player, indices, cardsToPlay, callback) {
+      isProcessing = true; soundMgr.playCardPlay();
+      const speedMult = getSpeedMultiplier();
+      const targetRect = document.getElementById('field-container-el').getBoundingClientRect();
+      let originRects = [];
+
+      if (player === 'player') {
+        const cardEls = document.getElementById('player-hand').querySelectorAll('.card');
+        indices.forEach(idx => {
+          if (cardEls[idx]) { originRects.push(cardEls[idx].getBoundingClientRect()); cardEls[idx].style.visibility = 'hidden'; }
+        });
+      } else {
+        const cpuBox = document.getElementById(player);
+        const stackEl = document.getElementById(`${player}-stack`);
+        const baseRect = (stackEl && stackEl.children.length > 0) ? stackEl.children[0].getBoundingClientRect() : cpuBox.getBoundingClientRect();
+        cardsToPlay.forEach((_, i) => originRects.push({ left: baseRect.left + (i * 10), top: baseRect.top, width: 40, height: 60 }));
+      }
+
+      if (originRects.length === 0) { isProcessing = false; callback(); return; }
+
+      const clones = [];
+      cardsToPlay.forEach((card, idx) => {
+        const rect = originRects[idx] || originRects[0];
+        const clone = createCardElement(card);
+        clone.classList.add('card-play-anim');
+        clone.style.setProperty('--speed-factor', speedMult);
+        clone.style.left = `${rect.left}px`; clone.style.top = `${rect.top}px`;
+        document.body.appendChild(clone); clones.push(clone);
+      });
+
+      setTimeout(() => {
+        const cardW = clones[0].offsetWidth || 50;
+        const totalWidth = clones.length * cardW + (clones.length - 1) * 6;
+        const startX = targetRect.left + (targetRect.width - totalWidth) / 2;
+        clones.forEach((clone, idx) => {
+          clone.style.left = `${startX + idx * (cardW + 6)}px`;
+          clone.style.top = `${targetRect.top + targetRect.height / 2 - clone.offsetHeight / 2}px`;
+        });
+      }, 20);
+
+      setTimeout(() => {
+        clones.forEach(c => c.remove());
+        isProcessing = false; callback();
+      }, 350 / speedMult);
+    }
+
+    function playCardSuccess(player, cards, needFullRedraw = false, playedIndices = []) {
+      const wasFieldLoneJoker = fieldCards.length === 1 && fieldCards[0].isJoker;
+      fieldCards = cards; lastPlayedPlayer = player; consecutivePasses = 0; selectedIndices = [];
+      playedCardsHistory.push(...cards);
+      lastActionLog = { player, cards };
+
+      const charNameMap = {
+        player: 'あなた',
+        cpu1: assignedCharacters.cpu1 ? assignedCharacters.cpu1.name : 'CPU 1',
+        cpu2: assignedCharacters.cpu2 ? assignedCharacters.cpu2.name : 'CPU 2',
+        cpu3: assignedCharacters.cpu3 ? assignedCharacters.cpu3.name : 'CPU 3'
+      };
+
+      const cardStr = cards.map(c => c.isJoker ? `${c.suitSymbol}JOKER` : `${c.suitSymbol}${c.display}`).join(' ');
+      let actionText = `${charNameMap[player]}が「${cardStr}」を出しました。`;
+      let hasSpecial = false;
+      let specialEventType = null;
+
+      const isSpade3Return = wasFieldLoneJoker && cards.length === 1 && !cards[0].isJoker &&
+        cards[0].suitSymbol === '♠' && cards[0].display === '3';
+      const isJokerSolo = cards.length === 1 && cards[0].isJoker;
+
+      if (isSpade3Return) {
+        actionText += ` スペード3返し発動！ジョーカーを打ち破った！`;
+        hasSpecial = true; specialEventType = 'STRONG';
+        soundMgr.playSpade3Return();
+      } else if (isJokerSolo) {
+        actionText += ` ジョーカー、絶対強者の一枚！`;
+        hasSpecial = true; specialEventType = 'STRONG';
+        soundMgr.playJoker();
+      }
+
+      if (cards.length >= 4) {
+        isRevolution = !isRevolution; actionText += ` 革命発生！`;
+        PLAYERS.forEach(p => sortHand(hands[p])); needFullRedraw = true; hasSpecial = true;
+        specialEventType = 'REVOLUTION';
+      }
+      if (cards[0].display === 'J') {
+        isElevenBack = true; actionText += ` 11バック発動！`;
+        PLAYERS.forEach(p => sortHand(hands[p])); needFullRedraw = true; hasSpecial = true;
+        if (!specialEventType) specialEventType = 'ELEVEN_BACK';
+      }
+      const isEightGiri = cards[0].display === '8';
+      if (isEightGiri) { 
+        actionText += ` 8切り発動！`; hasSpecial = true; 
+        if (!specialEventType) specialEventType = 'EIGHT_CUT';
+      }
+
+      if (hasSpecial && !isSpade3Return && !isJokerSolo) soundMgr.playSpecial();
+      setMessage(actionText); updateStatusUI();
+      bgmMgr.update(isRevolution, isElevenBack);
+
+      if (player !== 'player') {
+        checkAndTriggerDialogue(player, specialEventType || 'PLAY_CARD', cards);
+      }
+
+      if (hands[player].length === 0 && !finishedPlayers.includes(player)) {
+        finishedPlayers.push(player); assignWinRank(player); soundMgr.playWin();
+        setMessage(`${charNameMap[player]}が上がり！【${playerStatusMap[player]}】確定！`);
+        if (player !== 'player') {
+          checkAndTriggerDialogue(player, 'WIN');
+        }
+      }
+
+      const speedMult = getSpeedMultiplier();
+      if (isEightGiri) {
+        isProcessing = true;
+        if (needFullRedraw) render(true);
+        else syncPlayerHandAfterPlay(playedIndices);
+        render(false);
+        setTimeout(() => clearField(player), 1200 / speedMult);
+      } else {
+        if (needFullRedraw) {
+          render(true);
+        } else if (player === 'player') {
+          syncPlayerHandAfterPlay(playedIndices);
+          render(false);
+        } else {
+          render(false);
+        }
+        nextTurn();
+      }
+    }
+
+    function triggerDobon(player) {
+      const charNameMap = {
+        player: 'あなた',
+        cpu1: assignedCharacters.cpu1 ? assignedCharacters.cpu1.name : 'CPU 1',
+        cpu2: assignedCharacters.cpu2 ? assignedCharacters.cpu2.name : 'CPU 2',
+        cpu3: assignedCharacters.cpu3 ? assignedCharacters.cpu3.name : 'CPU 3'
+      };
+      if (!finishedPlayers.includes(player)) finishedPlayers.push(player);
+      hands[player] = []; assignDobonRank(player);
+      setMessage(`${charNameMap[player]}が${MAX_PASS_LIMIT}回目のパスで「ドボン」！【${playerStatusMap[player]}】確定！`);
+      if (player !== 'player') {
+        checkAndTriggerDialogue(player, 'LOSE');
+      }
+      nextTurn();
+    }
+
+    function assignWinRank(player) {
+      const ranksInOrder = ['大富豪', '富豪', '貧民', '大貧民'];
+      for (let r of ranksInOrder) {
+        if (!Object.values(playerStatusMap).includes(r)) {
+          playerStatusMap[player] = r;
+          if (r === '大富豪') showVictoryPopup(player);
+          break;
+        }
+      }
+    }
+
+    function assignDobonRank(player) {
+      const ranksInReverseOrder = ['大貧民', '貧民', '富豪', '大富豪'];
+      for (let r of ranksInReverseOrder) {
+        if (!Object.values(playerStatusMap).includes(r)) { playerStatusMap[player] = r; break; }
+      }
+    }
+
+    function processPass(player) {
+      playerPassCounts[player]++; consecutivePasses++; selectedIndices = [];
+      hasPassedInRound[player] = true;
+
+      const charNameMap = {
+        player: 'あなた',
+        cpu1: assignedCharacters.cpu1 ? assignedCharacters.cpu1.name : 'CPU 1',
+        cpu2: assignedCharacters.cpu2 ? assignedCharacters.cpu2.name : 'CPU 2',
+        cpu3: assignedCharacters.cpu3 ? assignedCharacters.cpu3.name : 'CPU 3'
+      };
+
+      if (player !== 'player') {
+        checkAndTriggerDialogue(player, 'PASS');
+      }
+
+      if (ALLOW_LIMIT_PASS && playerPassCounts[player] >= MAX_PASS_LIMIT) {
+        triggerDobon(player); return;
+      }
+      setMessage(`${charNameMap[player]}がパスしました。次のターンに移ります。`);
+      nextTurn();
+    }
+
+    function nextTurn() {
+      const activePlayers = PLAYERS.filter(p => !finishedPlayers.includes(p));
+
+      if (activePlayers.length <= 1) {
+        if (activePlayers.length === 1) {
+          const lastPlayer = activePlayers[0];
+          finishedPlayers.push(lastPlayer);
+          assignWinRank(lastPlayer);
+          if (lastPlayer !== 'player') {
+            checkAndTriggerDialogue(lastPlayer, 'LOSE');
+          }
+        }
+        gameEnded = true; previousRanks = { ...playerStatusMap };
+        render(false);
+        setMessage('ゲームセット！全員の順位が確定しました。');
+        renderFinalRanking();
+        document.getElementById('next-game-modal').classList.add('active');
+        return;
+      }
+
+      const speedMult = getSpeedMultiplier();
+      if (lastPlayedPlayer && (consecutivePasses >= activePlayers.length - 1 || consecutivePasses >= 3)) {
+        isProcessing = true; render(false);
+        setTimeout(() => clearField(), 1200 / speedMult);
+        return;
+      }
+
+      do {
+        currentTurnIndex = (currentTurnIndex + 1) % PLAYERS.length;
+      } while (finishedPlayers.includes(PLAYERS[currentTurnIndex]));
+
+      checkTurn();
+    }
+
+    function clearField(specifiedNextPlayer = null) {
+      const fieldCardsEl = document.getElementById('field-cards');
+      fieldCardsEl.classList.add('clear-animation');
+
+      setTimeout(() => {
+        fieldCards = []; consecutivePasses = 0;
+        fieldCardsEl.classList.remove('clear-animation');
+
+        PLAYERS.forEach(p => hasPassedInRound[p] = false);
+
+        let needHandRedraw = false;
+        if (isElevenBack) {
+          isElevenBack = false;
+          PLAYERS.forEach(p => sortHand(hands[p]));
+          selectedIndices = []; needHandRedraw = true;
+        }
+
+        updateStatusUI();
+        bgmMgr.update(isRevolution, isElevenBack);
+
+        if (specifiedNextPlayer) {
+          currentTurnIndex = PLAYERS.indexOf(specifiedNextPlayer);
+        } else if (lastPlayedPlayer) {
+          currentTurnIndex = PLAYERS.indexOf(lastPlayedPlayer);
+        }
+
+        while (finishedPlayers.includes(PLAYERS[currentTurnIndex])) {
+          currentTurnIndex = (currentTurnIndex + 1) % PLAYERS.length;
+        }
+
+        lastPlayedPlayer = null; isProcessing = false;
+        if (needHandRedraw) render(true);
+        checkTurn();
+      }, 400);
+    }
+
+    function checkTurn() {
+      const currentPlayer = PLAYERS[currentTurnIndex];
+
+      hasPassedInRound[currentPlayer] = false;
+
+      if (currentPlayer === 'player') {
+        isProcessing = false; render(false);
+      } else {
+        isProcessing = true; render(false);
+        const speedMult = getSpeedMultiplier();
+        setTimeout(() => cpuPlayTurn(currentPlayer), 1000 / speedMult);
+      }
+    }
+
+    function cpuPlayTurn(cpu) {
+      const chosenMove = decideCpuMove(cpu);
+      if (chosenMove) {
+        const targetIndices = chosenMove.map(c => hands[cpu].indexOf(c));
+        animateCardMovement(cpu, targetIndices, chosenMove, () => {
+          chosenMove.forEach(c => {
+            const idx = hands[cpu].indexOf(c);
+            if (idx > -1) hands[cpu].splice(idx, 1);
+          });
+          playCardSuccess(cpu, chosenMove, false);
+        });
+      } else {
+        soundMgr.playPass();
+        processPass(cpu);
+      }
+    }
+
+    function createCardElement(card) {
+      const cardEl = document.createElement('div');
+      cardEl.className = `card ${card.suitClass}`;
+      if (card.isJoker) {
+        cardEl.innerHTML = `
+          <div class="card-top">
+            <span class="card-suit-symbol">${card.suitSymbol}</span>
+            <span class="card-rank">JOKER</span>
+          </div>
+          <span class="card-center-icon">${card.suitSymbol}</span>
+        `;
+      } else {
+        cardEl.innerHTML = `
+          <div class="card-top">
+            <span class="card-suit-symbol">${card.suitSymbol}</span>
+            <span class="card-rank">${card.display}</span>
+          </div>
+        `;
+      }
+      return cardEl;
+    }
+
+    function renderCpuStack(cpuId, count) {
+      const stackEl = document.getElementById(`${cpuId}-stack`);
+      stackEl.innerHTML = '';
+      const displayCount = (cpuId === 'cpu2') ? count : Math.min(count, 8);
+      for (let i = 0; i < displayCount; i++) {
+        const backCard = document.createElement('div');
+        backCard.className = 'card-back';
+        stackEl.appendChild(backCard);
+      }
+    }
+
+    function syncPlayerHandAfterPlay(playedIndices) {
+      const handEl = document.getElementById('player-hand');
+      if (!handEl) return;
+
+      const cardEls = Array.from(handEl.children);
+      [...playedIndices].sort((a, b) => b - a).forEach(index => {
+        if (cardEls[index]) cardEls[index].remove();
+      });
+
+      Array.from(handEl.children).forEach((cardEl, index) => {
+        const card = hands.player[index];
+        cardEl.style.zIndex = index + 1;
+        cardEl.classList.remove('selected');
+        cardEl.onclick = () => toggleSelectCardByCard(card);
+      });
+
+      updateHandOverlap();
+    }
+
+    function updateHandOverlap() {
+      const handEl = document.getElementById('player-hand');
+      if (!handEl) return;
+      const cards = handEl.querySelectorAll(':scope > .card');
+      const n = cards.length;
+      if (n === 0) return;
+
+      handEl.style.removeProperty('--hand-overlap');
+      if (n <= 1) return;
+
+      const cardWidth = cards[0].offsetWidth;
+      if (!cardWidth) return;
+
+      const cs = getComputedStyle(handEl);
+      const paddingX = parseFloat(cs.paddingLeft || 0) + parseFloat(cs.paddingRight || 0);
+      const containerWidth = handEl.clientWidth - paddingX;
+
+      const defaultOverlap = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--card-overlap')) || 0;
+      const defaultTotalWidth = cardWidth + (n - 1) * (cardWidth + defaultOverlap);
+
+      if (defaultTotalWidth <= containerWidth) return;
+
+      let neededOverlap = (containerWidth - cardWidth) / (n - 1) - cardWidth;
+      const minVisible = cardWidth * 0.18;
+      const minOverlap = minVisible - cardWidth;
+      if (neededOverlap < minOverlap) neededOverlap = minOverlap;
+
+      handEl.style.setProperty('--hand-overlap', `${neededOverlap}px`);
+    }
+
+    let handOverlapResizeTimer = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(handOverlapResizeTimer);
+      handOverlapResizeTimer = setTimeout(updateHandOverlap, 100);
+    });
+    window.addEventListener('orientationchange', () => {
+      clearTimeout(handOverlapResizeTimer);
+      handOverlapResizeTimer = setTimeout(updateHandOverlap, 150);
+    });
+
+    function render(isFullRedraw = false) {
+      if (isFullRedraw) {
+        const playerHandEl = document.getElementById('player-hand');
+        playerHandEl.innerHTML = '';
+        hands.player.forEach((card, index) => {
+          const cardEl = createCardElement(card);
+          cardEl.style.zIndex = index + 1;
+          cardEl.classList.add('draw-anim');
+          if (selectedIndices.includes(index)) cardEl.classList.add('selected');
+          cardEl.onclick = () => toggleSelectCardByCard(card);
+          playerHandEl.appendChild(cardEl);
+        });
+        updateHandOverlap();
+      }
+
+      ['cpu1', 'cpu2', 'cpu3'].forEach(cpu => renderCpuStack(cpu, hands[cpu].length));
+
+      PLAYERS.forEach(p => {
+        const passEl = document.getElementById(`${p}-pass`);
+        if (passEl) {
+          passEl.textContent = ALLOW_LIMIT_PASS ? `${playerPassCounts[p]}/${MAX_PASS_LIMIT - 1}` : playerPassCounts[p];
+        }
+      });
+
+      const fieldCardsEl = document.getElementById('field-cards');
+      fieldCardsEl.innerHTML = '';
+      fieldCards.forEach(card => fieldCardsEl.appendChild(createCardElement(card)));
+
+      updateControlsOnly();
+
+      PLAYERS.forEach(p => {
+        const areaEl = document.getElementById(p === 'player' ? 'player-area' : p);
+        const badgeEl = document.getElementById(p === 'player' ? 'player-badge' : `${p}-badge`);
+
+        if (areaEl && badgeEl) {
+          if (hasPassedInRound[p]) {
+            badgeEl.textContent = 'PASS';
+            badgeEl.classList.add('is-pass');
+            areaEl.classList.remove('active-turn');
+          } else {
+            badgeEl.classList.remove('is-pass');
+            if (p === 'player') {
+              badgeEl.textContent = 'あなたの順番です';
+            } else {
+              badgeEl.textContent = 'THINKING';
+            }
+
+            if (!isPreExchangePhase && !isExchangePhase && PLAYERS[currentTurnIndex] === p && !finishedPlayers.includes(p) && !gameEnded) {
+              areaEl.classList.add('active-turn');
+            } else {
+              areaEl.classList.remove('active-turn');
+            }
+          }
+        }
+      });
+
+      PLAYERS.forEach(p => {
+        const rankEl = document.getElementById(`${p}-rank`);
+        if (rankEl) {
+          if (playerStatusMap[p]) rankEl.textContent = playerStatusMap[p];
+          else if (previousRanks[p]) rankEl.textContent = `[${previousRanks[p]}]`;
+          else rankEl.textContent = '';
+        }
+      });
+    }
+
+    function updateControlsOnly() {
+      const playBtn = document.getElementById('play-btn');
+      const passBtn = document.getElementById('pass-btn');
+      const goExchangeBtn = document.getElementById('go-exchange-btn');
+      const exchangeBtn = document.getElementById('exchange-btn');
+      const nextGameBtn = document.getElementById('next-game-btn');
+
+      if (isPreExchangePhase) {
+        playBtn.style.display = 'none'; passBtn.style.display = 'none';
+        goExchangeBtn.style.display = 'flex'; exchangeBtn.style.display = 'none';
+        nextGameBtn.disabled = true;
+      } else if (isExchangePhase) {
+        playBtn.style.display = 'none'; passBtn.style.display = 'none';
+        goExchangeBtn.style.display = 'none'; exchangeBtn.style.display = 'flex';
+        exchangeBtn.disabled = selectedIndices.length !== requiredExchangeCount;
+        nextGameBtn.disabled = true;
+      } else {
+        playBtn.style.display = 'flex'; passBtn.style.display = 'flex';
+        goExchangeBtn.style.display = 'none'; exchangeBtn.style.display = 'none';
+
+        const isMyTurn = (PLAYERS[currentTurnIndex] === 'player') && !isProcessing && !finishedPlayers.includes('player') && !gameEnded;
+        playBtn.disabled = !isMyTurn || selectedIndices.length === 0;
+        passBtn.disabled = !isMyTurn;
+        nextGameBtn.disabled = !gameEnded;
+      }
+    }
+
+    /* モーダル & ルールパネル関連イベント */
+    const ruleModal = document.getElementById('rule-modal');
+    const charModal = document.getElementById('char-modal');
+    const nextGameModal = document.getElementById('next-game-modal');
+    const rulesPanel = document.getElementById('rules-panel');
+
+    const openRuleModal = () => { soundMgr.playSelect(); ruleModal.classList.add('active'); };
+    const closeRuleModal = () => { soundMgr.playDeselect(); ruleModal.classList.remove('active'); };
+
+    const openCharModal = () => { soundMgr.playSelect(); charModal.classList.add('active'); };
+    const closeCharModal = () => { soundMgr.playDeselect(); charModal.classList.remove('active'); };
+
+    document.getElementById('rule-toggle-btn').addEventListener('click', () => {
+      soundMgr.playSelect();
+      if (rulesPanel.classList.contains('open')) {
+        rulesPanel.classList.remove('open');
+        openRuleModal();
+      } else {
+        rulesPanel.classList.add('open');
+      }
+    });
+
+    document.getElementById('modal-close-btn').addEventListener('click', closeRuleModal);
+    document.getElementById('modal-close-x').addEventListener('click', closeRuleModal);
+
+    document.getElementById('char-help-btn').addEventListener('click', openCharModal);
+    document.getElementById('modal-char-close-btn').addEventListener('click', closeCharModal);
+    document.getElementById('modal-char-close-x').addEventListener('click', closeCharModal);
+
+    document.getElementById('btn-keep-char').addEventListener('click', () => {
+      soundMgr.playSelect();
+      nextGameModal.classList.remove('active');
+      rulesPanel.classList.remove('open');
+      resetGame(false, true);
+      PLAYERS.filter(p => p !== 'player').forEach(p => checkAndTriggerDialogue(p, 'NEXT_GAME'));
+    });
+
+    document.getElementById('btn-change-char').addEventListener('click', () => {
+      soundMgr.playSelect();
+      nextGameModal.classList.remove('active');
+      rulesPanel.classList.remove('open');
+      resetGame(true, false);
+      PLAYERS.filter(p => p !== 'player').forEach(p => checkAndTriggerDialogue(p, 'NEXT_GAME'));
+    });
+
+    document.getElementById('next-game-btn').addEventListener('click', () => {
+      soundMgr.playSelect();
+      nextGameModal.classList.add('active');
+    });
+
+    document.getElementById('reset-btn').addEventListener('click', () => {
+      soundMgr.playSelect();
+      rulesPanel.classList.remove('open');
+      resetGame(true, false);
+    });
+
+    document.getElementById('go-exchange-btn').addEventListener('click', proceedToExchange);
+    document.getElementById('exchange-btn').addEventListener('click', confirmExchange);
+    document.getElementById('play-btn').addEventListener('click', playerPlayCard);
+    document.getElementById('pass-btn').addEventListener('click', playerPass);
+
+    initRuleTexts();
+    buildCharSelectGrid();
+    populateCharIntroPortraits();
+    bgmMgr.setCharSelectPhase(true);
+  </script>
+</body>
+</html>
