@@ -1,24 +1,15 @@
-/* app.js の主な変更点（事前説明）
+/* app.js の修正内容
 
-1.  画面内デバッグロガー（InAppLogger）の組み込み:
+1.  AIDataLogger にターン別着手履歴（currentTurnHistory）を追加:
+      - ゲーム開始時に空配列に初期化。
+      - recordTurnAction(seatNum, action, cards, isCleared) メソッドを新設。
+2.  カード提出時（playCardSuccess）とパス時（processPass）の自動追跡:
+      - カード提出時は "action": "play"、カードリスト、および8切り時の "isCleared": true を記録。
+      - パス時は "action": "pass"、空配列 []、および全員パスによる流れ発生時の "isCleared": true を記録。
+3.  エピソードログ（recordEpisodeEnd）への "playedCardsHistory" 追加:
+      - 既存の gameId, seats, remainingCards 等のデータ構造を一切崩さず、1エピソードごとの提出・パス履歴配列を完全追加。 */
 
-      - ブラウザの console.log / warn / error を自動的に画面内のデバッグウィンドウへ転送。
-      - タブレットでも「AIへの送信データ」「AIからの回答」「通信エラー」が色付きでリアルタイムに読めるようになります。
-      - 「📋 全コピー」「🗑️ クリア」も完備。
-
-2.  🔮 AI通信ステータスランプのリアルタイム制御:
-
-      - 起動時: 裏で自動的に server.py へ「目覚まし通信（/health）」を送信。
-          - 起きている時 ➔ 🟢 「AI: 正常稼働」
-          - Renderスリープ中など ➔ 🟡 「AI: 起動中...」
-          - 通信不能時 ➔ 🔴 「AI: オフライン」
-      - 推論時: ⚡ 青白くピカッと光り「AI: 推論中...」と表示。
-
-3.  ✨ キャラクター名横のAIブレインランプ発光:
-
-      - 上級AI・中級AIがPyTorch推論でカードを選択した瞬間、該当キャラクターの宝石（ドット）がキラッとエメラルドに発光！「AIの知能で出した」ことが一目で分かります。 */
-
-/* [JS Version: v1.8.6-ai-orb-logger] 最終更新: AI推論ステータスランプ・キャラ別思考発光・タブレット画面内デバッグログ搭載 */
+/* [JS Version: v1.8.7-turn-history] 最終更新: 1エピソードごとの場流出・ターン着手履歴(playedCardsHistory)収集完全対応 */
 
 /* ====================================================================
  * ROYAL DAIFUGO - 完全統合・リファクタリング版 (app.js)
@@ -63,7 +54,6 @@ const InAppLogger = {
     const timeStr = this.formatTime();
     const text = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
     
-    // AI推論関係の特別ハイライト判定
     let actualType = type;
     if (text.includes('[推論]') || text.includes('PyTorch') || text.includes('AIモデル')) {
       actualType = 'ai';
@@ -577,7 +567,7 @@ const AIStatusUI = {
     const dot = document.getElementById(`${playerKey}-brain-dot`);
     if (!dot) return;
     dot.classList.remove('active');
-    void dot.offsetWidth; // リフロー強制
+    void dot.offsetWidth;
     dot.classList.add('active');
     setTimeout(() => dot.classList.remove('active'), 1200);
   },
@@ -595,7 +585,7 @@ const AIStatusUI = {
         throw new Error(`HTTP ${res.status}`);
       }
     } catch (err) {
-      console.warn(`⚠️ [ヘルスチェック未到達] サーバーがスリープまたは未起動です: ${err.message}`);
+      console.warn(`⚠️ [ヘルスチェック未到達] サーバー未起動またはオフライン: ${err.message}`);
       this.set('offline', 'AI: オフライン');
     }
   }
@@ -628,7 +618,6 @@ function matchReturnedMoveWithHand(hand, returnedCards) {
 
 async function askPythonAI(hand, currentField, validMoves, modelType = 'hi', playerKey = 'cpu2') {
   AIStatusUI.set('thinking', 'AI: 推論中');
-  AIStatusUI.flashBrainDot(playerKey);
 
   try {
     const controller = new AbortController();
@@ -656,16 +645,19 @@ async function askPythonAI(hand, currentField, validMoves, modelType = 'hi', pla
 
     if (resData && resData.status === 'success') {
       AIStatusUI.set('online', 'AI: 稼働中');
+
       if (resData.fallback) {
-        console.warn(`[推論] サーバー側未ロードのためフォールバック手を受信`);
+        console.warn(`[推論] サーバー未ロードのためフォールバック手を受信`);
       } else {
         console.log(`[推論] ${modelType === 'mid' ? '中級AI' : '上級AI'} (${playerKey}) スコア: ${resData.bestScore ? resData.bestScore.toFixed(3) : '-'}`);
+        AIStatusUI.flashBrainDot(playerKey);
       }
+
       if (!resData.chosenMove) return null;
       return matchReturnedMoveWithHand(hand, resData.chosenMove);
     }
   } catch (err) {
-    console.warn(`⚠️ Python AI推論通信エラー (${err.message})。通常思考にフォールバックします。`);
+    console.warn(`⚠️ Python AI通信エラー (${err.message})。通常思考にフォールバックします。`);
     AIStatusUI.set('offline', 'AI: フォールバック');
   }
 
@@ -673,7 +665,7 @@ async function askPythonAI(hand, currentField, validMoves, modelType = 'hi', pla
 }
 
 /* ----------------------------------------------------
- * 3. AIデータロガー (AIDataLogger: 54枚完全ユニーク識別)
+ * 3. AIデータロガー (AIDataLogger: ターン着手履歴 playedCardsHistory 搭載)
  * ---------------------------------------------------- */
 const AIDataLogger = {
   activeGameId: null,
@@ -681,11 +673,13 @@ const AIDataLogger = {
   currentTurnCount: 0,
   stepLogs: [],
   episodeLogs: [],
+  currentTurnHistory: [], // ★新設: 1エピソード中の全手番カード提出・パス履歴
 
   startNewGame(pattern = 'OBSERVE_GAME') {
     this.activeGameId = 'game_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
     this.activePattern = pattern;
     this.currentTurnCount = 0;
+    this.currentTurnHistory = [];
   },
 
   serializeCard(c) {
@@ -701,6 +695,18 @@ const AIDataLogger = {
   serializeCards(cards) {
     if (!cards) return [];
     return cards.map(c => this.serializeCard(c));
+  },
+
+  // ★新設: ターンごとの提出・パス・場流れアクションを記録
+  recordTurnAction(seatNum, action, cards, isCleared = false) {
+    if (!CONFIG.ENABLE_AI_DATA_LOGGING) return;
+    this.currentTurnHistory.push({
+      turn: this.currentTurnCount,
+      seat: seatNum,
+      action: action, // "play" または "pass"
+      cards: (action === 'play' && cards) ? this.serializeCards(cards) : [],
+      isCleared: !!isCleared
+    });
   },
 
   recordStep(player, seatNum, charDef, hand, fieldCards, isRev, isEb, consecutivePasses, passMap, validMoves, chosenMove, evalScore = null) {
@@ -769,6 +775,7 @@ const AIDataLogger = {
       totalTurns: this.currentTurnCount,
       seats: seatResults,
       remainingCards: remainingCardsMap,
+      playedCardsHistory: [...this.currentTurnHistory], // ★要件準拠: 毎ターンの着手・流出履歴を完全追加
       timestamp: Date.now()
     };
     this.episodeLogs.push(ep);
@@ -802,6 +809,7 @@ const AIDataLogger = {
   clear() {
     this.stepLogs = [];
     this.episodeLogs = [];
+    this.currentTurnHistory = [];
   }
 };
 
@@ -2443,6 +2451,10 @@ function playCardSuccess(player, cards, needFullRedraw = false, playedIndices = 
     if (!specialType) specialType = 'EIGHT_CUT';
   }
 
+  // ★ターン履歴記録（カード提出・8切りの場クリア記録）
+  const seatNum = PLAYERS.indexOf(player) + 1;
+  AIDataLogger.recordTurnAction(seatNum, 'play', cards, isEight);
+
   if (hasSpecial && !isSpade3Return && !isJokerSolo) soundMgr.playSpecial();
   setMessage(actionText);
   updateStatusUI();
@@ -2489,6 +2501,12 @@ function processPass(player) {
   consecutivePasses++;
   selectedIndices = [];
   hasPassedInRound[player] = true;
+
+  // ★ターン履歴記録（パス・全員パスによる流れフラグ）
+  const seatNum = PLAYERS.indexOf(player) + 1;
+  const active = PLAYERS.filter(p => !finishedPlayers.includes(p));
+  const willClear = (consecutivePasses >= active.length - 1 || consecutivePasses >= 3);
+  AIDataLogger.recordTurnAction(seatNum, 'pass', [], willClear);
 
   if (player !== 'player') checkAndTriggerDialogue(player, 'PASS');
   setMessage(`${getPlayerDisplayName(player)}がパスしました。`);
@@ -3415,7 +3433,6 @@ function initEvents() {
   const logViewerModal = document.getElementById('log-viewer-modal');
   const debugLogModal = document.getElementById('debug-log-modal');
 
-  // AIステータスオーブ ＆ デバッグログボタン
   const aiOrbBtn = document.getElementById('ai-status-orb');
   const debugBtn = document.getElementById('debug-log-btn');
   if (aiOrbBtn) aiOrbBtn.onclick = openDebugLogModal;
@@ -3665,7 +3682,5 @@ buildCharSelectGrid();
 initEvents();
 bgmMgr.setCharSelectPhase(true);
 
-// 🚀 起動時: Pythonサーバーへの接続チェック＆目覚まし通信
 AIStatusUI.pingServer();
-
 

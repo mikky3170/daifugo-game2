@@ -1,3 +1,13 @@
+# server.py の主な変更点（事前説明）
+# 
+# 1.  run_single_game_fast 内で着手履歴（turn_history）を収集:
+#       - カード提出時（"action": "play"）: 出されたカード一覧と、8切り発生時の "isCleared": true を記録。
+#       - パス時（"action": "pass"）: 空配列 [] と、全員パスによる流れ発生時の "isCleared": true を記録。
+# 2.  episode_record への "playedCardsHistory" 追加:
+#       - app.js と全く同じフォーマットで、エピソードデータ内に格納。
+# 3.  JSONダウンロード（/download_json）およびビューアAPI（/latest_simulation_data）への完全反映:
+#       - シミュレーション完了後にダウンロードされるJSONファイルにも、全試合のターン着手・場流れ履歴が含まれるようになります。
+
 # [Python Server] server.py - 大富豪 上級AI(110次元)・中級AI(106次元)推論 ＆ 5パターンシャッフルシミュレーションサーバー
 import os
 import json
@@ -159,7 +169,7 @@ CHARACTER_ICONS = {
     'DUKE': '👑', 'MARQUIS': '🍷', 'COUNT': '📜', 'KNIGHT': '⚔️',
     'MERCHANT': '⚖️', 'SCHOLAR': '📖', 'STRATEGIST': '♟️',
     'REVOLUTIONARY': '🔥', 'JESTER': '🤡', 'KING': '🏰',
-    'BEGINNER_AI': '🤖', 'MID_AI': '🦾'
+    'BEGINNER_AI': '🤖', 'MID_AI': '👸'
 }
 
 PLAYERS = [0, 1, 2, 3]
@@ -241,10 +251,9 @@ def encode_cards_to_vector(cards):
     return vec
 
 def build_input_vector(hand, field, required_dim=106, is_rev=False, is_eb=False):
-    """手札(53) + 場(53) ＋ 必要に応じて状態フラグ(4)を結合してベクトル化"""
     h_vec = encode_cards_to_vector(hand)
     f_vec = encode_cards_to_vector(field)
-    base = h_vec + f_vec  # 106次元
+    base = h_vec + f_vec
 
     if required_dim == 110:
         extra = [
@@ -732,19 +741,15 @@ def decide_move_sim(seat, seat_chars, hands, field, rev, finished, played_histor
     if not valid: return None
     can_pass = len(field) > 0
 
-    # 🏰 王 (KING)
     if cid == 'KING':
         return king_decide_move_universal(seat, hand, field, rev, hands, finished, played_history, last_seat, pass_cnt, PLAYERS)
 
-    # 🤖 上級AI (BEGINNER_AI): 110次元入力対応
     if cid == 'BEGINNER_AI':
         return decide_neural_move(model_hi, model_hi_loaded, hi_in_dim, hand, field, valid, is_rev=is_rev, is_eb=is_eb)
 
-    # 🦾 中級AI (MID_AI): 106次元入力対応
     if cid == 'MID_AI':
         return decide_neural_move(model_mid, model_mid_loaded, mid_in_dim, hand, field, valid, is_rev=is_rev, is_eb=is_eb)
 
-    # その他 10キャラクター
     next_seat = (seat + 1) % 4
     next_cnt = len(hands[next_seat])
     other_counts = [len(hands[st]) for st in PLAYERS if st != seat and st not in finished]
@@ -753,7 +758,7 @@ def decide_move_sim(seat, seat_chars, hands, field, rev, finished, played_histor
     return select_move_by_character_def(cid, hand, field, rev, other_counts, can_pass, unrevealed, next_cnt)
 
 # ----------------------------------------------------
-# 5. 高速シミュレーション ＆ ステップ収集
+# 5. 高速シミュレーション ＆ ステップ収集 (playedCardsHistory対応)
 # ----------------------------------------------------
 latest_batch_data = {
     "episodes": [],
@@ -777,6 +782,7 @@ def run_single_game_fast(seat_chars, pattern_name="PATTERN_A", collect_steps=Tru
     finished = []
     ranks = {}
     game_steps = []
+    turn_history = []  # ★新設: 1ゲーム中のカード提出・パス・場流れの全履歴
     turn_count = 0
 
     curr_seat = 0
@@ -845,6 +851,15 @@ def run_single_game_fast(seat_chars, pattern_name="PATTERN_A", collect_steps=Tru
                 finished.append(s)
                 ranks[s] = ['大富豪', '富豪', '貧民', '大貧民'][len(finished) - 1]
 
+            # ★着手履歴記録 (play)
+            turn_history.append({
+                "turn": turn_count,
+                "seat": s + 1,
+                "action": "play",
+                "cards": serialize_cards(move),
+                "isCleared": is_eight
+            })
+
             if is_eight:
                 field = []
                 is_eb = False
@@ -863,6 +878,18 @@ def run_single_game_fast(seat_chars, pattern_name="PATTERN_A", collect_steps=Tru
         else:
             pass_cnt += 1
             pass_map[f"seat_{s + 1}"] = True
+
+            active = [st for st in range(4) if st not in finished]
+            will_clear = bool(field and (pass_cnt >= len(active) - 1 or pass_cnt >= 3))
+
+            # ★着手履歴記録 (pass)
+            turn_history.append({
+                "turn": turn_count,
+                "seat": s + 1,
+                "action": "pass",
+                "cards": [],
+                "isCleared": will_clear
+            })
 
         active = [st for st in range(4) if st not in finished]
         if len(active) <= 1: break
@@ -911,6 +938,7 @@ def run_single_game_fast(seat_chars, pattern_name="PATTERN_A", collect_steps=Tru
         "totalTurns": turn_count,
         "seats": seat_results,
         "remainingCards": rem_cards_map,
+        "playedCardsHistory": turn_history,  # ★完全出力: ターン着手・場流れ履歴
         "timestamp": int(time.time() * 1000)
     }
 
@@ -1011,7 +1039,7 @@ def simulate_batch():
             expected_chars = ['BEGINNER_AI'] + BASE_10_CHARACTERS
         elif pattern == 'PATTERN_D':
             expected_chars = ['BEGINNER_AI', 'MID_AI']
-        else: # PATTERN_E
+        else:
             expected_chars = ['BEGINNER_AI']
 
         stats = {
@@ -1040,7 +1068,7 @@ def simulate_batch():
                 seat_chars = ['BEGINNER_AI', 'BEGINNER_AI', others[0], others[1]]
             elif pattern == 'PATTERN_D':
                 seat_chars = ['BEGINNER_AI', 'BEGINNER_AI', 'MID_AI', 'MID_AI']
-            else: # PATTERN_E
+            else:
                 seat_chars = ['BEGINNER_AI', 'BEGINNER_AI', 'BEGINNER_AI', 'BEGINNER_AI']
 
             random.shuffle(seat_chars)
