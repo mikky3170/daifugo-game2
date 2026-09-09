@@ -1,15 +1,108 @@
-/* [JS Version: v1.8.5-syntax-fixed] 最終更新: 構文エラー修正・中級AI(queen.png)・クラウドURL切替対応完全版 */
+/* app.js の主な変更点（事前説明）
+
+1.  画面内デバッグロガー（InAppLogger）の組み込み:
+
+      - ブラウザの console.log / warn / error を自動的に画面内のデバッグウィンドウへ転送。
+      - タブレットでも「AIへの送信データ」「AIからの回答」「通信エラー」が色付きでリアルタイムに読めるようになります。
+      - 「📋 全コピー」「🗑️ クリア」も完備。
+
+2.  🔮 AI通信ステータスランプのリアルタイム制御:
+
+      - 起動時: 裏で自動的に server.py へ「目覚まし通信（/health）」を送信。
+          - 起きている時 ➔ 🟢 「AI: 正常稼働」
+          - Renderスリープ中など ➔ 🟡 「AI: 起動中...」
+          - 通信不能時 ➔ 🔴 「AI: オフライン」
+      - 推論時: ⚡ 青白くピカッと光り「AI: 推論中...」と表示。
+
+3.  ✨ キャラクター名横のAIブレインランプ発光:
+
+      - 上級AI・中級AIがPyTorch推論でカードを選択した瞬間、該当キャラクターの宝石（ドット）がキラッとエメラルドに発光！「AIの知能で出した」ことが一目で分かります。 */
+
+/* [JS Version: v1.8.6-ai-orb-logger] 最終更新: AI推論ステータスランプ・キャラ別思考発光・タブレット画面内デバッグログ搭載 */
 
 /* ====================================================================
  * ROYAL DAIFUGO - 完全統合・リファクタリング版 (app.js)
  * ==================================================================== */
 
 /* ----------------------------------------------------
+ * 0. 画面内デバッグロガー（タブレット・スマホ対応）
+ * ---------------------------------------------------- */
+const InAppLogger = {
+  maxEntries: 200,
+  logs: [],
+
+  init() {
+    const originalLog = console.log;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+
+    console.log = (...args) => {
+      originalLog.apply(console, args);
+      this.addEntry('info', args);
+    };
+    console.warn = (...args) => {
+      originalWarn.apply(console, args);
+      this.addEntry('warn', args);
+    };
+    console.error = (...args) => {
+      originalError.apply(console, args);
+      this.addEntry('error', args);
+    };
+
+    window.addEventListener('error', (e) => {
+      this.addEntry('error', [`[JS Exception] ${e.message} at ${e.filename}:${e.lineno}`]);
+    });
+  },
+
+  formatTime() {
+    const d = new Date();
+    return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}.${d.getMilliseconds().toString().padStart(3, '0')}`;
+  },
+
+  addEntry(type, args) {
+    const timeStr = this.formatTime();
+    const text = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
+    
+    // AI推論関係の特別ハイライト判定
+    let actualType = type;
+    if (text.includes('[推論]') || text.includes('PyTorch') || text.includes('AIモデル')) {
+      actualType = 'ai';
+    }
+
+    this.logs.push({ time: timeStr, type: actualType, text: text });
+    if (this.logs.length > this.maxEntries) this.logs.shift();
+
+    const container = document.getElementById('debug-log-container');
+    if (container) {
+      const entryEl = document.createElement('div');
+      entryEl.className = `log-entry ${actualType}`;
+      entryEl.innerHTML = `<span class="log-time">${timeStr}</span>${text}`;
+      container.appendChild(entryEl);
+      container.scrollTop = container.scrollHeight;
+    }
+  },
+
+  clear() {
+    this.logs = [];
+    const container = document.getElementById('debug-log-container');
+    if (container) container.innerHTML = '';
+  },
+
+  copyAll() {
+    const fullText = this.logs.map(l => `[${l.time}] [${l.type.toUpperCase()}] ${l.text}`).join('\n');
+    navigator.clipboard.writeText(fullText).then(() => {
+      alert('ログをクリップボードにコピーしました！');
+    }).catch(() => {
+      prompt('ログを全選択してコピーしてください:', fullText);
+    });
+  }
+};
+InAppLogger.init();
+
+/* ----------------------------------------------------
  * 1. 設定・定数・キャラクター定義
  * ---------------------------------------------------- */
 // 🌐 AI計算係（Pythonサーバー）の接続先アドレス
-// ・PC自身のローカルで動かす場合: 'http://localhost:5000'
-// ・クラウドに公開した場合: 'https://あなたのサービス名.onrender.com' などに書き換えます
 const AI_SERVER_BASE_URL = 'http://localhost:5000';
 
 const CONFIG = {
@@ -17,6 +110,7 @@ const CONFIG = {
   MAX_PASS_LIMIT: 6,
   BASE_SPEED: 1,
   ENABLE_AI_DATA_LOGGING: true,
+  PYTHON_HEALTH_URL: `${AI_SERVER_BASE_URL}/health`,
   PYTHON_AI_URL: `${AI_SERVER_BASE_URL}/predict`,
   PYTHON_SIM_URL: `${AI_SERVER_BASE_URL}/simulate_batch`,
   PYTHON_DOWNLOAD_JSON_URL: `${AI_SERVER_BASE_URL}/download_json`,
@@ -107,8 +201,8 @@ const CHAR_SHORT_DESC = {
   REVOLUTIONARY: '革命特化の攻撃型',
   JESTER: '読めないトリッキー派',
   KING: '完全読みの最強AI',
-  BEGINNER_AI: 'PyTorch深層学習モデル（上級）による推論AI',
-  MID_AI: 'PyTorch深層学習モデル（中級）による推論AI'
+  BEGINNER_AI: 'PyTorch深層学習モデル（上級110次元）による推論AI',
+  MID_AI: 'PyTorch深層学習モデル（中級106次元）による推論AI'
 };
 
 const CHARACTER_DIALOGUES = {
@@ -450,8 +544,63 @@ const soundMgr = new SoundManager();
 const bgmMgr = new BgmManager();
 
 /* ----------------------------------------------------
- * 2.5 Python AI推論サーバー連携関数 (上級・中級AI用)
+ * 2.5 AIステータスランプ ＆ Python AI推論サーバー連携
  * ---------------------------------------------------- */
+const AIStatusUI = {
+  set(state, text = null) {
+    const dot = document.getElementById('ai-orb-dot');
+    const label = document.getElementById('ai-orb-label');
+    const summary = document.getElementById('debug-status-summary');
+    if (!dot || !label) return;
+
+    dot.classList.remove('status-online', 'status-waking', 'status-offline', 'status-thinking');
+
+    if (state === 'online') {
+      dot.classList.add('status-online');
+      label.textContent = text || 'AI: ONLINE';
+      if (summary) summary.textContent = `🟢 接続中: ${AI_SERVER_BASE_URL}`;
+    } else if (state === 'waking') {
+      dot.classList.add('status-waking');
+      label.textContent = text || 'AI: 起動中...';
+      if (summary) summary.textContent = `🟡 待機/起動中: ${AI_SERVER_BASE_URL}`;
+    } else if (state === 'thinking') {
+      dot.classList.add('status-thinking');
+      label.textContent = text || 'AI: 推論中...';
+    } else { // offline
+      dot.classList.add('status-offline');
+      label.textContent = text || 'AI: OFFLINE';
+      if (summary) summary.textContent = `🔴 未接続: ${AI_SERVER_BASE_URL}`;
+    }
+  },
+
+  flashBrainDot(playerKey) {
+    const dot = document.getElementById(`${playerKey}-brain-dot`);
+    if (!dot) return;
+    dot.classList.remove('active');
+    void dot.offsetWidth; // リフロー強制
+    dot.classList.add('active');
+    setTimeout(() => dot.classList.remove('active'), 1200);
+  },
+
+  async pingServer() {
+    this.set('waking', 'AI: 接続確認中');
+    console.log(`[接続確認] Pythonサーバーへヘルスチェック送信中: ${CONFIG.PYTHON_HEALTH_URL}`);
+    try {
+      const res = await fetch(CONFIG.PYTHON_HEALTH_URL, { method: 'GET', cache: 'no-cache' });
+      if (res.ok) {
+        const data = await res.json();
+        console.log(`✅ [Pythonサーバー接続成功] 上級モデル: ${data.model_hi_name || 'OK'}, 中級モデル: ${data.model_mid_name || 'OK'}`);
+        this.set('online', 'AI: 稼働中');
+      } else {
+        throw new Error(`HTTP ${res.status}`);
+      }
+    } catch (err) {
+      console.warn(`⚠️ [ヘルスチェック未到達] サーバーがスリープまたは未起動です: ${err.message}`);
+      this.set('offline', 'AI: オフライン');
+    }
+  }
+};
+
 function matchReturnedMoveWithHand(hand, returnedCards) {
   if (!returnedCards || returnedCards.length === 0) return null;
   const chosen = [];
@@ -477,10 +626,13 @@ function matchReturnedMoveWithHand(hand, returnedCards) {
   return chosen.length === returnedCards.length ? chosen : null;
 }
 
-async function askPythonAI(hand, currentField, validMoves, modelType = 'hi') {
+async function askPythonAI(hand, currentField, validMoves, modelType = 'hi', playerKey = 'cpu2') {
+  AIStatusUI.set('thinking', 'AI: 推論中');
+  AIStatusUI.flashBrainDot(playerKey);
+
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
 
     const payload = {
       modelType: modelType,
@@ -503,11 +655,18 @@ async function askPythonAI(hand, currentField, validMoves, modelType = 'hi') {
     const resData = await response.json();
 
     if (resData && resData.status === 'success') {
+      AIStatusUI.set('online', 'AI: 稼働中');
+      if (resData.fallback) {
+        console.warn(`[推論] サーバー側未ロードのためフォールバック手を受信`);
+      } else {
+        console.log(`[推論] ${modelType === 'mid' ? '中級AI' : '上級AI'} (${playerKey}) スコア: ${resData.bestScore ? resData.bestScore.toFixed(3) : '-'}`);
+      }
       if (!resData.chosenMove) return null;
       return matchReturnedMoveWithHand(hand, resData.chosenMove);
     }
   } catch (err) {
-    console.warn("⚠️ Python AIサーバーへの問い合わせに失敗しました。通常思考にフォールバックします:", err);
+    console.warn(`⚠️ Python AI推論通信エラー (${err.message})。通常思考にフォールバックします。`);
+    AIStatusUI.set('offline', 'AI: フォールバック');
   }
 
   return validMoves.length > 0 ? validMoves[0] : null;
@@ -2453,7 +2612,7 @@ async function cpuPlayTurn(cpu) {
     move = null;
   } else if (charDef && (charDef.id === 'BEGINNER_AI' || charDef.id === 'MID_AI')) {
     const modelType = (charDef.id === 'MID_AI') ? 'mid' : 'hi';
-    move = await askPythonAI(hands[cpu], fieldCards, validMoves, modelType);
+    move = await askPythonAI(hands[cpu], fieldCards, validMoves, modelType, cpu);
   } else {
     move = decideCpuMove(cpu);
   }
@@ -2849,7 +3008,7 @@ function showEvalModal() {
 }
 
 /* ============================================================
- * ランキング・戦績・自己対戦コントロールパネル (上級AI & 中級AI対応)
+ * ランキング・戦績・自己対戦コントロールパネル
  * ============================================================ */
 function renderRankingModalContent() {
   const body = document.getElementById('stats-body');
@@ -3024,13 +3183,11 @@ function renderRankingModalContent() {
         </div>
 
         <div class="selfplay-btn-row" style="display:flex; flex-direction:column; gap:8px;">
-          <!-- パターンA -->
           <button class="btn-selfplay" id="btn-selfplay-a">
             <span>🅰️ パターンA（対強敵・王特化）：上級AI × 2 🆚「王」 × 2</span>
             <span style="font-size:10px; color:#d4af37; font-weight:bold;">最難関ベンチマーク (毎試合シャッフル・500試合)</span>
           </button>
           
-          <!-- パターンB & C -->
           <div style="display:flex; gap:8px;">
             <button class="btn-selfplay" id="btn-selfplay-b" style="flex:1;">
               <span>🅱️ パターンB（実戦混戦・王＋中級）</span>
@@ -3044,7 +3201,6 @@ function renderRankingModalContent() {
             </button>
           </div>
 
-          <!-- パターンD & E -->
           <div style="display:flex; gap:8px;">
             <button class="btn-selfplay" id="btn-selfplay-d" style="flex:1;">
               <span>🅳 パターンD（モデル比較・中級戦）</span>
@@ -3059,7 +3215,6 @@ function renderRankingModalContent() {
           </div>
         </div>
 
-        <!-- リアルタイム進捗バー表示エリア -->
         <div class="selfplay-progress-wrap" id="selfplay-progress-wrap" style="display:none; flex-direction:column; gap:6px;">
           <div class="selfplay-progress-text" style="display:flex; justify-content:space-between; font-size:11.5px; color:#e0e6ed;">
             <span id="selfplay-progress-label">シミュレーション準備中...</span>
@@ -3080,7 +3235,6 @@ function renderRankingModalContent() {
             </div>
           </div>
 
-          <!-- 保存・ビューア用 3連アクションボタン -->
           <div class="selfplay-download-row" style="margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(212,175,55,0.25); display: flex; gap: 8px; flex-wrap: wrap;">
             <button class="btn-selfplay" id="btn-download-json" style="flex: 1; padding: 9px 8px; font-size: 11px;" ${canDownloadOrView ? '' : 'disabled'}>
               <span>💾 JSON保存 (全体データ)</span>
@@ -3242,6 +3396,13 @@ function triggerSelfPlay(pattern, total = 500) {
   );
 }
 
+function openDebugLogModal() {
+  soundMgr.playSelect();
+  document.getElementById('debug-log-modal').classList.add('active');
+  const container = document.getElementById('debug-log-container');
+  if (container) container.scrollTop = container.scrollHeight;
+}
+
 function initEvents() {
   const rulesPanel = document.getElementById('rules-panel');
   const ruleModal = document.getElementById('rule-modal');
@@ -3252,6 +3413,32 @@ function initEvents() {
   const versionModal = document.getElementById('version-modal');
   const versionBadge = document.getElementById('version-badge');
   const logViewerModal = document.getElementById('log-viewer-modal');
+  const debugLogModal = document.getElementById('debug-log-modal');
+
+  // AIステータスオーブ ＆ デバッグログボタン
+  const aiOrbBtn = document.getElementById('ai-status-orb');
+  const debugBtn = document.getElementById('debug-log-btn');
+  if (aiOrbBtn) aiOrbBtn.onclick = openDebugLogModal;
+  if (debugBtn) debugBtn.onclick = openDebugLogModal;
+
+  if (debugLogModal) {
+    document.getElementById('modal-debug-log-close-btn').onclick = () => {
+      soundMgr.playDeselect();
+      debugLogModal.classList.remove('active');
+    };
+    document.getElementById('modal-debug-log-close-x').onclick = () => {
+      soundMgr.playDeselect();
+      debugLogModal.classList.remove('active');
+    };
+    document.getElementById('btn-clear-logs').onclick = () => {
+      soundMgr.playSelect();
+      InAppLogger.clear();
+    };
+    document.getElementById('btn-copy-logs').onclick = () => {
+      soundMgr.playSelect();
+      InAppLogger.copyAll();
+    };
+  }
 
   if (versionBadge && typeof APP_VERSION !== 'undefined') {
     versionBadge.textContent = APP_VERSION;
@@ -3477,4 +3664,8 @@ initRuleTexts();
 buildCharSelectGrid();
 initEvents();
 bgmMgr.setCharSelectPhase(true);
+
+// 🚀 起動時: Pythonサーバーへの接続チェック＆目覚まし通信
+AIStatusUI.pingServer();
+
 

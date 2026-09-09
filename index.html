@@ -1,4 +1,19 @@
-<!-- [HTML Version: v1.6.0-dl-beginner] 最終更新: 11人目キャラクター「初級AI(PyTorch深層学習モデル連携)」新設 -->
+<!-- index.html の主な変更点
+
+1.  ヘッダーの戦況メーター横:
+      - 全体AI通信ステータスランプ（<div id="ai-status-orb">...</div>）を追加。（タップするとログ画面が開く親切設計）
+2.  各キャラ（CPU1, CPU2, CPU3, プレイヤー）のネームプレート横:
+      - AI思考時にキラッと光る宝石ランプ（<span class="ai-brain-dot"></span>）を追加。
+3.  デバッグログ専用モーダル（<div id="debug-log-modal">）の新設:
+      - タブレット上でリアルタイムにログをスクロール閲覧できる画面を追加（「📋 ログ全コピー」「🗑️ クリア」「閉じる」ボタン付き）。
+4.  画面右下:
+      - バージョンバッジの横に、いつでもログを開ける 「📜 ログ」ボタン を追加。
+
+【1ファイル目】index.html の完全コード
+
+以下の内容で index.html を丸ごと上書き保存してください。-->
+
+<!-- [HTML Version: v1.8.6-ai-orb-logger] 最終更新: AI推論ステータスランプ・キャラ別思考発光・タブレット画面内デバッグログ搭載 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -13,69 +28,29 @@
        バージョン情報 ＆ 更新履歴マスター（index.htmlで一括管理）
        =================================================== -->
   <script>
-    const APP_VERSION = "v1.6.0-dl-beginner";
+    const APP_VERSION = "v1.8.6";
     const VERSION_HISTORY = [
       {
-        ver: "v1.6.0-dl-beginner",
+        ver: "v1.8.6",
+        date: "2025-02-25",
+        title: "AI通信ステータスランプ ＆ 画面内デバッグコンソール新設",
+        changes: [
+          "ヘッダーにPyTorchサーバーとの通信状態を示す『AI通信ステータス・オーブ（緑/黄/赤）』を新設",
+          "上級・中級AI思考時にキャラクター名横のオーブがキラッと発光するリアルタイム演出を追加",
+          "タブレット・スマホ対応の『画面内デバッグログモーダル（ログコピー・消去機能付き）』を新設",
+          "起動時のRenderサーバー自動目覚まし通信に対応"
+        ],
+        files: ["index.html (v1.8.6)", "style.css (v1.8.6)", "app.js (v1.8.6)"]
+      },
+      {
+        ver: "v1.8.5",
         date: "2025-02-24",
-        title: "11人目キャラクター『初級AI (PyTorch深層学習モデル連携)』新設",
+        title: "中級AI(PyTorch 106次元モデル) ＆ クラウド連携対応",
         changes: [
-          "Pythonサーバー（server.py）およびPyTorch学習済みモデル（daifugo_ai.pth）と完全連携",
-          "キャラクター選択で『🤖 初級AI』を選択時、手番ごとに106次元ベクトルをPythonへ送信し、リアルタイム推論で最高評価のカードを選択",
-          "高速自己対戦シミュレーター（1,000試合仕様）および8切り親権・上がり後親権の正常化を完全維持"
+          "上級AI(110次元)と中級AI(106次元)のPyTorchモデル完全両立",
+          "5パターンの座席シャッフル高速シミュレーション搭載"
         ],
-        files: ["server.py", "index.html (v1.6.0-dl-beginner)", "style.css (v1.5.5)", "app.js (v1.6.0-dl-beginner)"]
-      },
-      {
-        ver: "v1.5.5",
-        date: "2025-02-23",
-        title: "200試合自己対戦 ＆ 1試合ごとの学習データ詳細ビューア(別画面)新設",
-        changes: [
-          "自己対戦の対局数を『200試合』に設定し、終了後に全キャラ／座席の最終ランキング表をサマリー出力",
-          "1試合ごとのJSONL手番データをカラーで閲覧できる専用モーダル『試合データ詳細ビューア』を新設",
-          "『◀ 前の試合』『次の試合 ▶』ボタンや試合番号ドロップダウンにより、全200試合の中から見たい試合を1試合ずつめくって全手番（座席・着手・手札・finalRank）をカラー確認可能",
-          "通常対局時のルール・演出・カード操作・キャラクター設定には一切の変更なし"
-        ],
-        files: ["index.html (v1.5.5)", "style.css (v1.5.5)", "app.js (v1.5.5)"]
-      },
-      {
-        ver: "v1.5.0",
-        date: "2025-02-23",
-        title: "V1.5 機械学習基盤・2000試合自己対戦（A:10キャラ均等 / B:KING 4体）新設",
-        changes: [
-          "将来のディープラーニング・強化学習に向け、全思考ステップおよび試合結果に『seat (座席番号 1〜4)』『finalRank (確定順位 1〜4)』の記録構造を追加",
-          "戦績モーダル内に『🤖 AI自己対戦』タブを新設し、カード交換なしの高速自己対戦に対応",
-          "対戦結果サマリー表示および、Python等で即座に扱える標準JSON / JSONL（改行区切り）形式の学習データ出力機能を実装"
-        ],
-        files: ["index.html (v1.5.0)", "style.css (v1.5.0)", "app.js (v1.5.0)"]
-      },
-      {
-        ver: "v1.1.0",
-        date: "2025-02-23",
-        title: "対戦成績・総合ランキングの刷新（AI・プレイヤー完全分離）",
-        changes: [
-          "宮廷総合ランキングに『👤 あなた（プレイヤー）』枠を追加（全11名での格付け）",
-          "手動プレイ結果のみを『あなた』の戦績として集計、自動プレイ・観戦時は各AIキャラの純粋戦績として集計",
-          "『あなたの個人戦績』を自分が手動操作した対局のみに限定集計",
-          "新仕様への移行に伴う戦績データベースのクリーンリセット（新シーズン開幕）"
-        ],
-        files: ["index.html (v1.1.0)", "style.css (v1.1.0)", "app.js (v1.1.0)"]
-      },
-      {
-        ver: "v1.0.0",
-        date: "2025-02-23",
-        title: "バージョン管理システム導入 ＆ 正式リリース版",
-        changes: [
-          "手札カードの重なり幅を枚数によらず一定ピッチ（固定幅）に統一",
-          "CPU2のキャラ名右隣に階級バッジ（大富豪等）をスマホでも横並び表示",
-          "プレイヤーのパス回数を手札直下に適正配置",
-          "PC時のCPU1・CPU3のカード重なりを緩和・全枚数表示に対応",
-          "パス実行時の手札選択即時解除",
-          "5枚出し等における場のカード自動重なり収縮機能",
-          "セリフ表示と肖像拡大の完全同期、勝利時の肖像戻り処理",
-          "バージョン管理メトリクスおよび更新履歴モーダルの新設"
-        ],
-        files: ["index.html (v1.0.0)", "style.css (v1.0.0)", "app.js (v1.0.0)"]
+        files: ["server.py", "app.js (v1.8.5)"]
       }
     ];
   </script>
@@ -132,21 +107,29 @@
           </ul>
         </div>
 
-        <!-- 戦況メーター -->
-        <div class="eval-meter-container" id="eval-meter-btn" title="クリックで戦況グラフを表示">
-          <div class="eval-meter-wrapper">
-            <div class="eval-meter-label">勝利予想</div>
-            <div class="eval-meter-badge">
-              <span id="eval-summary-icon">📊</span>
-              <span id="eval-summary-text">互角</span>
-              <span class="eval-pct" id="eval-summary-pct"></span>
-              <div class="eval-meter-bar-mini" id="eval-mini-bar">
-                <div class="eval-meter-bar-fill" style="background:#d4af37; width:25%;"></div>
-                <div class="eval-meter-bar-fill" style="background:#4caf50; width:25%;"></div>
-                <div class="eval-meter-bar-fill" style="background:#2196f3; width:25%;"></div>
-                <div class="eval-meter-bar-fill" style="background:#e91e63; width:25%;"></div>
+        <!-- 戦況メーター & AI通信ステータスランプ -->
+        <div class="header-status-row">
+          <div class="eval-meter-container" id="eval-meter-btn" title="クリックで戦況グラフを表示">
+            <div class="eval-meter-wrapper">
+              <div class="eval-meter-label">勝利予想</div>
+              <div class="eval-meter-badge">
+                <span id="eval-summary-icon">📊</span>
+                <span id="eval-summary-text">互角</span>
+                <span class="eval-pct" id="eval-summary-pct"></span>
+                <div class="eval-meter-bar-mini" id="eval-mini-bar">
+                  <div class="eval-meter-bar-fill" style="background:#d4af37; width:25%;"></div>
+                  <div class="eval-meter-bar-fill" style="background:#4caf50; width:25%;"></div>
+                  <div class="eval-meter-bar-fill" style="background:#2196f3; width:25%;"></div>
+                  <div class="eval-meter-bar-fill" style="background:#e91e63; width:25%;"></div>
+                </div>
               </div>
             </div>
+          </div>
+
+          <!-- 🔮 AI通信ステータスオーブ -->
+          <div class="ai-status-orb-btn" id="ai-status-orb" title="クリックでデバッグログを表示">
+            <span class="ai-orb-dot status-offline" id="ai-orb-dot"></span>
+            <span class="ai-orb-label" id="ai-orb-label">AI: 待機中</span>
           </div>
         </div>
       </div>
@@ -161,17 +144,31 @@
         </div>
         <div class="modal-body">
           <div class="char-intro-item">
-            <img class="char-intro-portrait" data-char-img="BEGINNER_AI" src="" alt="🤖 初級AI (Beginner AI) - PyTorch深層学習モデル">
+            <img class="char-intro-portrait" data-char-img="BEGINNER_AI" src="" alt="🤖 上級AI - PyTorch深層学習モデル">
             <div class="char-intro-text">
-              <div class="rule-item-title">🤖 初級AI (Beginner AI) - PyTorch深層学習モデル</div>
-              <div>PyTorchで訓練された深層学習モデル（daifugo_ai.pth）とローカル通信を行い、盤面ベクトル（106次元）から推論した最高スコアのカードを選択して戦う最新AIです。</div>
+              <div class="rule-item-title">🤖 上級AI - PyTorch深層学習モデル (110次元)</div>
+              <div>PyTorchで訓練された多層深層学習モデル（daifugou_ai_hi.pth）と連携し、盤面ベクトルから推論した最高スコアのカードを選択して戦う本格AIです。</div>
+            </div>
+          </div>
+          <div class="char-intro-item">
+            <img class="char-intro-portrait" data-char-img="MID_AI" src="" alt="👸 中級AI - PyTorch深層学習モデル">
+            <div class="char-intro-text">
+              <div class="rule-item-title">👸 中級AI - PyTorch深層学習モデル (106次元)</div>
+              <div>標準3層ニューラルネット（daifugo_ai_mid.pth）により手堅い戦法をとる学習モデルAIです。</div>
+            </div>
+          </div>
+          <div class="char-intro-item">
+            <img class="char-intro-portrait" data-char-img="KING" src="" alt="🏰 王 (King) - 完全読み（最強AI）">
+            <div class="char-intro-text">
+              <div class="rule-item-title">🏰 王 (King) - 完全読み（最強AI）</div>
+              <div>未見のカードや全員の手札状況を完璧に計算し、モンテカルロ木探索（MCTS）で確定勝ちルートを指す最強AIです。</div>
             </div>
           </div>
           <div class="char-intro-item">
             <img class="char-intro-portrait" data-char-img="DUKE" src="" alt="👑 公爵 (Duke) - 温存型">
             <div class="char-intro-text">
               <div class="rule-item-title">👑 公爵 (Duke) - 温存型</div>
-              <div>強力なカード（Aや2）を温存し、手札後半で一気に勝負をかけます。また、次の相手をアシストするような安易な温存プレイは避けます。</div>
+              <div>強力なカード（Aや2）を温存し、手札後半で一気に勝負をかけます。</div>
             </div>
           </div>
           <div class="char-intro-item">
@@ -185,56 +182,49 @@
             <img class="char-intro-portrait" data-char-img="COUNT" src="" alt="📜 伯爵 (Count) - 変則展開">
             <div class="char-intro-text">
               <div class="rule-item-title">📜 伯爵 (Count) - 変則展開</div>
-              <div>序盤は温存し、手札が5枚以下になると強力なカードを積極的に使い始める、状況に応じた戦術の変化が得意です。</div>
+              <div>序盤は温存し、手札が5枚以下になると強力なカードを積極的に使い始めます。</div>
             </div>
           </div>
           <div class="char-intro-item">
             <img class="char-intro-portrait" data-char-img="KNIGHT" src="" alt="⚔️ 騎士 (Knight) - 愚直・最弱順">
             <div class="char-intro-text">
               <div class="rule-item-title">⚔️ 騎士 (Knight) - 愚直・最弱順</div>
-              <div>駆け引きをせず、常に自分が持っている「今出せる中で最も弱いカード」を直直に出していきます。</div>
+              <div>駆け引きをせず、常に「今出せる中で最も弱いカード」を直直に出していきます。</div>
             </div>
           </div>
           <div class="char-intro-item">
             <img class="char-intro-portrait" data-char-img="MERCHANT" src="" alt="⚖️ 商人 (Merchant) - ペア重視">
             <div class="char-intro-text">
               <div class="rule-item-title">⚖️ 商人 (Merchant) - ペア重視</div>
-              <div>ペア（2枚出し）やセット（3枚出し以上）の構築を好み、同じ数字のカードを分解して単発で出すことを嫌います。</div>
+              <div>ペア（2枚出し）やセットの構築を好み、同じ数字のカードを単発で出すことを嫌います。</div>
             </div>
           </div>
           <div class="char-intro-item">
             <img class="char-intro-portrait" data-char-img="SCHOLAR" src="" alt="📖 学者 (Scholar) - 慎重・観察">
             <div class="char-intro-text">
               <div class="rule-item-title">📖 学者 (Scholar) - 慎重・観察</div>
-              <div>場の流れを分析し、相手が複数出しをしてきた場合に合わせて強力なカードでカウンターを狙います。</div>
+              <div>場の流れを分析し、相手が複数出しをしてきた場合に合わせてカウンターを狙います。</div>
             </div>
           </div>
           <div class="char-intro-item">
             <img class="char-intro-portrait" data-char-img="STRATEGIST" src="" alt="♟️ 軍師 (Strategist) - 妨害・コントロール">
             <div class="char-intro-text">
               <div class="rule-item-title">♟️ 軍師 (Strategist) - 妨害・コントロール</div>
-              <div>他プレイヤーの手札が残り少なくなると「8切り」や「A/2」を使って親権を奪い、あがりを阻止します。</div>
+              <div>他プレイヤーの手札が残り少なくなると「8切り」や強カードで親権を奪い、あがりを阻止します。</div>
             </div>
           </div>
           <div class="char-intro-item">
             <img class="char-intro-portrait" data-char-img="REVOLUTIONARY" src="" alt="🔥 革命家 (Revolutionary) - 革命特化">
             <div class="char-intro-text">
               <div class="rule-item-title">🔥 革命家 (Revolutionary) - 革命特化</div>
-              <div>4枚以上のペアがあれば最優先で「革命」を狙い、さらに「8切り」を多用して場を支配します。</div>
+              <div>4枚以上のペアがあれば最優先で「革命」を狙い、さらに「8切り」を多用します。</div>
             </div>
           </div>
           <div class="char-intro-item">
             <img class="char-intro-portrait" data-char-img="JESTER" src="" alt="🤡 道化師 (Jester) - 予測不能">
             <div class="char-intro-text">
               <div class="rule-item-title">🤡 道化師 (Jester) - 予測不能</div>
-              <div>気まぐれに強カードを突然出したり、突然パスしたりと、読めないトリッキーな動きをします。</div>
-            </div>
-          </div>
-          <div class="char-intro-item">
-            <img class="char-intro-portrait" data-char-img="KING" src="" alt="🏰 王 (King) - 完全読み（最強AI）">
-            <div class="char-intro-text">
-              <div class="rule-item-title">🏰 王 (King) - 完全読み（最強AI）</div>
-              <div>未見のカードや全員の手札状況を完璧に計算し、確定勝ちルートを計算して最適手を指す最強AIです。</div>
+              <div>気まぐれに強カードを出したりパスしたりと、読めないトリッキーな動きをします。</div>
             </div>
           </div>
         </div>
@@ -262,7 +252,7 @@
           </div>
           <div class="rule-item">
             <div class="rule-item-title">カード交換 (Card Exchange)</div>
-            <div>2ゲーム目以降の開始時、前ゲームの階級に応じてカードを交換します。（※メンバー交代時は交換なし）<br>・大富豪 ⇄ 大貧民：大貧民は最も強い2枚を献上、大富豪は任意の2枚を譲渡。<br>・富豪 ⇄ 貧民：貧民は最も強い1枚を献上、富豪は任意の1枚を譲渡。</div>
+            <div>2ゲーム目以降の開始時、前ゲームの階級に応じてカードを交換します。<br>・大富豪 ⇄ 大貧民：大貧民は最も強い2枚を献上、大富豪は任意の2枚を譲渡。<br>・富豪 ⇄ 貧民：貧民は最も強い1枚を献上、富豪は任意の1枚を譲渡。</div>
           </div>
           <div class="rule-item">
             <div class="rule-item-title">革命 (Revolution)</div>
@@ -278,11 +268,11 @@
           </div>
           <div class="rule-item">
             <div class="rule-item-title">🃏 ジョーカー (Joker)</div>
-            <div>デッキには2枚のジョーカーが含まれます。単騎で出すと革命中でも常に最強のカードとして場を支配します。複数枚出し（ペア・トリプルなど）では、他のカードの代わりとなるワイルドカードとしても使用できます。</div>
+            <div>デッキには2枚のジョーカーが含まれます。単騎で出すと最強カードとして場を支配します。</div>
           </div>
           <div class="rule-item">
             <div class="rule-item-title">♠3返し (Spade 3 Return)</div>
-            <div>場に「ジョーカー単騎」が出ている時に限り、「♠3」を単騎で出すことでジョーカーに勝つことができる特殊ルールです。</div>
+            <div>場に「ジョーカー単騎」が出ている時に限り、「♠3」を単騎で出すことでジョーカーに勝つことができます。</div>
           </div>
           <div class="rule-item" id="rule-item-pass-block">
             <div class="rule-item-title" id="rule-item-pass-title">パスの制限 (Pass Rules)</div>
@@ -315,7 +305,7 @@
       </div>
     </div>
 
-    <!-- 1試合ごとの学習データ詳細ビューア（別画面・ページ送りモーダル） -->
+    <!-- 1試合ごとの学習データ詳細ビューア -->
     <div class="modal-overlay" id="log-viewer-modal">
       <div class="modal-content" style="max-width: 760px; width: 96%;">
         <div class="modal-header">
@@ -335,6 +325,29 @@
         </div>
         <div class="modal-footer">
           <button class="btn-modal-close" id="modal-log-viewer-close-btn">閉じる</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 📜 画面内デバッグ・ログコンソールモーダル（タブレット・スマホ対応） -->
+    <div class="modal-overlay" id="debug-log-modal">
+      <div class="modal-content" style="max-width: 720px; width: 96%;">
+        <div class="modal-header">
+          <div class="modal-title">📜 デバッグ ＆ AI通信ログ</div>
+          <button class="modal-close" id="modal-debug-log-close-x">&times;</button>
+        </div>
+        <div class="debug-log-toolbar">
+          <div class="debug-status-summary" id="debug-status-summary">サーバー: 確認中...</div>
+          <div class="debug-actions">
+            <button class="btn-debug-act" id="btn-copy-logs">📋 全コピー</button>
+            <button class="btn-debug-act" id="btn-clear-logs">🗑️ クリア</button>
+          </div>
+        </div>
+        <div class="modal-body" style="padding: 0; max-height: 58vh;">
+          <div class="debug-log-container" id="debug-log-container"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-modal-close" id="modal-debug-log-close-btn">閉じる</button>
         </div>
       </div>
     </div>
@@ -395,6 +408,7 @@
         <div class="char-row">
           <img class="char-portrait" id="cpu2-portrait" src="" alt="">
           <div class="player-name-row">
+            <span class="ai-brain-dot" id="cpu2-brain-dot" title="AI推論中"></span>
             <div class="char-badge" id="cpu2-char-title">---</div>
             <div class="rank-badge" id="cpu2-rank"></div>
           </div>
@@ -410,7 +424,10 @@
         </div>
         <div class="char-row">
           <img class="char-portrait" id="cpu1-portrait" src="" alt="">
-          <div class="char-badge" id="cpu1-char-title">---</div>
+          <div class="player-name-row">
+            <span class="ai-brain-dot" id="cpu1-brain-dot" title="AI推論中"></span>
+            <div class="char-badge" id="cpu1-char-title">---</div>
+          </div>
         </div>
         <div class="cpu-card-stack" id="cpu1-stack"></div>
         <div class="pass-count"><span id="cpu1-pass-label">パス: </span><span id="cpu1-pass">0</span></div>
@@ -438,7 +455,10 @@
         </div>
         <div class="char-row">
           <img class="char-portrait" id="cpu3-portrait" src="" alt="">
-          <div class="char-badge" id="cpu3-char-title">---</div>
+          <div class="player-name-row">
+            <span class="ai-brain-dot" id="cpu3-brain-dot" title="AI推論中"></span>
+            <div class="char-badge" id="cpu3-char-title">---</div>
+          </div>
         </div>
         <div class="cpu-card-stack" id="cpu3-stack"></div>
         <div class="pass-count"><span id="cpu3-pass-label">パス: </span><span id="cpu3-pass">0</span></div>
@@ -454,6 +474,7 @@
         <div class="char-row">
           <img class="char-portrait" id="player-portrait" src="" alt="">
           <div class="player-name-row">
+            <span class="ai-brain-dot" id="player-brain-dot" title="AI推論中"></span>
             <div class="char-badge" id="player-char-title">---</div>
             <div class="rank-badge" id="player-rank"></div>
           </div>
@@ -464,7 +485,7 @@
       </div>
     </div>
 
-    <!-- 下部操作バー (16:10統一・横1行配置) -->
+    <!-- 下部操作バー -->
     <div id="bottom-bar">
       <div class="action-group left-actions">
         <button class="btn" id="auto-play-btn">自動プレイ: OFF</button>
@@ -488,9 +509,13 @@
 
   </div> <!-- /#app-viewport -->
 
-  <!-- 画面右下のバージョン表示バッジ（クリックで更新履歴表示） -->
-  <div id="version-badge" title="クリックで更新履歴を表示">v1.6.0-dl-beginner</div>
+  <!-- 画面右下のフローティングツールバー（ログボタン ＆ バージョンバッジ） -->
+  <div id="floating-tools">
+    <button id="debug-log-btn" title="デバッグログを開く">📜 ログ</button>
+    <div id="version-badge" title="クリックで更新履歴を表示">v1.8.6</div>
+  </div>
 
   <script src="app.js"></script>
 </body>
 </html>
+
