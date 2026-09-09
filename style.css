@@ -1,21 +1,4 @@
-/* style.css の主な変更点（事前説明）
-
-1.  ヘッダーの横並び配置（.header-status-row）:
-      - 戦況メーターと「AI通信オーブ」がすっきりと横並びになるよう調整。
-2.  AI通信オーブ（#ai-status-orb）の宮廷風デザイン ＆ 発光アニメーション:
-      - 🟢 ONLINE: エメラルドグリーンに優しく脈動（パルス）。
-      - 🟡 WAKING: 琥珀色に点滅（Render起動待ち）。
-      - 🔴 OFFLINE: ルビー色（通信切断／フォールバック動作中）。
-3.  キャラクター名横のAIブレインランプ（.ai-brain-dot）:
-      - 上級AI・中級AIがPyTorch推論を行った瞬間に、**ピカッとエメラルドに強く輝くアニメーション（@keyframes
-        brainGlow）**を実装。
-4.  画面内ログコンソール（#debug-log-modal）のデザイン:
-      - モバイル・タブレットで見やすい黒背景＆等幅フォントのコンソール画面。
-      - 通常ログ、警告（黄）、エラー（赤）、AI推論（金）のカラー色分け表示。
-5.  右下のフローティングツールバー（#floating-tools）:
-      - 「📜 ログ」ボタンとバージョンバッジを綺麗に右下に常駐配置。 */
-
-/* [CSS Version: v1.8.6-ai-orb-logger] 最終更新: AI推論ステータスランプ・キャラ別思考発光・タブレット画面内デバッグログ搭載 */
+/* [CSS Version: v1.9.1] 最終更新: 操作バーへのログボタン統合 ＆ PC追従型バージョンバッジ完全対応版 */
 
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Noto+Serif+JP:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap');
 
@@ -1102,8 +1085,12 @@ body {
   box-shadow: 0 0 10px rgba(212, 175, 55, 0.5) !important;
 }
 
+/* ★「ログ」ボタンも戦績・リセットと同等のボタンスタイルに統一 */
 #go-exchange-btn, #exchange-btn { flex: 1; max-width: 180px; font-weight: bold; }
-#auto-play-btn, #stats-btn, #reset-btn { min-width: 44px; padding: 0 4px; }
+#auto-play-btn, #stats-btn, #reset-btn, #debug-log-btn { 
+  min-width: 36px; 
+  padding: 0 4px; 
+}
 
 .speed-controls {
   position: absolute;
@@ -1159,42 +1146,22 @@ body {
 #player-area .pass-count { margin-top: 1px; margin-bottom: 1px; }
 
 /* ============================================================
- * 右下フローティングツールバー（ログボタン ＆ バージョン）
+ * ★バージョンバッジ（ゲーム枠内の右下に常駐・PC/スマホ/タブレット共通）
  * ============================================================ */
-#floating-tools {
-  position: fixed;
-  bottom: 3px;
-  right: 6px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  z-index: 200;
-  user-select: none;
-}
-
-#debug-log-btn {
-  background: rgba(15, 23, 36, 0.85);
-  color: #fff3a8;
-  border: 1px solid rgba(212, 175, 55, 0.45);
-  border-radius: 3px;
-  font-size: 10px;
-  padding: 1px 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-weight: bold;
-}
-#debug-log-btn:hover {
-  background: rgba(212, 175, 55, 0.25);
-  border-color: #d4af37;
-}
-
 #version-badge {
+  position: absolute;
+  bottom: 1px;
+  right: 6px;
   font-size: 10px;
   font-family: 'Cinzel', serif;
-  color: rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.45);
   letter-spacing: 0.5px;
   cursor: pointer;
   transition: color 0.2s ease;
+  z-index: 500;
+  padding: 1px 4px;
+  user-select: none;
+  pointer-events: auto;
 }
 #version-badge:hover {
   color: #d4af37;
@@ -1474,4 +1441,5 @@ body {
 .srb-2 { background: rgba(76, 175, 80, 0.3); color: #a5d6a7; border: 1px solid #4caf50; }
 .srb-3 { background: rgba(33, 150, 243, 0.3); color: #90caf9; border: 1px solid #2196f3; }
 .srb-4 { background: rgba(244, 67, 54, 0.3); color: #ef9a9a; border: 1px solid #f44336; }
+
 

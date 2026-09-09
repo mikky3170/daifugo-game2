@@ -1,26 +1,5 @@
-/* app.js を確認しました！ Renderで立ち上げた https://daifugo-game2.onrender.com を組み込み、
 
-  - ローカル環境（PC上での開発・検証・file直接開き）: http://127.0.0.1:5000
-  - 本番環境（GitHub Pages や 公開Web）: https://daifugo-game2.onrender.com
-
-を完全自動判別してシームレスに切り替えるように更新します。 バージョンも一本化ルールに従い v1.9.1 へインクリメントしました。
-
-主な変更箇所（130行目前後）
-
-// 🌐 AI計算係（Pythonサーバー）の接続先アドレス (ローカル / Render クラウド自動判別)
-const RENDER_BACKEND_URL = 'https://daifugo-game2.onrender.com';
-
-const AI_SERVER_BASE_URL = (
-  window.location.hostname === 'localhost' ||
-  window.location.hostname === '127.0.0.1' ||
-  window.location.protocol === 'file:'
-)
-  ? 'http://127.0.0.1:5000'
-  : RENDER_BACKEND_URL;
-
-console.log(`[SYSTEM] Target API Backend: ${AI_SERVER_BASE_URL}`); */
-
-/* [JS Version: v1.9.1] 最終更新: RenderクラウドAPI連携 & ローカル/クラウド自動判別統合版 */
+/* [JS Version: v1.9.1] 最終更新: Renderクラウド本番連携・操作バーログボタン統合・PC追従バージョンバッジ完全対応版 */
 
 /* ====================================================================
  * ROYAL DAIFUGO - バージョン管理マスター（最新10件キープ運用）
@@ -30,13 +9,15 @@ const VERSION_HISTORY = [
   {
     ver: "v1.9.1",
     date: "2025-02-25",
-    title: "Render.com クラウドAPI連携 ＆ ローカル/クラウド自動判別",
+    title: "Render.com クラウドAPI本番連携 ＆ UIレイアウト完全統合",
     changes: [
-      "Render.comにデプロイされたPyTorchバックエンドサーバー（https://daifugo-game2.onrender.com）との本番連携に対応",
-      "アクセス元（localhost/file/Web）に応じたAPI接続先の自動切り替えロジックを実装",
-      "Render無料枠のスリープ復帰待機（WAKINGオーブ）との完全同期"
+      "Render.comクラウド上のPyTorch推論サーバー（https://daifugo-game2.onrender.com）との本番接続に対応",
+      "接続先（localhost/file/Web）に応じたAPI自動切り替えロジックを実装",
+      "下部操作バーの『リセット』横に『ログ』ボタンを美しく統合（全デバイス対応）",
+      "大画面PCでも中央の宮廷ゲーム枠内に追従するようバージョンバッジ（v1.9.1）の配置を最適化",
+      "タブレット等の読み込み遅延による停止を防止する安全起動ラッパー（startApp）を搭載"
     ],
-    files: ["app.js", "server.py", "requirements.txt", "Procfile"]
+    files: ["index.html", "style.css", "app.js", "server.py", "requirements.txt", "Procfile"]
   },
   {
     ver: "v1.9.0",
@@ -2482,7 +2463,7 @@ function playerPlayCard() {
   }
 
   const validMoves = getAllValidMoves(hands.player, fieldCards, rev);
-  AIDataLogger.recordStep('player', 1, assignedCharacters.player, hands.player, fieldCards, isRevolution, isElevenBack, consecutivePasses, hasPassedInRound, validMoves, cards);
+  AIDataLogger.recordStep(hands.player, fieldCards, isRevolution, isElevenBack, consecutivePasses, hasPassedInRound, validMoves, cards);
 
   const playedIndices = [...selectedIndices];
   animateCardMovement('player', playedIndices, cards, () => {
@@ -2496,7 +2477,7 @@ function playerPass() {
   
   const rev = effectiveReverse();
   const validMoves = getAllValidMoves(hands.player, fieldCards, rev);
-  AIDataLogger.recordStep('player', 1, assignedCharacters.player, hands.player, fieldCards, isRevolution, isElevenBack, consecutivePasses, hasPassedInRound, validMoves, null);
+  AIDataLogger.recordStep(hands.player, fieldCards, isRevolution, isElevenBack, consecutivePasses, hasPassedInRound, validMoves, null);
 
   selectedIndices = [];
   const handEl = document.getElementById('player-hand');
@@ -3780,12 +3761,29 @@ window.RoyalAI = {
   exportJSONL: () => AIDataLogger.exportJSONL()
 };
 
-document.querySelectorAll('#char-modal img[data-char-img]').forEach(img => {
-img.src = CHAR_IMAGES[img.getAttribute('data-char-img')] || '';
-});
-initRuleTexts();
-buildCharSelectGrid();
-initEvents();
-bgmMgr.setCharSelectPhase(true);
+// ============================================================
+// アプリケーション安全起動処理 (全デバイス初期化保証)
+// ============================================================
+function startApp() {
+  try {
+    document.querySelectorAll('#char-modal img[data-char-img]').forEach(img => {
+      img.src = CHAR_IMAGES[img.getAttribute('data-char-img')] || '';
+    });
+    initRuleTexts();
+    buildCharSelectGrid();
+    initEvents();
+    bgmMgr.setCharSelectPhase(true);
+    AIStatusUI.pingServer();
+    console.log('[SYSTEM] アプリ初期化完了（v1.9.1）');
+  } catch (err) {
+    console.error('[CRITICAL] 起動初期化エラー:', err);
+  }
+}
 
-AIStatusUI.pingServer();
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startApp);
+} else {
+  startApp();
+}
+
+

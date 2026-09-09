@@ -1,9 +1,4 @@
-<!--index.html の修正内容
-
-  - 先頭にあったバージョン情報の埋め込みスクリプト（VERSION_HISTORY）を撤去し、HTMLファイルを軽量・シンプルに整理しました。
-  - バージョン表記や履歴モーダルの組み立ては、すべて次の app.js 側で自動実行されます。 -->
-
-<!-- [HTML Version: v1.9.0] 最終更新: バージョン管理をapp.jsへ一本化・AIオーブ・デバッグログ完全統合 -->
+<!-- [HTML Version: v1.9.1] 最終更新: 操作バーへのログボタン統合 ＆ バージョンバッジ枠内配置版 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -463,18 +458,18 @@
       <div class="action-group right-actions">
         <button class="btn" id="stats-btn">戦績</button>
         <button class="btn" id="reset-btn">リセット</button>
+        <!-- ★リセットの横に配置された「ログ」ボタン -->
+        <button class="btn" id="debug-log-btn" title="デバッグログを開く">ログ</button>
       </div>
     </div>
 
-  </div> <!-- /#app-viewport -->
+    <!-- ★ゲーム枠内の右下に常駐配置されたバージョンバッジ（PC/スマホ/タブレット共通） -->
+    <div id="version-badge" title="クリックで更新履歴を表示">v1.9.1</div>
 
-  <!-- 画面右下のフローティングツールバー（ログボタン ＆ バージョンバッジ） -->
-  <div id="floating-tools">
-    <button id="debug-log-btn" title="デバッグログを開く">📜 ログ</button>
-    <div id="version-badge" title="クリックで更新履歴を表示">v1.9.0</div>
-  </div>
+  </div> <!-- /#app-viewport -->
 
   <script src="app.js"></script>
 </body>
 </html>
+
 
