@@ -1,19 +1,117 @@
-/* app.js の修正内容
+/* app.js を確認しました！ Renderで立ち上げた https://daifugo-game2.onrender.com を組み込み、
 
-1.  AIDataLogger にターン別着手履歴（currentTurnHistory）を追加:
-      - ゲーム開始時に空配列に初期化。
-      - recordTurnAction(seatNum, action, cards, isCleared) メソッドを新設。
-2.  カード提出時（playCardSuccess）とパス時（processPass）の自動追跡:
-      - カード提出時は "action": "play"、カードリスト、および8切り時の "isCleared": true を記録。
-      - パス時は "action": "pass"、空配列 []、および全員パスによる流れ発生時の "isCleared": true を記録。
-3.  エピソードログ（recordEpisodeEnd）への "playedCardsHistory" 追加:
-      - 既存の gameId, seats, remainingCards 等のデータ構造を一切崩さず、1エピソードごとの提出・パス履歴配列を完全追加。 */
+  - ローカル環境（PC上での開発・検証・file直接開き）: http://127.0.0.1:5000
+  - 本番環境（GitHub Pages や 公開Web）: https://daifugo-game2.onrender.com
 
-/* [JS Version: v1.8.7-turn-history] 最終更新: 1エピソードごとの場流出・ターン着手履歴(playedCardsHistory)収集完全対応 */
+を完全自動判別してシームレスに切り替えるように更新します。 バージョンも一本化ルールに従い v1.9.1 へインクリメントしました。
+
+主な変更箇所（130行目前後）
+
+// 🌐 AI計算係（Pythonサーバー）の接続先アドレス (ローカル / Render クラウド自動判別)
+const RENDER_BACKEND_URL = 'https://daifugo-game2.onrender.com';
+
+const AI_SERVER_BASE_URL = (
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.protocol === 'file:'
+)
+  ? 'http://127.0.0.1:5000'
+  : RENDER_BACKEND_URL;
+
+console.log(`[SYSTEM] Target API Backend: ${AI_SERVER_BASE_URL}`); */
+
+/* [JS Version: v1.9.1] 最終更新: RenderクラウドAPI連携 & ローカル/クラウド自動判別統合版 */
 
 /* ====================================================================
- * ROYAL DAIFUGO - 完全統合・リファクタリング版 (app.js)
+ * ROYAL DAIFUGO - バージョン管理マスター（最新10件キープ運用）
  * ==================================================================== */
+const APP_VERSION = "v1.9.1";
+const VERSION_HISTORY = [
+  {
+    ver: "v1.9.1",
+    date: "2025-02-25",
+    title: "Render.com クラウドAPI連携 ＆ ローカル/クラウド自動判別",
+    changes: [
+      "Render.comにデプロイされたPyTorchバックエンドサーバー（https://daifugo-game2.onrender.com）との本番連携に対応",
+      "アクセス元（localhost/file/Web）に応じたAPI接続先の自動切り替えロジックを実装",
+      "Render無料枠のスリープ復帰待機（WAKINGオーブ）との完全同期"
+    ],
+    files: ["app.js", "server.py", "requirements.txt", "Procfile"]
+  },
+  {
+    ver: "v1.9.0",
+    date: "2025-02-25",
+    title: "AI稼働ステータス可視化・画面内ログ ＆ カウンティング学習データ対応",
+    changes: [
+      "ヘッダーにPyTorchサーバーとの通信状態を示す『AI通信ステータス・オーブ（緑/黄/赤）』を新設",
+      "タブレット・スマホ実機で推論ログや通信状態を確認・コピーできる『画面内デバッグコンソール』を搭載",
+      "上級・中級AIが正常に推論した瞬間のみキャラ横ランプが発光する仕様に改善（フォールバック時は完全消灯）",
+      "AIのカウンティング学習・残手札推定を可能にするため、JSONログに1手ごとの着手・場流れ履歴（playedCardsHistory）を追加記録",
+      "起動時のRenderサーバー自動目覚まし通信に対応"
+    ],
+    files: ["index.html", "style.css", "app.js", "server.py"]
+  },
+  {
+    ver: "v1.8.5",
+    date: "2025-02-24",
+    title: "中級AI(PyTorch 106次元モデル) ＆ クラウド連携対応",
+    changes: [
+      "上級AI(110次元)と中級AI(106次元)のPyTorchモデル完全両立",
+      "5パターンの座席シャッフル高速シミュレーション搭載"
+    ],
+    files: ["server.py", "app.js"]
+  },
+  {
+    ver: "v1.6.0",
+    date: "2025-02-24",
+    title: "PyTorch深層学習モデル連携基盤の新設",
+    changes: [
+      "Pythonサーバー（server.py）およびPyTorch学習済みモデルと完全連携",
+      "盤面106次元ベクトルをリアルタイム推論"
+    ],
+    files: ["server.py", "app.js"]
+  },
+  {
+    ver: "v1.5.5",
+    date: "2025-02-23",
+    title: "自己対戦 ＆ 1試合ごとの学習データ詳細ビューア新設",
+    changes: [
+      "試合ごとの手番データをカラーで閲覧できる専用モーダルを新設",
+      "ページ送り・試合番号選択による全手番カラー確認に対応"
+    ],
+    files: ["index.html", "style.css", "app.js"]
+  },
+  {
+    ver: "v1.5.0",
+    date: "2025-02-23",
+    title: "機械学習基盤・自己対戦機能新設",
+    changes: [
+      "座席番号(seat)・確定順位(finalRank)の記録構造を追加",
+      "標準JSON / JSONL形式の学習データ出力機能を実装"
+    ],
+    files: ["index.html", "style.css", "app.js"]
+  },
+  {
+    ver: "v1.1.0",
+    date: "2025-02-23",
+    title: "対戦成績・総合ランキングの刷新（AI・プレイヤー完全分離）",
+    changes: [
+      "宮廷総合ランキングに『あなた』枠を追加（全11名での格付け）",
+      "手動プレイと自動観戦の戦績完全分離集計"
+    ],
+    files: ["index.html", "style.css", "app.js"]
+  },
+  {
+    ver: "v1.0.0",
+    date: "2025-02-23",
+    title: "正式リリース版",
+    changes: [
+      "手札カード重なり幅の固定統一・レスポンシブ宮廷デザイン",
+      "セリフ表示と肖像拡大の完全同期演出"
+    ],
+    files: ["index.html", "style.css", "app.js"]
+  }
+];
 
 /* ----------------------------------------------------
  * 0. 画面内デバッグロガー（タブレット・スマホ対応）
@@ -92,8 +190,18 @@ InAppLogger.init();
 /* ----------------------------------------------------
  * 1. 設定・定数・キャラクター定義
  * ---------------------------------------------------- */
-// 🌐 AI計算係（Pythonサーバー）の接続先アドレス
-const AI_SERVER_BASE_URL = 'http://localhost:5000';
+// 🌐 AI計算係（Pythonサーバー）の接続先アドレス (ローカル / Render クラウド自動判別)
+const RENDER_BACKEND_URL = 'https://daifugo-game2.onrender.com';
+
+const AI_SERVER_BASE_URL = (
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.protocol === 'file:'
+)
+  ? 'http://127.0.0.1:5000'
+  : RENDER_BACKEND_URL;
+
+console.log(`[SYSTEM] Target API Backend: ${AI_SERVER_BASE_URL}`);
 
 const CONFIG = {
   ALLOW_LIMIT_PASS: false,
@@ -556,7 +664,7 @@ const AIStatusUI = {
     } else if (state === 'thinking') {
       dot.classList.add('status-thinking');
       label.textContent = text || 'AI: 推論中...';
-    } else { // offline
+    } else {
       dot.classList.add('status-offline');
       label.textContent = text || 'AI: OFFLINE';
       if (summary) summary.textContent = `🔴 未接続: ${AI_SERVER_BASE_URL}`;
@@ -621,7 +729,7 @@ async function askPythonAI(hand, currentField, validMoves, modelType = 'hi', pla
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
 
     const payload = {
       modelType: modelType,
@@ -673,7 +781,7 @@ const AIDataLogger = {
   currentTurnCount: 0,
   stepLogs: [],
   episodeLogs: [],
-  currentTurnHistory: [], // ★新設: 1エピソード中の全手番カード提出・パス履歴
+  currentTurnHistory: [],
 
   startNewGame(pattern = 'OBSERVE_GAME') {
     this.activeGameId = 'game_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
@@ -697,13 +805,12 @@ const AIDataLogger = {
     return cards.map(c => this.serializeCard(c));
   },
 
-  // ★新設: ターンごとの提出・パス・場流れアクションを記録
   recordTurnAction(seatNum, action, cards, isCleared = false) {
     if (!CONFIG.ENABLE_AI_DATA_LOGGING) return;
     this.currentTurnHistory.push({
       turn: this.currentTurnCount,
       seat: seatNum,
-      action: action, // "play" または "pass"
+      action: action,
       cards: (action === 'play' && cards) ? this.serializeCards(cards) : [],
       isCleared: !!isCleared
     });
@@ -775,7 +882,7 @@ const AIDataLogger = {
       totalTurns: this.currentTurnCount,
       seats: seatResults,
       remainingCards: remainingCardsMap,
-      playedCardsHistory: [...this.currentTurnHistory], // ★要件準拠: 毎ターンの着手・流出履歴を完全追加
+      playedCardsHistory: [...this.currentTurnHistory],
       timestamp: Date.now()
     };
     this.episodeLogs.push(ep);
@@ -2451,7 +2558,6 @@ function playCardSuccess(player, cards, needFullRedraw = false, playedIndices = 
     if (!specialType) specialType = 'EIGHT_CUT';
   }
 
-  // ★ターン履歴記録（カード提出・8切りの場クリア記録）
   const seatNum = PLAYERS.indexOf(player) + 1;
   AIDataLogger.recordTurnAction(seatNum, 'play', cards, isEight);
 
@@ -2502,7 +2608,6 @@ function processPass(player) {
   selectedIndices = [];
   hasPassedInRound[player] = true;
 
-  // ★ターン履歴記録（パス・全員パスによる流れフラグ）
   const seatNum = PLAYERS.indexOf(player) + 1;
   const active = PLAYERS.filter(p => !finishedPlayers.includes(p));
   const willClear = (consecutivePasses >= active.length - 1 || consecutivePasses >= 3);
@@ -2741,7 +2846,7 @@ const SelfPlayRunner = {
 
     } catch (err) {
       console.error("⚠️ Pythonシミュレーションエラー:", err);
-      alert(`Pythonサーバーとの通信に失敗しました。\nコマンドプロンプトで python server.py が起動しているか確認してください。\n(${err.message})`);
+      alert(`Pythonサーバーとの通信に失敗しました。\nサーバーが起動しているか確認してください。\n(${err.message})`);
       this.isRunning = false;
       const pWrap = document.getElementById('selfplay-progress-wrap');
       if (pWrap) pWrap.style.display = 'none';
@@ -3457,6 +3562,7 @@ function initEvents() {
     };
   }
 
+  // ★右下バージョンバッジの更新＆モーダル連動
   if (versionBadge && typeof APP_VERSION !== 'undefined') {
     versionBadge.textContent = APP_VERSION;
     versionBadge.onclick = () => {
@@ -3675,7 +3781,7 @@ window.RoyalAI = {
 };
 
 document.querySelectorAll('#char-modal img[data-char-img]').forEach(img => {
-  img.src = CHAR_IMAGES[img.getAttribute('data-char-img')] || '';
+img.src = CHAR_IMAGES[img.getAttribute('data-char-img')] || '';
 });
 initRuleTexts();
 buildCharSelectGrid();
@@ -3683,4 +3789,3 @@ initEvents();
 bgmMgr.setCharSelectPhase(true);
 
 AIStatusUI.pingServer();
-
