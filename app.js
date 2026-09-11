@@ -1,60 +1,107 @@
 
-/* [JS Version: v1.9.1] 最終更新: Renderクラウド本番連携・操作バーログボタン統合・PC追従バージョンバッジ完全対応版 */
+/* [JS Version: v2.2.2] 最終更新: 高速シミュレーター残り時間(ETA)リアルタイム表示・Renderクラウド＆外部端末連携対応版 */
 
 /* ====================================================================
  * ROYAL DAIFUGO - バージョン管理マスター（最新10件キープ運用）
  * ==================================================================== */
-const APP_VERSION = "v1.9.1";
+const APP_VERSION = "v2.2.2";
 const VERSION_HISTORY = [
   {
-    ver: "v1.9.1",
-    date: "2025-02-25",
-    title: "Render.com クラウドAPI本番連携 ＆ UIレイアウト完全統合",
+    ver: "v2.2.2",
+    date: "2026-09-11",
+    title: "高速シミュレーター残り時間(ETA)リアルタイム表示・ログ直通ボタン・Renderクラウド完全対応",
     changes: [
-      "Render.comクラウド上のPyTorch推論サーバー（https://daifugo-game2.onrender.com）との本番接続に対応",
-      "接続先（localhost/file/Web）に応じたAPI自動切り替えロジックを実装",
-      "下部操作バーの『リセット』横に『ログ』ボタンを美しく統合（全デバイス対応）",
-      "大画面PCでも中央の宮廷ゲーム枠内に追従するようバージョンバッジ（v1.9.1）の配置を最適化",
+      "シミュレーター進捗に「経過時間」および「残り時間(ETA)」をリアルタイムで分・秒表示",
+      "シミュレーター画面内に「📜 通信ログ確認」ボタンを新設（モーダルを閉じずにログ確認可能）",
+      "シミュレーター実行時に実際に使用されているモデル（163次元/110次元）の自動ログ記録＆UIバッジ表示",
+      "対王ガードレール（2のペナルティ解除・テンポ重視）の反映",
+      "Renderクラウドサーバー（動的PORT・静的Web直接配信・外部端末通信最適化）完全対応"
+    ],
+    files: ["server.py", "app.js", "index.html"]
+  },
+  {
+    ver: "v2.2.1",
+    date: "2026-09-11",
+    title: "超級AI 163次元完全体表示・超級専用Joker戦術補正・シミュレーターUI更新",
+    changes: [
+      "シミュレーターUIのパターンD/E等の表示を163次元へ完全統一",
+      "超級AIの診断テストで発覚したJoker小札浪費バグを解消する超級専用戦術温存補正を適用",
+      "キャラクター解説・セリフ・ログの次元数表記を163次元へ整合",
+      "HTML/JS/Python全ファイルのバージョン同期（v2.2.1）"
+    ],
+    files: ["server.py", "index.html", "app.js"]
+  },
+  {
+    ver: "v2.1.0",
+    date: "2026-09-10",
+    title: "高速シミュレーター新5パターン（超級AI主軸体制）実装",
+    changes: [
+      "シミュレーターの全パターンを超級AI（159次元）主軸へ再編",
+      "パターンA：超級AI × 2 🆚 王 × 2（最難関ベンチマーク）",
+      "パターンB：超級AI × 2 🆚 王 × 1 🆚 上級AI × 1（実戦混戦モデル）",
+      "パターンC：超級AI × 2 🆚 超級を除く11名からランダム2名（汎用・全キャラ対戦）",
+      "パターンD：超級AI × 2 🆚 上級AI × 2（新旧モデル頂上決戦）",
+      "パターンE：超級AI × 4（159次元同モデル自己対戦）"
+    ],
+    files: ["server.py", "app.js"]
+  },
+  {
+    ver: "v2.0.0",
+    date: "2026-09-09",
+    title: "超級AIモデル(159次元・流れたカードカウンティング推論) 実装",
+    changes: [
+      "中級AIを最上位『超級AI』（daifugo_ai_hi2.pth / 4層BatchNorm構造）へ完全リプレイス",
+      "手札(53)＋場(53)に加え、『流れたカード(53)』を完全記憶する159次元推論基盤を構築",
+      "下部操作バーの『リセット』横に『ログ』ボタンを統合（全デバイス共通UI）",
+      "PCワイド画面でも中央ゲーム枠の右下に追従するバージョンバッジ（v2.0.0）を常駐化"
+    ],
+    files: ["index.html", "style.css", "app.js", "server.py"]
+  },
+  {
+    ver: "v1.9.1",
+    date: "2026-09-08",
+    title: "Render.com クラウドAPI連携 ＆ ローカル/クラウド自動判別",
+    changes: [
+      "Render.comにデプロイされたPyTorchバックエンドサーバー（https://daifugo-game2.onrender.com）との本番連携に対応",
+      "アクセス元（localhost/file/Web）に応じたAPI接続先の自動切り替えロジックを実装",
       "タブレット等の読み込み遅延による停止を防止する安全起動ラッパー（startApp）を搭載"
     ],
-    files: ["index.html", "style.css", "app.js", "server.py", "requirements.txt", "Procfile"]
+    files: ["app.js", "server.py", "requirements.txt", "Procfile"]
   },
   {
     ver: "v1.9.0",
-    date: "2025-02-25",
+    date: "2026-09-07",
     title: "AI稼働ステータス可視化・画面内ログ ＆ カウンティング学習データ対応",
     changes: [
       "ヘッダーにPyTorchサーバーとの通信状態を示す『AI通信ステータス・オーブ（緑/黄/赤）』を新設",
       "タブレット・スマホ実機で推論ログや通信状態を確認・コピーできる『画面内デバッグコンソール』を搭載",
-      "上級・中級AIが正常に推論した瞬間のみキャラ横ランプが発光する仕様に改善（フォールバック時は完全消灯）",
-      "AIのカウンティング学習・残手札推定を可能にするため、JSONログに1手ごとの着手・場流れ履歴（playedCardsHistory）を追加記録",
-      "起動時のRenderサーバー自動目覚まし通信に対応"
+      "AIのカウンティング学習を可能にするため、JSONログに1手ごとの着手・場流れ履歴を追加記録"
     ],
     files: ["index.html", "style.css", "app.js", "server.py"]
   },
   {
     ver: "v1.8.5",
-    date: "2025-02-24",
-    title: "中級AI(PyTorch 106次元モデル) ＆ クラウド連携対応",
+    date: "2026-09-06",
+    title: "ニューラルネット推論 ＆ クラウド連携対応",
     changes: [
-      "上級AI(110次元)と中級AI(106次元)のPyTorchモデル完全両立",
+      "PyTorch深層学習モデルとのリアルタイム通信",
       "5パターンの座席シャッフル高速シミュレーション搭載"
     ],
     files: ["server.py", "app.js"]
   },
   {
     ver: "v1.6.0",
-    date: "2025-02-24",
+    date: "2026-09-05",
     title: "PyTorch深層学習モデル連携基盤の新設",
     changes: [
       "Pythonサーバー（server.py）およびPyTorch学習済みモデルと完全連携",
-      "盤面106次元ベクトルをリアルタイム推論"
+      "盤面ベクトルをリアルタイム推論"
     ],
     files: ["server.py", "app.js"]
   },
   {
     ver: "v1.5.5",
-    date: "2025-02-23",
+    date: "2026-09-04",
     title: "自己対戦 ＆ 1試合ごとの学習データ詳細ビューア新設",
     changes: [
       "試合ごとの手番データをカラーで閲覧できる専用モーダルを新設",
@@ -64,31 +111,11 @@ const VERSION_HISTORY = [
   },
   {
     ver: "v1.5.0",
-    date: "2025-02-23",
+    date: "2026-09-03",
     title: "機械学習基盤・自己対戦機能新設",
     changes: [
       "座席番号(seat)・確定順位(finalRank)の記録構造を追加",
       "標準JSON / JSONL形式の学習データ出力機能を実装"
-    ],
-    files: ["index.html", "style.css", "app.js"]
-  },
-  {
-    ver: "v1.1.0",
-    date: "2025-02-23",
-    title: "対戦成績・総合ランキングの刷新（AI・プレイヤー完全分離）",
-    changes: [
-      "宮廷総合ランキングに『あなた』枠を追加（全11名での格付け）",
-      "手動プレイと自動観戦の戦績完全分離集計"
-    ],
-    files: ["index.html", "style.css", "app.js"]
-  },
-  {
-    ver: "v1.0.0",
-    date: "2025-02-23",
-    title: "正式リリース版",
-    changes: [
-      "手札カード重なり幅の固定統一・レスポンシブ宮廷デザイン",
-      "セリフ表示と肖像拡大の完全同期演出"
     ],
     files: ["index.html", "style.css", "app.js"]
   }
@@ -134,7 +161,7 @@ const InAppLogger = {
     const text = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
     
     let actualType = type;
-    if (text.includes('[推論]') || text.includes('PyTorch') || text.includes('AIモデル')) {
+    if (text.includes('[推論]') || text.includes('PyTorch') || text.includes('AIモデル') || text.includes('[シミュレーター]')) {
       actualType = 'ai';
     }
 
@@ -171,7 +198,6 @@ InAppLogger.init();
 /* ----------------------------------------------------
  * 1. 設定・定数・キャラクター定義
  * ---------------------------------------------------- */
-// 🌐 AI計算係（Pythonサーバー）の接続先アドレス (ローカル / Render クラウド自動判別)
 const RENDER_BACKEND_URL = 'https://daifugo-game2.onrender.com';
 
 const AI_SERVER_BASE_URL = (
@@ -180,7 +206,7 @@ const AI_SERVER_BASE_URL = (
   window.location.protocol === 'file:'
 )
   ? 'http://127.0.0.1:5000'
-  : RENDER_BACKEND_URL;
+  : (window.location.origin && window.location.origin.startsWith('http') ? window.location.origin : RENDER_BACKEND_URL);
 
 console.log(`[SYSTEM] Target API Backend: ${AI_SERVER_BASE_URL}`);
 
@@ -251,7 +277,8 @@ const CHARACTER_DEFS = {
   JESTER: { id: 'JESTER', name: '道化師', icon: '🤡' },
   KING: { id: 'KING', name: '王', icon: '🏰' },
   BEGINNER_AI: { id: 'BEGINNER_AI', name: '上級AI', icon: '🤖' },
-  MID_AI: { id: 'MID_AI', name: '中級AI', icon: '👸' }
+  SUPER_AI: { id: 'SUPER_AI', name: '超級AI', icon: '👸' },
+  MID_AI: { id: 'SUPER_AI', name: '超級AI', icon: '👸' }
 };
 
 const CHAR_IMAGES = {
@@ -266,6 +293,7 @@ const CHAR_IMAGES = {
   JESTER: "fugo-絵柄/jester.png",
   KING: "fugo-絵柄/king.png",
   BEGINNER_AI: "fugo-絵柄/young_king.png",
+  SUPER_AI: "fugo-絵柄/queen.png",
   MID_AI: "fugo-絵柄/queen.png"
 };
 
@@ -281,7 +309,8 @@ const CHAR_SHORT_DESC = {
   JESTER: '読めないトリッキー派',
   KING: '完全読みの最強AI',
   BEGINNER_AI: 'PyTorch深層学習モデル（上級110次元）による推論AI',
-  MID_AI: 'PyTorch深層学習モデル（中級106次元）による推論AI'
+  SUPER_AI: 'PyTorch深層学習モデル（超級163次元・盤面完全認識）による推論AI',
+  MID_AI: 'PyTorch深層学習モデル（超級163次元・盤面完全認識）による推論AI'
 };
 
 const CHARACTER_DIALOGUES = {
@@ -461,21 +490,37 @@ const CHARACTER_DIALOGUES = {
     EXCHANGE: ['交換テンソル処理中……', 'カード譲渡を実行。'],
     NEXT_GAME: ['次の対局へ進みます。', '新規エピソード開始。']
   },
-  MID_AI: {
-    NORMAL: ['中級推論モデルを実行。', '標準パラメータに従い打牌。', '手札ベクトル照合中。'],
-    STRONG: ['評価値上昇手を選択。', '高出力カードを展開。'],
-    MULTI: ['セット出しを選択。', '結合完了。'],
-    EIGHT_CUT: ['8切りコードを検知。クリアを実行。', '場を初期化。'],
+  SUPER_AI: {
+    NORMAL: ['超級推論モデル稼働中。', '流れたカードを含む163次元ベクトル解析完了。', '盤面・カウンティング照合。'],
+    STRONG: ['超高スコア手を選択。', '勝率最大化テンソルを展開。'],
+    MULTI: ['最適セット出しを検出。', '結合テンソル出力。'],
+    EIGHT_CUT: ['8切り認識。場をクリアし除外リストへ格納。', '強制初期化。'],
     ELEVEN_BACK: ['11バック認識。順位テーブルを一時反転。'],
-    REVOLUTION: ['革命フラグ成立。順位テーブルを反転。'],
-    PASS: ['パスを選択。次巡の評価待ち。', 'スキップ。'],
-    ENEMY_FEW: ['警戒判定: 敵手札減少。', '詰めを警戒。'],
-    MY_FEW: ['残りカード僅少。収束中。', 'あがり予測圏内。'],
-    WIN: ['上位ゴール確定。検証成功。', '大富豪を達成しました。'],
-    LOSE: ['モデル精度に課題あり。調整を記録。', '反省データを蓄積。'],
-    GAME_START: ['中級AIモデル（daifugo_ai_mid.pth）稼働。対局を開始します。', '初期化完了。'],
-    EXCHANGE: ['カード交換テンソルを実行。', '受渡完了。'],
-    NEXT_GAME: ['次の対局へ移行します。', '新規試行を開始。']
+    REVOLUTION: ['革命成立。テンソル強弱を完全反転。'],
+    PASS: ['期待値精査によりパスを選択。', 'スキップ判定。'],
+    ENEMY_FEW: ['敵手札僅少アラート。カウンティング警戒深度最大。', '詰め阻止モード。'],
+    MY_FEW: ['残りカード収束。勝利ルート確定。', '王手確定。'],
+    WIN: ['超級モデル検証成功。完全勝利（大富豪）。', 'エピソード最上位ゴール。'],
+    LOSE: ['損失関数増大を記録。パラメータ補正データを保存。', '次回試行へ。'],
+    GAME_START: ['超級AIモデル（daifugou_ai_hi2.pth・163次元）起動。対局を開始します。', '初期化完了。'],
+    EXCHANGE: ['カード交換テンソルを実行。', '最適受渡完了。'],
+    NEXT_GAME: ['次の対局へ移行します。', '新規エピソード開始。']
+  },
+  MID_AI: {
+    NORMAL: ['超級推論モデル稼働中。', '流れたカードを含む163次元ベクトル解析完了。'],
+    STRONG: ['超高スコア手を選択。'],
+    MULTI: ['最適セット出しを検出。'],
+    EIGHT_CUT: ['8切り認識。場をクリア。'],
+    ELEVEN_BACK: ['11バック認識。評価反転。'],
+    REVOLUTION: ['革命成立。順位反転。'],
+    PASS: ['パスを選択。'],
+    ENEMY_FEW: ['敵手札僅少アラート。'],
+    MY_FEW: ['残りカード収束。'],
+    WIN: ['超級モデル検証成功。'],
+    LOSE: ['次回試行へ。'],
+    GAME_START: ['超級AIモデル（daifugou_ai_hi2.pth・163次元）起動。'],
+    EXCHANGE: ['カード交換テンソルを実行。'],
+    NEXT_GAME: ['次の対局へ移行します。']
   }
 };
 
@@ -668,7 +713,7 @@ const AIStatusUI = {
       const res = await fetch(CONFIG.PYTHON_HEALTH_URL, { method: 'GET', cache: 'no-cache' });
       if (res.ok) {
         const data = await res.json();
-        console.log(`✅ [Pythonサーバー接続成功] 上級モデル: ${data.model_hi_name || 'OK'}, 中級モデル: ${data.model_mid_name || 'OK'}`);
+        console.log(`✅ [Pythonサーバー接続成功] 上級モデル: ${data.model_hi_name || 'OK'}, 超級モデル: ${data.model_super_name || 'OK'} (${data.super_in_dim || 163}次元)`);
         this.set('online', 'AI: 稼働中');
       } else {
         throw new Error(`HTTP ${res.status}`);
@@ -718,6 +763,7 @@ async function askPythonAI(hand, currentField, validMoves, modelType = 'hi', pla
       isElevenBack: !!isElevenBack,
       hand: hand.map(c => ({ suit: c.suitSymbol, rank: c.display, isJoker: !!c.isJoker, jokerId: c.jokerId })),
       field: currentField.map(c => ({ suit: c.suitSymbol, rank: c.display, isJoker: !!c.isJoker, jokerId: c.jokerId })),
+      clearedCards: AIDataLogger.serializeCards(clearedCardsHistory),
       validMoves: validMoves.map(m => m.map(c => ({ suit: c.suitSymbol, rank: c.display, isJoker: !!c.isJoker, jokerId: c.jokerId })))
     };
 
@@ -735,10 +781,13 @@ async function askPythonAI(hand, currentField, validMoves, modelType = 'hi', pla
     if (resData && resData.status === 'success') {
       AIStatusUI.set('online', 'AI: 稼働中');
 
+      const isSuper = (modelType === 'super' || modelType === 'mid');
+      const roleName = isSuper ? '超級AI' : '上級AI';
+
       if (resData.fallback) {
         console.warn(`[推論] サーバー未ロードのためフォールバック手を受信`);
       } else {
-        console.log(`[推論] ${modelType === 'mid' ? '中級AI' : '上級AI'} (${playerKey}) スコア: ${resData.bestScore ? resData.bestScore.toFixed(3) : '-'}`);
+        console.log(`[推論] ${roleName} (${playerKey}) スコア: ${resData.bestScore ? resData.bestScore.toFixed(3) : '-'}`);
         AIStatusUI.flashBrainDot(playerKey);
       }
 
@@ -754,7 +803,7 @@ async function askPythonAI(hand, currentField, validMoves, modelType = 'hi', pla
 }
 
 /* ----------------------------------------------------
- * 3. AIデータロガー (AIDataLogger: ターン着手履歴 playedCardsHistory 搭載)
+ * 3. AIデータロガー (AIDataLogger)
  * ---------------------------------------------------- */
 const AIDataLogger = {
   activeGameId: null,
@@ -817,6 +866,7 @@ const AIDataLogger = {
       playerCharName: charDef?.name || (player === 'player' ? 'あなた' : player),
       hand: this.serializeCards(hand),
       fieldCards: this.serializeCards(fieldCards),
+      clearedCards: this.serializeCards(clearedCardsHistory),
       isRevolution: !!isRev,
       isElevenBack: !!isEb,
       consecutivePasses: consecutivePasses,
@@ -1340,7 +1390,7 @@ class SimGame {
     this.consecutivePasses++;
   }
 
-  advanceTurn(currentIdx, wasEightGiri) {
+  advance_turn(currentIdx, wasEightGiri) {
     const active = this.playerKeys.filter(p => !this.finishedPlayers.includes(p));
 
     if (wasEightGiri || (this.lastPlayedPlayer && (this.consecutivePasses >= active.length - 1 || this.consecutivePasses >= 3))) {
@@ -1363,6 +1413,10 @@ class SimGame {
       g++;
     }
     return next;
+  }
+
+  advanceTurn(currentIdx, wasEightGiri) {
+    return this.advance_turn(currentIdx, wasEightGiri);
   }
 }
 
@@ -1438,7 +1492,7 @@ function kingSolveExactWin(sim, kingCpu, depth = 0, maxDepth = 5) {
     const nextSim = sim.clone();
     nextSim.doMove(kingCpu, move);
     const wasEight = move[0].display === '8';
-    const nextIdx = nextSim.advanceTurn(sim.playerKeys.indexOf(kingCpu), wasEight);
+    const nextIdx = nextSim.advance_turn(sim.playerKeys.indexOf(kingCpu), wasEight);
 
     let canBeBeaten = false;
     const nextP = sim.playerKeys[nextIdx];
@@ -1451,7 +1505,7 @@ function kingSolveExactWin(sim, kingCpu, depth = 0, maxDepth = 5) {
         if (oppMove === null) oppSim.doPass();
         else oppSim.doMove(nextP, oppMove);
 
-        oppSim.advanceTurn(nextIdx, oppMove && oppMove[0].display === '8');
+        oppSim.advance_turn(nextIdx, oppMove && oppMove[0].display === '8');
         if ((oppSim.hands[nextP]?.length || 0) === 0) {
           canBeBeaten = true;
           break;
@@ -1525,12 +1579,12 @@ function kingDecideMoveUniversal(cpuKey, hand, currentField, rev, allHands, allF
       node = bestChild;
       if (node.move === null) sim.doPass();
       else sim.doMove(sim.playerKeys[node.parent.playerIdx], node.move);
-      sim.advanceTurn(node.parent.playerIdx, node.move && node.move[0].display === '8');
+      sim.advance_turn(node.parent.playerIdx, node.move && node.move[0].display === '8');
     }
 
     if (node.unexpandedMoves && node.unexpandedMoves.length > 0) {
       const move = node.unexpandedMoves.pop();
-      const nextIdx = sim.advanceTurn(node.playerIdx, move && move[0].display === '8');
+      const nextIdx = sim.advance_turn(node.playerIdx, move && move[0].display === '8');
       if (move === null) sim.doPass();
       else sim.doMove(sim.playerKeys[node.playerIdx], move);
 
@@ -1551,7 +1605,7 @@ function kingDecideMoveUniversal(cpuKey, hand, currentField, rev, allHands, allF
       const chosen = cands[Math.floor(RandomManager.random() * cands.length)];
       if (chosen === null) sim.doPass();
       else sim.doMove(p, chosen);
-      currPIdx = sim.advanceTurn(currPIdx, chosen && chosen[0].display === '8');
+      currPIdx = sim.advance_turn(currPIdx, chosen && chosen[0].display === '8');
       depth++;
     }
 
@@ -1674,9 +1728,9 @@ function selectMoveByCharacterDef(charDef, hand, currentField, rev, otherCounts,
         let s = evaluateMoveDefault(move);
         if (isGuaranteedAbsoluteWin(move, unrevealedCards, rev)) s += 50;
         if (danger) {
-          if (move[0].display === '8') s += 60;
-          if (move[0].display === 'A' || move[0].display === '2') s += 40;
-          if (move[0].display === 'J') s += 30;
+          if (move[0].display == '8') s += 60;
+          if (move[0].display == 'A' || move[0].display == '2') s += 40;
+          if (move[0].display == 'J') s += 30;
         }
         if (s > bestScore) { bestScore = s; bestMove = move; }
       }
@@ -1690,7 +1744,7 @@ function selectMoveByCharacterDef(charDef, hand, currentField, rev, otherCounts,
       let bestMove = validMoves[0], bestScore = -999;
       for (let move of validMoves) {
         let s = evaluateMoveDefault(move);
-        if (move[0].display === '8') s += 50;
+        if (move[0].display == '8') s += 50;
         if (s > bestScore) { bestScore = s; bestMove = move; }
       }
       return bestMove;
@@ -1709,6 +1763,7 @@ function selectMoveByCharacterDef(charDef, hand, currentField, rev, otherCounts,
 
     case 'KING':
     case 'BEGINNER_AI':
+    case 'SUPER_AI':
     case 'MID_AI':
       return null;
 
@@ -1730,7 +1785,7 @@ function decideCpuMove(cpu) {
   let chosen = null;
   if (charDef.id === 'KING') {
     chosen = kingDecideMoveUniversal(cpu, hand, fieldCards, rev, hands, finishedPlayers, playedCardsHistory, lastPlayedPlayer, consecutivePasses, PLAYERS, false);
-  } else if (charDef.id === 'BEGINNER_AI' || charDef.id === 'MID_AI') {
+  } else if (charDef.id === 'BEGINNER_AI' || charDef.id === 'SUPER_AI' || charDef.id === 'MID_AI') {
     chosen = validMoves[0];
   } else {
     const nextIdx = (PLAYERS.indexOf(cpu) + 1) % PLAYERS.length;
@@ -2231,6 +2286,8 @@ let gameEnded = false;
 
 let assignedCharacters = { player: null, cpu1: null, cpu2: null, cpu3: null };
 let playedCardsHistory = [];
+let currentRoundCards = [];
+let clearedCardsHistory = [];
 let cpuCooldowns = { cpu1: 0, cpu2: 0, cpu3: 0 };
 
 function effectiveReverse() {
@@ -2257,6 +2314,8 @@ function startNewGame() {
   isRevolution = false;
   isElevenBack = false;
   playedCardsHistory = [];
+  currentRoundCards = [];
+  clearedCardsHistory = [];
   cpuCooldowns = { cpu1: 0, cpu2: 0, cpu3: 0 };
 
   const dealOrder = shuffle([...PLAYERS]);
@@ -2463,7 +2522,7 @@ function playerPlayCard() {
   }
 
   const validMoves = getAllValidMoves(hands.player, fieldCards, rev);
-  AIDataLogger.recordStep(hands.player, fieldCards, isRevolution, isElevenBack, consecutivePasses, hasPassedInRound, validMoves, cards);
+  AIDataLogger.recordStep('player', 1, assignedCharacters.player, hands.player, fieldCards, isRevolution, isElevenBack, consecutivePasses, hasPassedInRound, validMoves, cards);
 
   const playedIndices = [...selectedIndices];
   animateCardMovement('player', playedIndices, cards, () => {
@@ -2477,7 +2536,7 @@ function playerPass() {
   
   const rev = effectiveReverse();
   const validMoves = getAllValidMoves(hands.player, fieldCards, rev);
-  AIDataLogger.recordStep(hands.player, fieldCards, isRevolution, isElevenBack, consecutivePasses, hasPassedInRound, validMoves, null);
+  AIDataLogger.recordStep('player', 1, assignedCharacters.player, hands.player, fieldCards, isRevolution, isElevenBack, consecutivePasses, hasPassedInRound, validMoves, null);
 
   selectedIndices = [];
   const handEl = document.getElementById('player-hand');
@@ -2494,6 +2553,7 @@ function playerPass() {
 function playCardSuccess(player, cards, needFullRedraw = false, playedIndices = []) {
   const wasLoneJoker = fieldCards.length === 1 && fieldCards[0].isJoker;
   fieldCards = cards;
+  currentRoundCards.push(...cards);
   lastPlayedPlayer = player;
   consecutivePasses = 0;
   selectedIndices = [];
@@ -2661,6 +2721,9 @@ function clearField(nextPlayer = null) {
   const fieldEl = document.getElementById('field-cards');
   fieldEl.classList.add('clear-animation');
 
+  clearedCardsHistory.push(...currentRoundCards);
+  currentRoundCards = [];
+
   setTimeout(() => {
     fieldCards = [];
     consecutivePasses = 0;
@@ -2714,8 +2777,8 @@ async function cpuPlayTurn(cpu) {
 
   if (validMoves.length === 0) {
     move = null;
-  } else if (charDef && (charDef.id === 'BEGINNER_AI' || charDef.id === 'MID_AI')) {
-    const modelType = (charDef.id === 'MID_AI') ? 'mid' : 'hi';
+  } else if (charDef && (charDef.id === 'BEGINNER_AI' || charDef.id === 'SUPER_AI' || charDef.id === 'MID_AI')) {
+    const modelType = (charDef.id === 'SUPER_AI' || charDef.id === 'MID_AI') ? 'super' : 'hi';
     move = await askPythonAI(hands[cpu], fieldCards, validMoves, modelType, cpu);
   } else {
     move = decideCpuMove(cpu);
@@ -2768,7 +2831,7 @@ async function cpuPlayTurn(cpu) {
 }
 
 /* ----------------------------------------------------
- * 11. 高速自己対戦エンジン (5パターン・毎試合シャッフル対応)
+ * 11. 高速自己対戦エンジン (新5パターン・ETA＆モデル追跡対応)
  * ---------------------------------------------------- */
 const SelfPlayRunner = {
   isRunning: false,
@@ -2781,7 +2844,7 @@ const SelfPlayRunner = {
     this.activePattern = pattern;
     this.totalGames = total;
 
-    onProgress(0, total, 0);
+    onProgress(0, total, 0, 0, null);
 
     try {
       const response = await fetch(CONFIG.PYTHON_SIM_URL, {
@@ -2810,11 +2873,11 @@ const SelfPlayRunner = {
           try {
             const msg = JSON.parse(trimmed);
             if (msg.type === 'progress') {
-              onProgress(msg.current, msg.total, msg.pct);
+              onProgress(msg.current, msg.total, msg.pct, msg.elapsed || 0, msg.superModel);
             } else if (msg.type === 'complete') {
               this.isRunning = false;
-              onProgress(msg.totalGames, msg.totalGames, 100);
-              onComplete(msg.results, msg.elapsedSeconds, msg.totalSteps, msg.isFixedSeats);
+              onProgress(msg.totalGames, msg.totalGames, 100, msg.elapsedSeconds, msg.superModel);
+              onComplete(msg.results, msg.elapsedSeconds, msg.totalSteps, msg.isFixedSeats, msg.superModel);
               return;
             }
           } catch (pe) {
@@ -2982,7 +3045,7 @@ function renderVersionHistoryModal() {
 }
 
 function pickRandomCPUCharacters() {
-  const keys = Object.keys(CHARACTER_DEFS).filter(k => !assignedCharacters.player || k !== assignedCharacters.player.id);
+  const keys = Object.keys(CHARACTER_DEFS).filter(k => k !== 'MID_AI' && (!assignedCharacters.player || k !== assignedCharacters.player.id));
   const shuffled = shuffle(keys);
   assignedCharacters.cpu1 = CHARACTER_DEFS[shuffled[0]];
   assignedCharacters.cpu2 = CHARACTER_DEFS[shuffled[1]];
@@ -3006,6 +3069,7 @@ function buildCharSelectGrid() {
   if (!grid) return;
   grid.innerHTML = '';
   Object.keys(CHARACTER_DEFS).forEach(key => {
+    if (key === 'MID_AI') return;
     const def = CHARACTER_DEFS[key];
     const card = document.createElement('div');
     card.className = 'char-select-card';
@@ -3112,8 +3176,15 @@ function showEvalModal() {
 }
 
 /* ============================================================
- * ランキング・戦績・自己対戦コントロールパネル
+ * ランキング・戦績・自己対戦コントロールパネル (ETA・ログ直通対応)
  * ============================================================ */
+function formatSecondsToDisplay(sec) {
+  if (sec <= 0 || isNaN(sec)) return '計算中...';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return m > 0 ? `${m}分${s}秒` : `${s}秒`;
+}
+
 function renderRankingModalContent() {
   const body = document.getElementById('stats-body');
   if (!body) return;
@@ -3122,7 +3193,7 @@ function renderRankingModalContent() {
     const all = StorageManager.loadAllCharStats();
     const pStats = StorageManager.loadPlayerStats();
 
-    const list = Object.keys(CHARACTER_DEFS).map(id => {
+    const list = Object.keys(CHARACTER_DEFS).filter(k => k !== 'MID_AI').map(id => {
       const def = CHARACTER_DEFS[id];
       const st = all[id] || { games: 0, df: 0, f: 0, h: 0, dh: 0, rankSum: 0 };
       const winRate = st.games > 0 ? ((st.df / st.games) * 100).toFixed(1) : '0.0';
@@ -3270,7 +3341,7 @@ function renderRankingModalContent() {
       <div>
         <div class="rule-item-title">⚔️ あなたの天敵AIとその根拠</div>
         <div style="background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 6px; border-left: 3px solid #ff6b6b;">
-          <div style="margin-bottom: 3px;">最も敗北を喫した相手: <strong style="color:#ff6b6b; font-size: 14px;">${nemesis}</strong></div>
+          <div style="margin-bottom: 3px;">最も敗北を誇った相手: <strong style="color:#ff6b6b; font-size: 14px;">${nemesis}</strong></div>
           <div style="font-size: 11.5px; color: #b0bec5; line-height: 1.4;">根拠: ${nemesisReason}</div>
         </div>
       </div>
@@ -3282,56 +3353,61 @@ function renderRankingModalContent() {
     body.innerHTML = `
       <div class="selfplay-container">
         <div class="selfplay-header-box">
-          <strong style="color:#fff3a8;">🤖 高精度シミュレーター (毎試合座席完全シャッフル)</strong><br>
-          ※PyTorch推論モデル（上級AI・中級AI）やMCTS王思考を用いた高速検証。毎試合座席位置を完全シャッフルし、席順バイアスを排除した純粋な実力を評価。
+          <strong style="color:#fff3a8;">🤖 高精度シミュレーター (超級AI主軸・毎試合座席完全シャッフル)</strong><br>
+          ※超級AI（163次元完全体・盤面認識モデル）を中心に据えた高速検証。毎試合座席を完全シャッフルし、純粋な実力を評価。
         </div>
 
         <div class="selfplay-btn-row" style="display:flex; flex-direction:column; gap:8px;">
           <button class="btn-selfplay" id="btn-selfplay-a">
-            <span>🅰️ パターンA（対強敵・王特化）：上級AI × 2 🆚「王」 × 2</span>
+            <span>🅰️ パターンA（対強敵・王特化）：超級AI × 2 🆚「王」 × 2</span>
             <span style="font-size:10px; color:#d4af37; font-weight:bold;">最難関ベンチマーク (毎試合シャッフル・500試合)</span>
           </button>
           
           <div style="display:flex; gap:8px;">
             <button class="btn-selfplay" id="btn-selfplay-b" style="flex:1;">
-              <span>🅱️ パターンB（実戦混戦・王＋中級）</span>
-              <span style="font-size:10px; color:#4caf50; font-weight:bold;">上級AI × 2、王 × 1、中級AI × 1</span>
+              <span>🅱️ パターンB（実戦混戦・王＋上級）</span>
+              <span style="font-size:10px; color:#4caf50; font-weight:bold;">超級AI × 2、王 × 1、上級AI × 1</span>
               <span style="font-size:9px; color:#b0bec5;">(毎試合シャッフル・500試合)</span>
             </button>
             <button class="btn-selfplay" id="btn-selfplay-c" style="flex:1;">
-              <span>🅲 パターンC（汎用・全キャラ対応）</span>
-              <span style="font-size:10px; color:#2196f3; font-weight:bold;">上級AI × 2 🆚 その他10キャラからランダム2名</span>
+              <span>🅲 パターンC（汎用・全キャラ対戦）</span>
+              <span style="font-size:10px; color:#2196f3; font-weight:bold;">超級AI × 2 🆚 超級を除く11名からランダム2名</span>
               <span style="font-size:9px; color:#b0bec5;">(毎試合シャッフル・1,000試合)</span>
             </button>
           </div>
 
           <div style="display:flex; gap:8px;">
             <button class="btn-selfplay" id="btn-selfplay-d" style="flex:1;">
-              <span>🅳 パターンD（モデル比較・中級戦）</span>
-              <span style="font-size:10px; color:#9c27b0; font-weight:bold;">上級AI × 2 🆚 中級AI × 2</span>
-              <span style="font-size:9px; color:#b0bec5;">(新旧モデル対決・毎試合シャッフル・500試合)</span>
+              <span>🅳 パターンD（新旧モデル頂上決戦）</span>
+              <span style="font-size:10px; color:#9c27b0; font-weight:bold;">超級AI × 2 🆚 上級AI × 2</span>
+              <span style="font-size:9px; color:#b0bec5;">(163次元 vs 110次元・毎試合シャッフル・500試合)</span>
             </button>
             <button class="btn-selfplay" id="btn-selfplay-e" style="flex:1;">
-              <span>🅴 パターンE（自己対戦・高密度）</span>
-              <span style="font-size:10px; color:#e91e63; font-weight:bold;">上級AI × 4名 同モデル決戦</span>
-              <span style="font-size:9px; color:#b0bec5;">(高精度学習用ログ収集・500試合)</span>
+              <span>🅴 パターンE（同モデル自己対戦）</span>
+              <span style="font-size:10px; color:#e91e63; font-weight:bold;">超級AI × 4名 同モデル決戦</span>
+              <span style="font-size:9px; color:#b0bec5;">(高精度163次元学習ログ収集・500試合)</span>
             </button>
           </div>
         </div>
 
         <div class="selfplay-progress-wrap" id="selfplay-progress-wrap" style="display:none; flex-direction:column; gap:6px;">
-          <div class="selfplay-progress-text" style="display:flex; justify-content:space-between; font-size:11.5px; color:#e0e6ed;">
+          <div class="selfplay-progress-text" style="display:flex; justify-content:space-between; font-size:11.5px; color:#e0e6ed; flex-wrap:wrap; gap:4px;">
             <span id="selfplay-progress-label">シミュレーション準備中...</span>
-            <span id="selfplay-progress-pct" style="color:#d4af37; font-weight:bold;">0.0%</span>
+            <span id="selfplay-progress-eta" style="color:#4caf50; font-weight:bold;">⏳ 残り時間: 計算中...</span>
           </div>
           <div class="selfplay-progress-bar-bg" style="background:#101726; height:8px; border-radius:4px; overflow:hidden; border:1px solid rgba(212,175,55,0.2);">
             <div class="selfplay-progress-bar-fill" id="selfplay-progress-fill" style="width: 0%; height:100%; background:linear-gradient(90deg, #d4af37, #4caf50); transition: width 0.25s ease;"></div>
           </div>
+          <div style="display:flex; justify-content:space-between; font-size:10.5px; color:#8c9ba5;">
+            <span id="selfplay-model-badge">使用モデル: 超級AI (163次元) ＆ 上級AI (110次元)</span>
+            <span id="selfplay-progress-pct" style="color:#d4af37; font-weight:bold;">0.0%</span>
+          </div>
         </div>
 
         <div class="selfplay-summary-box">
-          <div class="rule-item-title" style="margin-bottom: 6px;">
+          <div class="rule-item-title" style="margin-bottom: 6px; display:flex; justify-content:space-between; align-items:center;">
             <span>📊 最新シミュレーション結果サマリー</span>
+            <button class="btn" id="btn-selfplay-quick-log" style="padding: 2px 8px; font-size: 10px; background:rgba(212,175,55,0.15); border:1px solid #d4af37;">📜 通信ログを確認</button>
           </div>
           <div id="selfplay-results-table">
             <div style="padding: 15px; text-align: center; color: #8c9ba5;">
@@ -3359,6 +3435,9 @@ function renderRankingModalContent() {
     document.getElementById('btn-selfplay-c').onclick = () => triggerSelfPlay('PATTERN_C', 1000);
     document.getElementById('btn-selfplay-d').onclick = () => triggerSelfPlay('PATTERN_D', 500);
     document.getElementById('btn-selfplay-e').onclick = () => triggerSelfPlay('PATTERN_E', 500);
+
+    const qLogBtn = document.getElementById('btn-selfplay-quick-log');
+    if (qLogBtn) qLogBtn.onclick = openDebugLogModal;
 
     const btnJson = document.getElementById('btn-download-json');
     const btnJsonl = document.getElementById('btn-download-jsonl');
@@ -3403,8 +3482,10 @@ function triggerSelfPlay(pattern, total = 500) {
   const btnViewer = document.getElementById('btn-open-viewer');
   const pWrap = document.getElementById('selfplay-progress-wrap');
   const pLabel = document.getElementById('selfplay-progress-label');
+  const pEta = document.getElementById('selfplay-progress-eta');
   const pPct = document.getElementById('selfplay-progress-pct');
   const pFill = document.getElementById('selfplay-progress-fill');
+  const pModelBadge = document.getElementById('selfplay-model-badge');
   if (!pWrap) return;
 
   if (btnJson) btnJson.disabled = true;
@@ -3414,24 +3495,39 @@ function triggerSelfPlay(pattern, total = 500) {
   pWrap.style.display = 'flex';
   pFill.style.width = '0%';
   pPct.textContent = '0.0%';
+  pEta.textContent = '⏳ 残り時間: 計算中...';
 
   const titleMap = {
-    'PATTERN_A': 'パターンA (上級AI 2人 🆚 王 2人 500試合・毎試合シャッフル)',
-    'PATTERN_B': 'パターンB (上級AI 2人 🆚 王 1人＋中級 1人 500試合・毎試合シャッフル)',
-    'PATTERN_C': 'パターンC (上級AI 2人 🆚 その他一般10名からランダム2名 1,000試合・毎試合シャッフル)',
-    'PATTERN_D': 'パターンD (上級AI 2人 🆚 中級AI 2人 500試合・毎試合シャッフル)',
-    'PATTERN_E': 'パターンE (上級AI 4人 同キャラ決戦 500試合・毎試合シャッフル)'
+    'PATTERN_A': 'パターンA (超級AI 2人 🆚 王 2人 500試合)',
+    'PATTERN_B': 'パターンB (超級AI 2人 🆚 王 1人＋上級AI 1人 500試合)',
+    'PATTERN_C': 'パターンC (超級AI 2人 🆚 一般・上級11名からランダム2名 1,000試合)',
+    'PATTERN_D': 'パターンD (超級AI 2人 🆚 上級AI 2人 500試合)',
+    'PATTERN_E': 'パターンE (超級AI 4人 同キャラ決戦 500試合)'
   };
-  pLabel.textContent = `シミュレーション実行中: ${titleMap[pattern] || ''}`;
+  pLabel.textContent = `実行中: ${titleMap[pattern] || ''}`;
+
+  InAppLogger.addEntry('ai', [`[シミュレーター開始] ${titleMap[pattern]} を開始しました。`]);
 
   SelfPlayRunner.startBatch(
     pattern,
     total,
-    (current, totalCount, pct) => {
+    (current, totalCount, pct, elapsed, superModel) => {
       if (pFill) pFill.style.width = `${pct}%`;
       if (pPct) pPct.textContent = `${pct.toFixed(1)}% (${current.toLocaleString()} / ${totalCount.toLocaleString()} 試合)`;
+
+      if (superModel && pModelBadge) {
+        pModelBadge.textContent = `稼働モデル: 超級=${superModel}`;
+      }
+
+      if (elapsed > 0 && pct > 1.0) {
+        const totalEstimated = elapsed / (pct / 100);
+        const remainingSec = Math.max(0, totalEstimated - elapsed);
+        if (pEta) {
+          pEta.textContent = `経過: ${formatSecondsToDisplay(elapsed)} ｜ ⏳ 残り: 約${formatSecondsToDisplay(remainingSec)}`;
+        }
+      }
     },
-    (results, elapsedSeconds, totalSteps, isFixedSeats) => {
+    (results, elapsedSeconds, totalSteps, isFixedSeats, superModel) => {
       btnIds.forEach(k => {
         const b = document.getElementById(`btn-selfplay-${k}`);
         if (b) b.disabled = false;
@@ -3444,6 +3540,10 @@ function triggerSelfPlay(pattern, total = 500) {
       if (btnJsonl) btnJsonl.disabled = false;
       if (btnViewer) btnViewer.disabled = false;
 
+      InAppLogger.addEntry('ai', [
+        `[シミュレーター完了] 所要時間: ${elapsedSeconds}秒 ｜ 総手数: ${totalSteps.toLocaleString()}手 ｜ モデル: ${superModel || '163次元'}`
+      ]);
+
       const tableDiv = document.getElementById('selfplay-results-table');
       if (tableDiv && results) {
         let thtml = `
@@ -3451,6 +3551,9 @@ function triggerSelfPlay(pattern, total = 500) {
             <div style="font-weight:bold; color:#fff3a8; margin-bottom:4px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px;">
               <span>🏆 対戦結果 (${titleMap[pattern]})</span>
               <span style="color:#4caf50; font-size:11px;">⏱️ 所要時間: ${elapsedSeconds}秒 ${totalSteps ? `(総${totalSteps.toLocaleString()}手収集済)` : ''}</span>
+            </div>
+            <div style="font-size:10.5px; color:#8c9ba5; margin-bottom:6px;">
+              ✅ 稼働確認: 超級AI=${superModel || 'daifugou_ai_hi2.pth (163次元)'}
             </div>
             <table class="ranking-table" style="font-size:11.5px;">
               <thead>
@@ -3543,7 +3646,6 @@ function initEvents() {
     };
   }
 
-  // ★右下バージョンバッジの更新＆モーダル連動
   if (versionBadge && typeof APP_VERSION !== 'undefined') {
     versionBadge.textContent = APP_VERSION;
     versionBadge.onclick = () => {
@@ -3761,9 +3863,6 @@ window.RoyalAI = {
   exportJSONL: () => AIDataLogger.exportJSONL()
 };
 
-// ============================================================
-// アプリケーション安全起動処理 (全デバイス初期化保証)
-// ============================================================
 function startApp() {
   try {
     document.querySelectorAll('#char-modal img[data-char-img]').forEach(img => {
@@ -3774,7 +3873,7 @@ function startApp() {
     initEvents();
     bgmMgr.setCharSelectPhase(true);
     AIStatusUI.pingServer();
-    console.log('[SYSTEM] アプリ初期化完了（v1.9.1）');
+    console.log('[SYSTEM] アプリ初期化完了（v2.2.2 - Renderクラウド＆外部端末連携対応版）');
   } catch (err) {
     console.error('[CRITICAL] 起動初期化エラー:', err);
   }

@@ -1,31 +1,87 @@
-# server.py の主な変更点（事前説明）
-# 
-# 1.  run_single_game_fast 内で着手履歴（turn_history）を収集:
-#       - カード提出時（"action": "play"）: 出されたカード一覧と、8切り発生時の "isCleared": true を記録。
-#       - パス時（"action": "pass"）: 空配列 [] と、全員パスによる流れ発生時の "isCleared": true を記録。
-# 2.  episode_record への "playedCardsHistory" 追加:
-#       - app.js と全く同じフォーマットで、エピソードデータ内に格納。
-# 3.  JSONダウンロード（/download_json）およびビューアAPI（/latest_simulation_data）への完全反映:
-#       - シミュレーション完了後にダウンロードされるJSONファイルにも、全試合のターン着手・場流れ履歴が含まれるようになります。
 
-# [Python Server] server.py - 大富豪 上級AI(110次元)・中級AI(106次元)推論 ＆ 5パターンシャッフルシミュレーションサーバー
+# [Python Server] server.py - 大富豪 上級AI(110次元)・超級AI(163次元 6層深層・Renderクラウド＆シミュレーターETA追跡版 v2.2.2)
 import os
+import sys
 import json
 import time
 import random
 import math
+
+try:
+    sys.stdout.reconfigure(line_buffering=True)
+    sys.stderr.reconfigure(line_buffering=True)
+except Exception:
+    pass
+
 import torch
 import torch.nn as nn
-from flask import Flask, request, jsonify, Response, stream_with_context
+from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory
 from flask_cors import CORS
 
 # ----------------------------------------------------
-# 1. PyTorchモデルの定義（上級用 Sequential ＆ 中級用 FC）
+# 1. PyTorchモデルの定義
 # ----------------------------------------------------
-class MidDaifugoAI(nn.Module):
-    """中級AI用: fc1 -> fc2 -> fc3 (106 -> 128 -> 64 -> 53)"""
+class ImprovedDaifugoModel(nn.Module):
+    """163次元 / 159次元 対応モデル: 6層全結合 + BatchNorm + Dropout対応"""
+    def __init__(self, input_size=163):
+        super(ImprovedDaifugoModel, self).__init__()
+        self.fc1 = nn.Linear(input_size, 512)
+        self.bn1 = nn.BatchNorm1d(512)
+        self.dropout1 = nn.Dropout(0.4)
+
+        self.fc2 = nn.Linear(512, 256)
+        self.bn2 = nn.BatchNorm1d(256)
+        self.dropout2 = nn.Dropout(0.4)
+
+        self.fc3 = nn.Linear(256, 128)
+        self.bn3 = nn.BatchNorm1d(128)
+        self.dropout3 = nn.Dropout(0.3)
+
+        self.fc4 = nn.Linear(128, 64)
+        self.bn4 = nn.BatchNorm1d(64)
+        self.dropout4 = nn.Dropout(0.2)
+
+        self.fc5 = nn.Linear(64, 53)
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        x = self.relu(self.bn1(self.fc1(x)))
+        x = self.dropout1(x)
+        x = self.relu(self.bn2(self.fc2(x)))
+        x = self.dropout2(x)
+        x = self.relu(self.bn3(self.fc3(x)))
+        x = self.dropout3(x)
+        x = self.relu(self.bn4(self.fc4(x)))
+        x = self.dropout4(x)
+        x = self.fc5(x)
+        return x
+
+class SuperDaifugoAI(nn.Module):
+    """旧版超級AI: 4層全結合(fc1〜fc4) + BatchNorm(bn1, bn2) モデル（後方互換用）"""
+    def __init__(self, in_dim=159, h1=128, h2=64, h3=64, out_dim=53, has_bn3=False):
+        super(SuperDaifugoAI, self).__init__()
+        self.fc1 = nn.Linear(in_dim, h1)
+        self.bn1 = nn.BatchNorm1d(h1)
+        self.fc2 = nn.Linear(h1, h2)
+        self.bn2 = nn.BatchNorm1d(h2)
+        self.fc3 = nn.Linear(h2, h3)
+        self.has_bn3 = has_bn3
+        if has_bn3:
+            self.bn3 = nn.BatchNorm1d(h3)
+        self.fc4 = nn.Linear(h3, out_dim)
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        x = self.relu(self.bn1(self.fc1(x)))
+        x = self.relu(self.bn2(self.fc2(x)))
+        x = self.relu(self.bn3(self.fc3(x))) if self.has_bn3 else self.relu(self.fc3(x))
+        x = self.fc4(x)
+        return x
+
+class StandardFCDaifugoAI(nn.Module):
+    """標準3層全結合モデル"""
     def __init__(self, in_dim=106, h1=128, h2=64, out_dim=53):
-        super(MidDaifugoAI, self).__init__()
+        super(StandardFCDaifugoAI, self).__init__()
         self.fc1 = nn.Linear(in_dim, h1)
         self.fc2 = nn.Linear(h1, h2)
         self.fc3 = nn.Linear(h2, out_dim)
@@ -37,10 +93,10 @@ class MidDaifugoAI(nn.Module):
         x = self.fc3(x)
         return x
 
-class DeepHiDaifugoAI(nn.Module):
-    """上級AI用: net (Sequential + BatchNorm対応 110次元入力モデル)"""
+class DeepSequentialDaifugoAI(nn.Module):
+    """Sequential + BatchNorm対応 動的構築モデル (110次元等)"""
     def __init__(self, net_module):
-        super(DeepHiDaifugoAI, self).__init__()
+        super(DeepSequentialDaifugoAI, self).__init__()
         self.net = net_module
 
     def forward(self, x):
@@ -49,7 +105,8 @@ class DeepHiDaifugoAI(nn.Module):
 device = torch.device('cpu')
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-def load_hi_model(target_filenames):
+def load_flexible_model(target_filenames, default_dim=163, model_role="超級AI"):
+    """モデル構造（163次元6層BN / 159次元6層BN / 旧4層BN / Sequential）を自動識別してロードする万能ローダー"""
     for fname in target_filenames:
         full_path = os.path.join(BASE_DIR, fname)
         if not os.path.exists(full_path) and os.path.exists(fname):
@@ -59,7 +116,33 @@ def load_hi_model(target_filenames):
 
         try:
             state_dict = torch.load(full_path, map_location=device)
-            if any(k.startswith("net.") for k in state_dict):
+
+            # ケース0: 6層BN深層モデル（fc1〜fc5 + bn1〜bn4 構造: 163次元または159次元）
+            if 'fc5.weight' in state_dict and 'bn4.weight' in state_dict:
+                in_dim = state_dict['fc1.weight'].shape[1]
+                model = ImprovedDaifugoModel(input_size=in_dim).to(device)
+                model.load_state_dict(state_dict)
+                model.eval()
+                print(f"✅ {model_role}モデルロード成功 (深層6層BN構造): '{os.path.basename(full_path)}' (入力次元: {in_dim}, 構成: {in_dim} -> 512 -> 256 -> 128 -> 64 -> 53)", flush=True)
+                return model, True, os.path.basename(full_path), in_dim
+
+            # ケース1: 超級AIモデル（旧4層: fc1〜fc4 + bn1, bn2 構造）
+            elif 'fc4.weight' in state_dict and 'bn1.weight' in state_dict:
+                in_dim = state_dict['fc1.weight'].shape[1]
+                h1 = state_dict['fc1.weight'].shape[0]
+                h2 = state_dict['fc2.weight'].shape[0]
+                h3 = state_dict['fc3.weight'].shape[0]
+                out_dim = state_dict['fc4.weight'].shape[0]
+                has_bn3 = ('bn3.weight' in state_dict)
+
+                model = SuperDaifugoAI(in_dim=in_dim, h1=h1, h2=h2, h3=h3, out_dim=out_dim, has_bn3=has_bn3).to(device)
+                model.load_state_dict(state_dict)
+                model.eval()
+                print(f"✅ {model_role}モデルロード成功 (旧4層BN構造): '{os.path.basename(full_path)}' (入力次元: {in_dim}, 構成: {in_dim} -> {h1} -> {h2} -> {h3} -> {out_dim})", flush=True)
+                return model, True, os.path.basename(full_path), in_dim
+
+            # ケース2: Sequential構造 ('net.0.weight' など)
+            elif any(k.startswith("net.") for k in state_dict):
                 net_keys = list(state_dict.keys())
                 module_dict = nn.ModuleDict()
                 for k in net_keys:
@@ -83,67 +166,51 @@ def load_hi_model(target_filenames):
                         seq_layers.append(nn.ReLU())
 
                 net = nn.Sequential(*seq_layers)
-                model = DeepHiDaifugoAI(net).to(device)
+                model = DeepSequentialDaifugoAI(net).to(device)
                 model.load_state_dict(state_dict)
                 model.eval()
-                in_dim = state_dict['net.0.weight'].shape[1] if 'net.0.weight' in state_dict else 110
-                print(f"✅ 上級AIモデルロード成功: '{os.path.basename(full_path)}' (入力次元: {in_dim})")
+                in_dim = state_dict['net.0.weight'].shape[1] if 'net.0.weight' in state_dict else default_dim
+                print(f"✅ {model_role}モデルロード成功 (Sequential構造): '{os.path.basename(full_path)}' (入力次元: {in_dim})", flush=True)
                 return model, True, os.path.basename(full_path), in_dim
-            else:
-                m = MidDaifugoAI().to(device)
-                m.load_state_dict(state_dict)
-                m.eval()
-                print(f"✅ 上級AIモデルロード成功 (標準FC): '{os.path.basename(full_path)}'")
-                return m, True, os.path.basename(full_path), 106
+
+            # ケース3: 標準3層FC構造 ('fc1.weight' 〜 'fc3.weight')
+            elif 'fc1.weight' in state_dict and 'fc3.weight' in state_dict:
+                in_dim = state_dict['fc1.weight'].shape[1]
+                h1 = state_dict['fc1.weight'].shape[0]
+                h2 = state_dict['fc2.weight'].shape[0] if 'fc2.weight' in state_dict else 64
+                out_dim = state_dict['fc3.weight'].shape[0] if 'fc3.weight' in state_dict else 53
+
+                model = StandardFCDaifugoAI(in_dim=in_dim, h1=h1, h2=h2, out_dim=out_dim).to(device)
+                model.load_state_dict(state_dict)
+                model.eval()
+                print(f"✅ {model_role}モデルロード成功 (標準3層FC): '{os.path.basename(full_path)}' (構成: {in_dim} -> {h1} -> {h2} -> {out_dim})", flush=True)
+                return model, True, os.path.basename(full_path), in_dim
+
         except Exception as e:
-            print(f"⚠️ モデルファイル '{fname}' のロードで例外が発生しました: {e}")
+            print(f"⚠️ モデルファイル '{fname}' のロードで例外が発生しました: {e}", flush=True)
 
-    return None, False, None, 110
+    return None, False, None, default_dim
 
-def load_mid_model(target_filenames):
-    for fname in target_filenames:
-        full_path = os.path.join(BASE_DIR, fname)
-        if not os.path.exists(full_path) and os.path.exists(fname):
-            full_path = os.path.abspath(fname)
-        if not os.path.exists(full_path):
-            continue
-
-        try:
-            state_dict = torch.load(full_path, map_location=device)
-            in_dim = state_dict['fc1.weight'].shape[1] if 'fc1.weight' in state_dict else 106
-            h1 = state_dict['fc1.weight'].shape[0] if 'fc1.weight' in state_dict else 128
-            h2 = state_dict['fc2.weight'].shape[0] if 'fc2.weight' in state_dict else 64
-            out_dim = state_dict['fc3.weight'].shape[0] if 'fc3.weight' in state_dict else 53
-
-            ai_model = MidDaifugoAI(in_dim=in_dim, h1=h1, h2=h2, out_dim=out_dim).to(device)
-            ai_model.load_state_dict(state_dict)
-            ai_model.eval()
-            print(f"✅ 中級AIモデルロード成功: '{os.path.basename(full_path)}' (構成: {in_dim} -> {h1} -> {h2} -> {out_dim})")
-            return ai_model, True, os.path.basename(full_path), in_dim
-        except Exception as e:
-            print(f"⚠️ 中級モデルロード例外 '{fname}': {e}")
-
-    return MidDaifugoAI().to(device), False, None, 106
-
-# 上級AIモデルのロード
-model_hi, model_hi_loaded, hi_model_name, hi_in_dim = load_hi_model([
-    'daifugou_ai_hi.pth',
-    'daifugo_ai_hi.pth'
-])
+# 1. 上級AIモデルのロード（110次元）
+model_hi, model_hi_loaded, hi_model_name, hi_in_dim = load_flexible_model(
+    ['daifugou_ai_hi.pth', 'daifugo_ai_hi.pth'],
+    default_dim=110,
+    model_role="上級AI"
+)
 if not model_hi_loaded:
-    print("❌ [警告] 上級AIモデル（daifugou_ai_hi.pth）が見つかりません。")
+    print("❌ [警告] 上級AIモデル（daifugou_ai_hi.pth）が見つかりません。", flush=True)
 
-# 中級AIモデルのロード
-model_mid, model_mid_loaded, mid_model_name, mid_in_dim = load_mid_model([
-    'daifugo_ai_mid.pth',
-    'daifugou_ai_mid.pth',
-    'daifugo_ai.pth'
-])
-if not model_mid_loaded:
-    print("❌ [警告] 中級AIモデル（daifugo_ai_mid.pth）が見つかりません。")
+# 2. 超級AIモデルのロード（163次元完全版 / 159次元版を自動識別）
+model_super, model_super_loaded, super_model_name, super_in_dim = load_flexible_model(
+    ['daifugou_ai_hi2.pth', 'daifugo_ai_hi2.pth', 'daifugo_ai_163dim.pth', 'daifugo_ai_159dim_improved.pth'],
+    default_dim=163,
+    model_role="超級AI"
+)
+if not model_super_loaded:
+    print("❌ [警告] 超級AIモデル（daifugou_ai_hi2.pth）が見つかりません。", flush=True)
 
 # ----------------------------------------------------
-# 2. カード定義 & ヘルパー (54枚完全ユニーク識別)
+# 2. カード定義 & ヘルパー
 # ----------------------------------------------------
 SUITS = ['♠', '♥', '♦', '♣']
 RANKS = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2']
@@ -162,14 +229,15 @@ CHARACTER_NAMES = {
     'JESTER': '道化師',
     'KING': '王',
     'BEGINNER_AI': '上級AI',
-    'MID_AI': '中級AI'
+    'SUPER_AI': '超級AI',
+    'MID_AI': '超級AI'
 }
 
 CHARACTER_ICONS = {
     'DUKE': '👑', 'MARQUIS': '🍷', 'COUNT': '📜', 'KNIGHT': '⚔️',
     'MERCHANT': '⚖️', 'SCHOLAR': '📖', 'STRATEGIST': '♟️',
     'REVOLUTIONARY': '🔥', 'JESTER': '🤡', 'KING': '🏰',
-    'BEGINNER_AI': '🤖', 'MID_AI': '👸'
+    'BEGINNER_AI': '🤖', 'SUPER_AI': '👸', 'MID_AI': '👸'
 }
 
 PLAYERS = [0, 1, 2, 3]
@@ -250,19 +318,29 @@ def encode_cards_to_vector(cards):
         if 0 <= idx < 53: vec[idx] = 1.0
     return vec
 
-def build_input_vector(hand, field, required_dim=106, is_rev=False, is_eb=False):
+def build_input_vector(hand, field, required_dim=106, is_rev=False, is_eb=False, cleared_cards=None):
     h_vec = encode_cards_to_vector(hand)
     f_vec = encode_cards_to_vector(field)
+
+    flags = [
+        1.0 if is_rev else 0.0,
+        1.0 if is_eb else 0.0,
+        1.0 if (not field or len(field) == 0) else 0.0,
+        min(1.0, len(hand) / 14.0)
+    ]
+
+    if required_dim == 163:
+        c_vec = encode_cards_to_vector(cleared_cards or [])
+        return h_vec + f_vec + c_vec + flags
+
+    if required_dim == 159:
+        c_vec = encode_cards_to_vector(cleared_cards or [])
+        return h_vec + f_vec + c_vec
+
     base = h_vec + f_vec
 
     if required_dim == 110:
-        extra = [
-            1.0 if is_rev else 0.0,
-            1.0 if is_eb else 0.0,
-            1.0 if (not field or len(field) == 0) else 0.0,
-            min(1.0, len(hand) / 14.0)
-        ]
-        return base + extra
+        return base + flags
 
     return base
 
@@ -323,10 +401,12 @@ def get_all_valid_moves(hand, field, rev=False):
     return moves
 
 def evaluate_move_default(move):
-    return (len(move) * 10) - move[0].val()
+    if not move: return -999
+    v = move[0].val() if isinstance(move[0], Card) else RANK_VALUE_MAP.get(move[0].get('rank', move[0].get('display', '3')), 3)
+    return (len(move) * 10) - v
 
 # ----------------------------------------------------
-# 3. 王（KING）専用: 完全シミュレーション ＆ MCTSエンジン
+# 3. 王（KING）専用エンジン
 # ----------------------------------------------------
 def estimate_turns_to_win(hand, rev=False):
     if not hand: return 0
@@ -334,10 +414,8 @@ def estimate_turns_to_win(hand, rev=False):
     groups = {}
     jokers = 0
     for c in hand:
-        if c.is_joker:
-            jokers += 1
-        else:
-            groups[c.display] = groups.get(c.display, 0) + 1
+        if c.is_joker: jokers += 1
+        else: groups[c.display] = groups.get(c.display, 0) + 1
 
     turns = len(groups)
     if jokers > 0 and turns == 0: turns = 1
@@ -439,6 +517,9 @@ class SimGame:
             next_p = (next_p + 1) % len(self.player_keys)
             g += 1
         return next_p
+
+    def advanceTurn(self, current_idx, was_eight):
+        return self.advance_turn(current_idx, was_eight)
 
 class MCTSNode:
     def __init__(self, move, parent, player_idx):
@@ -625,11 +706,13 @@ def king_decide_move_universal(cpu_key, hand, current_field, rev, all_hands, all
     return best_child.move if best_child else candidate_moves[0]
 
 # ----------------------------------------------------
-# 4. キャラクター思考ルーチン
+# 4. キャラクター思考ルーチン ＆ モデルAI意思決定エンジン
 # ----------------------------------------------------
 BASE_10_CHARACTERS = ['DUKE', 'MARQUIS', 'COUNT', 'KNIGHT', 'MERCHANT', 'SCHOLAR', 'STRATEGIST', 'REVOLUTIONARY', 'JESTER', 'KING']
-ALL_CHARACTERS = BASE_10_CHARACTERS + ['BEGINNER_AI', 'MID_AI']
+OTHER_11_CHARACTERS = BASE_10_CHARACTERS + ['BEGINNER_AI']
+ALL_CHARACTERS = BASE_10_CHARACTERS + ['BEGINNER_AI', 'SUPER_AI', 'MID_AI']
 
+# === 4-1. 通常キャラクター ルールベース思考 ===
 def select_move_by_character_def(cid, hand, field, rev, other_counts, can_pass, unrevealed, next_cnt):
     valid_moves = get_all_valid_moves(hand, field, rev)
     if not valid_moves: return None
@@ -638,8 +721,7 @@ def select_move_by_character_def(cid, hand, field, rev, other_counts, can_pass, 
         high = [c for c in hand if c.display in ['A', '2']]
         other = [c for c in hand if c.display not in ['A', '2']]
         filtered = [m for m in valid_moves if not any(c.display in ['A', '2'] for c in m)] if len(high) < len(other) else valid_moves
-        if field and next_cnt >= 8 and 1 <= field[0].val() <= 7:
-            return None
+        if field and next_cnt >= 8 and 1 <= field[0].val() <= 7: return None
         if not filtered: return None if can_pass else valid_moves[0]
         filtered.sort(key=evaluate_move_default, reverse=True)
         return filtered[0]
@@ -714,27 +796,107 @@ def select_move_by_character_def(cid, hand, field, rev, other_counts, can_pass, 
     valid_moves.sort(key=evaluate_move_default, reverse=True)
     return valid_moves[0]
 
-def decide_neural_move(target_model, is_loaded, required_dim, hand, field, valid, is_rev=False, is_eb=False):
-    if not is_loaded or target_model is None:
-        valid_sorted = sorted(valid, key=evaluate_move_default, reverse=True)
-        return valid_sorted[0]
+# === 4-2. [モデルAI専用] 安全弁・戦術フィルター（対王 最適化ガードレール） ===
+def apply_tactical_safety_rails(move, raw_model_scores, hand, field, rev=False):
+    """
+    【超級AI専用】モデルの生スコアに大富豪の基礎戦術（Joker温存・ペア出し優遇・終盤8切り親奪取）のガードレールを適用
+    ※「2」の温存ペナルティは撤廃し、テンポ良く主導権（親番）を取れる攻撃力を維持
+    """
+    if not move:
+        return -999.0
 
-    in_vec = build_input_vector(hand, field, required_dim=required_dim, is_rev=is_rev, is_eb=is_eb)
+    # 1. モデルの純粋推論スコア平均
+    card_scores = [raw_model_scores[card_to_idx(c)] for c in move if 0 <= card_to_idx(c) < 53]
+    s = (sum(card_scores) / max(1, len(card_scores))) if card_scores else 0.0
+
+    hand_len = len(hand)
+    move_len = len(move)
+
+    # 2. 複数枚出し（手札整理の最大化）ボーナス
+    if move_len == 2:
+        s += 2.0
+    elif move_len >= 3:
+        s += 3.5
+
+    # 3. 8切りボーナス（終盤で親権を奪取して一気に上がる）
+    first_disp = move[0].display if isinstance(move[0], Card) else (move[0].get('rank') or move[0].get('display'))
+    if first_disp == '8':
+        if hand_len <= 5:
+            s += 3.0
+        else:
+            s += 1.0
+
+    # 4. 相手の場札の強さを判定
+    f_val = 0
+    if field and len(field) > 0:
+        if isinstance(field[0], Card):
+            f_val = field[0].val() if not field[0].is_joker else 14
+        else:
+            r_str = field[0].get('rank') or field[0].get('display') or '3'
+            f_val = RANK_VALUE_MAP.get(r_str, 3)
+
+    # 5. Joker温存ガードレール（小札相手の即死暴発を完全阻止）
+    is_joker_move = any(
+        (c.is_joker if isinstance(c, Card) else (c.get('isJoker') or c.get('rank') == 'JOKER' or c.get('display') == 'JOKER'))
+        for c in move
+    )
+
+    if is_joker_move:
+        # 終盤（手札3枚以下）なら積極的に使って親を取り、上がる
+        if hand_len <= 3:
+            s += 3.5
+        else:
+            # 親番（場なし）でJoker単発は禁止
+            if not field or len(field) == 0:
+                s -= 10.0
+            else:
+                # 通常時: 相手が10以下(<=8)ならJokerは温存
+                if not rev and f_val <= 8:
+                    s -= 7.0
+                # 革命時: 相手が8以上(>=6)ならJoker温存
+                elif rev and f_val >= 6:
+                    s -= 7.0
+
+    return s
+
+# === 4-3. [モデルAI共通] 統合意思決定エンジン（シミュレーター・Web対戦共通） ===
+def select_best_neural_move(target_model, is_loaded, required_dim, hand, field, valid_moves, is_rev=False, is_eb=False, cleared_cards=None, is_super=False):
+    """
+    シミュレーションとWeb対戦（/predict）で完全に共有される統一意思決定ロジック
+    """
+    if not valid_moves:
+        return None, 0.0
+
+    if not is_loaded or target_model is None:
+        valid_sorted = sorted(valid_moves, key=evaluate_move_default, reverse=True)
+        return valid_sorted[0], 0.0
+
+    in_vec = build_input_vector(hand, field, required_dim=required_dim, is_rev=is_rev, is_eb=is_eb, cleared_cards=cleared_cards)
     with torch.no_grad():
         t = torch.tensor([in_vec], dtype=torch.float32).to(device)
-        scores = target_model(t).squeeze(0).tolist()
+        output_scores = target_model(t).squeeze(0).tolist()
 
-    best_m = None
-    best_s = -float('inf')
-    for m in valid:
-        s = sum(scores[card_to_idx(c)] for c in m if 0 <= card_to_idx(c) < 53) / max(1, len(m))
-        if len(m) >= 2: s += 0.5 * len(m)
-        if s > best_s:
-            best_s = s
-            best_m = m
-    return best_m or valid[0]
+    best_move = None
+    best_score = -float('inf')
+    effective_rev = (is_rev != is_eb)
 
-def decide_move_sim(seat, seat_chars, hands, field, rev, finished, played_history, last_seat, pass_cnt, is_rev=False, is_eb=False):
+    for move in valid_moves:
+        if is_super:
+            score = apply_tactical_safety_rails(move, output_scores, hand, field, rev=effective_rev)
+        else:
+            card_scores = [output_scores[card_to_idx(c)] for c in move if 0 <= card_to_idx(c) < 53]
+            score = (sum(card_scores) / max(1, len(card_scores))) if card_scores else 0.0
+            if len(move) >= 2:
+                score += 0.5 * len(move)
+
+        if score > best_score:
+            best_score = score
+            best_move = move
+
+    return (best_move or valid_moves[0]), best_score
+
+# === 4-4. シミュレーション用 手選択ルーチン ===
+def decide_move_sim(seat, seat_chars, hands, field, rev, finished, played_history, last_seat, pass_cnt, is_rev=False, is_eb=False, cleared_cards=None):
     cid = seat_chars[seat]
     hand = hands[seat]
     valid = get_all_valid_moves(hand, field, rev)
@@ -745,10 +907,12 @@ def decide_move_sim(seat, seat_chars, hands, field, rev, finished, played_histor
         return king_decide_move_universal(seat, hand, field, rev, hands, finished, played_history, last_seat, pass_cnt, PLAYERS)
 
     if cid == 'BEGINNER_AI':
-        return decide_neural_move(model_hi, model_hi_loaded, hi_in_dim, hand, field, valid, is_rev=is_rev, is_eb=is_eb)
+        move, _ = select_best_neural_move(model_hi, model_hi_loaded, hi_in_dim, hand, field, valid, is_rev=is_rev, is_eb=is_eb, is_super=False)
+        return move
 
-    if cid == 'MID_AI':
-        return decide_neural_move(model_mid, model_mid_loaded, mid_in_dim, hand, field, valid, is_rev=is_rev, is_eb=is_eb)
+    if cid in ['SUPER_AI', 'MID_AI']:
+        move, _ = select_best_neural_move(model_super, model_super_loaded, super_in_dim, hand, field, valid, is_rev=is_rev, is_eb=is_eb, cleared_cards=cleared_cards, is_super=True)
+        return move
 
     next_seat = (seat + 1) % 4
     next_cnt = len(hands[next_seat])
@@ -758,7 +922,7 @@ def decide_move_sim(seat, seat_chars, hands, field, rev, finished, played_histor
     return select_move_by_character_def(cid, hand, field, rev, other_counts, can_pass, unrevealed, next_cnt)
 
 # ----------------------------------------------------
-# 5. 高速シミュレーション ＆ ステップ収集 (playedCardsHistory対応)
+# 5. 高速シミュレーション (流れたカード完全追跡 ＆ ETA・モデル追跡対応)
 # ----------------------------------------------------
 latest_batch_data = {
     "episodes": [],
@@ -775,6 +939,8 @@ def run_single_game_fast(seat_chars, pattern_name="PATTERN_A", collect_steps=Tru
     for s in range(4): hands[s].sort(key=lambda c: (14 if c.is_joker else c.val()))
 
     field = []
+    current_round_cards = []
+    cleared_cards = []
     is_rev, is_eb = False, False
     last_seat, pass_cnt = None, 0
     pass_map = {f"seat_{s + 1}": False for s in range(4)}
@@ -782,7 +948,7 @@ def run_single_game_fast(seat_chars, pattern_name="PATTERN_A", collect_steps=Tru
     finished = []
     ranks = {}
     game_steps = []
-    turn_history = []  # ★新設: 1ゲーム中のカード提出・パス・場流れの全履歴
+    turn_history = []
     turn_count = 0
 
     curr_seat = 0
@@ -801,7 +967,7 @@ def run_single_game_fast(seat_chars, pattern_name="PATTERN_A", collect_steps=Tru
         cid = seat_chars[s]
 
         valid_moves = get_all_valid_moves(p_hand, field, rev)
-        move = decide_move_sim(s, seat_chars, hands, field, rev, finished, played_history, last_seat, pass_cnt, is_rev=is_rev, is_eb=is_eb)
+        move = decide_move_sim(s, seat_chars, hands, field, rev, finished, played_history, last_seat, pass_cnt, is_rev=is_rev, is_eb=is_eb, cleared_cards=cleared_cards)
 
         if collect_steps:
             rem_counts = {f"seat_{st + 1}": len(hands[st]) for st in range(4)}
@@ -815,6 +981,7 @@ def run_single_game_fast(seat_chars, pattern_name="PATTERN_A", collect_steps=Tru
                 "playerCharName": CHARACTER_NAMES.get(cid, cid),
                 "hand": serialize_cards(p_hand),
                 "fieldCards": serialize_cards(field),
+                "clearedCards": serialize_cards(cleared_cards),
                 "isRevolution": bool(is_rev),
                 "isElevenBack": bool(is_eb),
                 "consecutivePasses": pass_cnt,
@@ -834,6 +1001,7 @@ def run_single_game_fast(seat_chars, pattern_name="PATTERN_A", collect_steps=Tru
         if move:
             for c in move: p_hand.remove(c)
             field = move
+            current_round_cards.extend(move)
             last_seat = s
             pass_cnt = 0
             played_history.extend(move)
@@ -851,7 +1019,6 @@ def run_single_game_fast(seat_chars, pattern_name="PATTERN_A", collect_steps=Tru
                 finished.append(s)
                 ranks[s] = ['大富豪', '富豪', '貧民', '大貧民'][len(finished) - 1]
 
-            # ★着手履歴記録 (play)
             turn_history.append({
                 "turn": turn_count,
                 "seat": s + 1,
@@ -861,6 +1028,8 @@ def run_single_game_fast(seat_chars, pattern_name="PATTERN_A", collect_steps=Tru
             })
 
             if is_eight:
+                cleared_cards.extend(current_round_cards)
+                current_round_cards = []
                 field = []
                 is_eb = False
                 pass_cnt = 0
@@ -882,7 +1051,6 @@ def run_single_game_fast(seat_chars, pattern_name="PATTERN_A", collect_steps=Tru
             active = [st for st in range(4) if st not in finished]
             will_clear = bool(field and (pass_cnt >= len(active) - 1 or pass_cnt >= 3))
 
-            # ★着手履歴記録 (pass)
             turn_history.append({
                 "turn": turn_count,
                 "seat": s + 1,
@@ -895,6 +1063,8 @@ def run_single_game_fast(seat_chars, pattern_name="PATTERN_A", collect_steps=Tru
         if len(active) <= 1: break
 
         if field and (pass_cnt >= len(active) - 1 or pass_cnt >= 3):
+            cleared_cards.extend(current_round_cards)
+            current_round_cards = []
             field = []
             is_eb = False
             pass_cnt = 0
@@ -938,26 +1108,37 @@ def run_single_game_fast(seat_chars, pattern_name="PATTERN_A", collect_steps=Tru
         "totalTurns": turn_count,
         "seats": seat_results,
         "remainingCards": rem_cards_map,
-        "playedCardsHistory": turn_history,  # ★完全出力: ターン着手・場流れ履歴
+        "playedCardsHistory": turn_history,
         "timestamp": int(time.time() * 1000)
     }
 
     return seat_results, episode_record, game_steps
 
 # ----------------------------------------------------
-# 6. Web APIエンドポイント
+# 6. Web API ＆ 静的ファイル配信エンドポイント
 # ----------------------------------------------------
 app = Flask(__name__)
 CORS(app)
 
+# --- クラウド・Web画面配信ルート（タブレット・PC両対応） ---
+@app.route('/', methods=['GET'])
+def serve_index():
+    return send_from_directory(BASE_DIR, 'index.html')
+
+@app.route('/<path:path>', methods=['GET'])
+def serve_static(path):
+    return send_from_directory(BASE_DIR, path)
+
+# --- APIルート ---
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({
         "status": "ok",
         "model_hi_loaded": model_hi_loaded,
         "model_hi_name": hi_model_name,
-        "model_mid_loaded": model_mid_loaded,
-        "model_mid_name": mid_model_name,
+        "model_super_loaded": model_super_loaded,
+        "model_super_name": super_model_name,
+        "super_in_dim": super_in_dim,
         "cached_episodes": len(latest_batch_data["episodes"]),
         "cached_steps": len(latest_batch_data["steps"])
     })
@@ -968,6 +1149,7 @@ def predict():
         data = request.get_json()
         hand_cards = data.get('hand', [])
         field_cards = data.get('field', [])
+        cleared_cards = data.get('clearedCards', [])
         valid_moves = data.get('validMoves', [])
         model_type = data.get('modelType', 'hi')
         is_rev = data.get('isRevolution', False)
@@ -976,44 +1158,38 @@ def predict():
         if not valid_moves:
             return jsonify({"chosenMove": None, "reason": "no_valid_moves"})
 
-        target_model = model_mid if model_type == 'mid' else model_hi
-        is_loaded = model_mid_loaded if model_type == 'mid' else model_hi_loaded
-        m_name = mid_model_name if model_type == 'mid' else hi_model_name
-        req_dim = mid_in_dim if model_type == 'mid' else hi_in_dim
+        is_super_request = (model_type in ['super', 'mid', 'SUPER_AI', 'MID_AI'])
+        target_model = model_super if is_super_request else model_hi
+        is_loaded = model_super_loaded if is_super_request else model_hi_loaded
+        m_name = super_model_name if is_super_request else hi_model_name
+        req_dim = super_in_dim if is_super_request else hi_in_dim
+        role_name = "超級AI" if is_super_request else "上級AI"
 
-        if not is_loaded or target_model is None:
-            fallback = sorted(valid_moves, key=lambda m: (len(m) * 10) - (RANK_VALUE_MAP.get(m[0].get('rank', m[0].get('display', '3')), 0)), reverse=True)[0]
-            print(f"[推論(未ロード代行)] {'中級AI' if model_type == 'mid' else '上級AI'} -> {fallback}")
-            return jsonify({"chosenMove": fallback, "status": "success", "fallback": True})
+        best_move, best_score = select_best_neural_move(
+            target_model=target_model,
+            is_loaded=is_loaded,
+            required_dim=req_dim,
+            hand=hand_cards,
+            field=field_cards,
+            valid_moves=valid_moves,
+            is_rev=is_rev,
+            is_eb=is_eb,
+            cleared_cards=cleared_cards,
+            is_super=is_super_request
+        )
 
-        in_vec = build_input_vector(hand_cards, field_cards, required_dim=req_dim, is_rev=is_rev, is_eb=is_eb)
-
-        with torch.no_grad():
-            t = torch.tensor([in_vec], dtype=torch.float32).to(device)
-            output_scores = target_model(t).squeeze(0).tolist()
-
-        best_move = None
-        best_score = -float('inf')
-
-        for move in valid_moves:
-            score = sum(output_scores[card_to_idx(card)] for card in move if 0 <= card_to_idx(card) < 53) / max(1, len(move))
-            if len(move) >= 2: score += 0.5 * len(move)
-            if score > best_score:
-                best_score = score
-                best_move = move
-
-        ai_name = f"中級AI ({m_name})" if model_type == 'mid' else f"上級AI ({m_name})"
+        ai_name = f"{role_name} ({m_name} / {req_dim}次元)"
         move_str = ' '.join([f"{c.get('suit', c.get('suitSymbol', ''))}{c.get('rank', c.get('display', ''))}" for c in (best_move or [])])
-        print(f"[推論] {ai_name} -> 出した手: {move_str}")
+        print(f"[推論] {ai_name} -> 出した手: {move_str} (スコア: {best_score:.3f})", flush=True)
 
         return jsonify({
             "chosenMove": best_move,
             "bestScore": best_score,
-            "modelType": model_type,
+            "modelType": "super" if is_super_request else "hi",
             "status": "success"
         })
     except Exception as e:
-        print(f"⚠️ 推論エラー: {e}")
+        print(f"⚠️ 推論エラー: {e}", flush=True)
         fallback = valid_moves[0] if valid_moves else None
         return jsonify({"chosenMove": fallback, "status": "error", "message": str(e)})
 
@@ -1027,20 +1203,20 @@ def simulate_batch():
 
     def generate_progress():
         global latest_batch_data
-        print(f"\n🚀 [シミュレーション開始] パターン: {pattern} ({total_games}試合・毎試合シャッフル)...")
-        print(f"   使用モデル状況: 上級={'OK (' + str(hi_model_name) + ')' if model_hi_loaded else '未ロード'} / 中級={'OK (' + str(mid_model_name) + ')' if model_mid_loaded else '未ロード'}")
+        print(f"\n🚀 [シミュレーション開始] パターン: {pattern} ({total_games}試合・毎試合シャッフル)...", flush=True)
+        print(f"   使用モデル状況: 超級={'OK (' + str(super_model_name) + ' / ' + str(super_in_dim) + '次元・対王ガードレール)' if model_super_loaded else '未ロード'} / 上級={'OK (' + str(hi_model_name) + ')' if model_hi_loaded else '未ロード'}", flush=True)
         start_t = time.time()
 
         if pattern == 'PATTERN_A':
-            expected_chars = ['BEGINNER_AI', 'KING']
+            expected_chars = ['SUPER_AI', 'KING']
         elif pattern == 'PATTERN_B':
-            expected_chars = ['BEGINNER_AI', 'KING', 'MID_AI']
+            expected_chars = ['SUPER_AI', 'KING', 'BEGINNER_AI']
         elif pattern == 'PATTERN_C':
-            expected_chars = ['BEGINNER_AI'] + BASE_10_CHARACTERS
+            expected_chars = ['SUPER_AI'] + BASE_10_CHARACTERS + ['BEGINNER_AI']
         elif pattern == 'PATTERN_D':
-            expected_chars = ['BEGINNER_AI', 'MID_AI']
+            expected_chars = ['SUPER_AI', 'BEGINNER_AI']
         else:
-            expected_chars = ['BEGINNER_AI']
+            expected_chars = ['SUPER_AI']
 
         stats = {
             cid: {
@@ -1058,67 +1234,79 @@ def simulate_batch():
 
         update_interval = 25
 
-        for g in range(1, total_games + 1):
-            if pattern == 'PATTERN_A':
-                seat_chars = ['BEGINNER_AI', 'BEGINNER_AI', 'KING', 'KING']
-            elif pattern == 'PATTERN_B':
-                seat_chars = ['BEGINNER_AI', 'BEGINNER_AI', 'KING', 'MID_AI']
-            elif pattern == 'PATTERN_C':
-                others = random.sample(BASE_10_CHARACTERS, 2)
-                seat_chars = ['BEGINNER_AI', 'BEGINNER_AI', others[0], others[1]]
-            elif pattern == 'PATTERN_D':
-                seat_chars = ['BEGINNER_AI', 'BEGINNER_AI', 'MID_AI', 'MID_AI']
-            else:
-                seat_chars = ['BEGINNER_AI', 'BEGINNER_AI', 'BEGINNER_AI', 'BEGINNER_AI']
+        try:
+            for g in range(1, total_games + 1):
+                if pattern == 'PATTERN_A':
+                    seat_chars = ['SUPER_AI', 'SUPER_AI', 'KING', 'KING']
+                elif pattern == 'PATTERN_B':
+                    seat_chars = ['SUPER_AI', 'SUPER_AI', 'KING', 'BEGINNER_AI']
+                elif pattern == 'PATTERN_C':
+                    others = random.sample(OTHER_11_CHARACTERS, 2)
+                    seat_chars = ['SUPER_AI', 'SUPER_AI', others[0], others[1]]
+                elif pattern == 'PATTERN_D':
+                    seat_chars = ['SUPER_AI', 'SUPER_AI', 'BEGINNER_AI', 'BEGINNER_AI']
+                else:
+                    seat_chars = ['SUPER_AI', 'SUPER_AI', 'SUPER_AI', 'SUPER_AI']
 
-            random.shuffle(seat_chars)
+                random.shuffle(seat_chars)
 
-            seat_results, episode_rec, game_steps = run_single_game_fast(seat_chars, pattern_name=pattern, collect_steps=True)
+                seat_results, episode_rec, game_steps = run_single_game_fast(seat_chars, pattern_name=pattern, collect_steps=True)
 
-            latest_batch_data["episodes"].append(episode_rec)
-            latest_batch_data["steps"].extend(game_steps)
+                latest_batch_data["episodes"].append(episode_rec)
+                latest_batch_data["steps"].extend(game_steps)
 
-            for item in seat_results:
-                cid = item['charId']
-                r = item['finalRank']
-                if cid not in stats:
-                    stats[cid] = {
-                        'name': CHARACTER_NAMES.get(cid, cid),
-                        'icon': CHARACTER_ICONS.get(cid, '👤'),
-                        'games': 0, 'df': 0, 'f': 0, 'h': 0, 'dh': 0, 'rankSum': 0
-                    }
-                stats[cid]['games'] += 1
-                if r == 1: stats[cid]['df'] += 1
-                elif r == 2: stats[cid]['f'] += 1
-                elif r == 3: stats[cid]['h'] += 1
-                elif r == 4: stats[cid]['dh'] += 1
-                stats[cid]['rankSum'] += r
+                for item in seat_results:
+                    cid = item['charId']
+                    r = item['finalRank']
+                    if cid not in stats:
+                        stats[cid] = {
+                            'name': CHARACTER_NAMES.get(cid, cid),
+                            'icon': CHARACTER_ICONS.get(cid, '👤'),
+                            'games': 0, 'df': 0, 'f': 0, 'h': 0, 'dh': 0, 'rankSum': 0
+                        }
+                    stats[cid]['games'] += 1
+                    if r == 1: stats[cid]['df'] += 1
+                    elif r == 2: stats[cid]['f'] += 1
+                    elif r == 3: stats[cid]['h'] += 1
+                    elif r == 4: stats[cid]['dh'] += 1
+                    stats[cid]['rankSum'] += r
 
-            if g % update_interval == 0 or g == total_games:
-                pct = round((g / total_games) * 100, 1)
-                progress_payload = json.dumps({
-                    "type": "progress",
-                    "current": g,
-                    "total": total_games,
-                    "pct": pct
-                })
-                yield f"{progress_payload}\n"
+                if g % update_interval == 0 or g == total_games:
+                    pct = round((g / total_games) * 100, 1)
+                    now_elapsed = round(time.time() - start_t, 1)
+                    progress_payload = json.dumps({
+                        "type": "progress",
+                        "current": g,
+                        "total": total_games,
+                        "pct": pct,
+                        "elapsed": now_elapsed,
+                        "superModel": f"{super_model_name} ({super_in_dim}次元)",
+                        "hiModel": f"{hi_model_name} ({hi_in_dim}次元)"
+                    })
+                    yield f"{progress_payload}\n"
 
-        elapsed = time.time() - start_t
-        filtered_stats = {k: v for k, v in stats.items() if v['games'] > 0}
-        print(f"🎉 [シミュレーション完了] 所要時間: {elapsed:.2f}秒 (総ステップ数: {len(latest_batch_data['steps'])}手)")
+            elapsed = time.time() - start_t
+            filtered_stats = {k: v for k, v in stats.items() if v['games'] > 0}
+            print(f"🎉 [シミュレーション完了] 所要時間: {elapsed:.2f}秒 (総ステップ数: {len(latest_batch_data['steps'])}手)", flush=True)
 
-        complete_payload = json.dumps({
-            "type": "complete",
-            "status": "success",
-            "pattern": pattern,
-            "totalGames": total_games,
-            "totalSteps": len(latest_batch_data['steps']),
-            "elapsedSeconds": round(elapsed, 2),
-            "results": filtered_stats,
-            "isFixedSeats": False
-        })
-        yield f"{complete_payload}\n"
+            complete_payload = json.dumps({
+                "type": "complete",
+                "status": "success",
+                "pattern": pattern,
+                "totalGames": total_games,
+                "totalSteps": len(latest_batch_data['steps']),
+                "elapsedSeconds": round(elapsed, 2),
+                "superModel": f"{super_model_name} ({super_in_dim}次元)",
+                "hiModel": f"{hi_model_name} ({hi_in_dim}次元)",
+                "results": filtered_stats,
+                "isFixedSeats": False
+            })
+            yield f"{complete_payload}\n"
+
+        except Exception as sim_err:
+            print(f"❌ [シミュレーション例外発生]: {sim_err}", flush=True)
+            err_payload = json.dumps({"type": "error", "message": str(sim_err)})
+            yield f"{err_payload}\n"
 
     return Response(stream_with_context(generate_progress()), mimetype='application/x-ndjson')
 
@@ -1166,10 +1354,11 @@ def latest_simulation_data():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
-    print("=======================================================")
-    print("🚀 大富豪 上級AI(110次元)・中級AI(106次元)推論 ＆ シミュレーションサーバー")
-    print("   ポート: 5000 / URL: http://localhost:5000")
-    print("=======================================================")
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    port = int(os.environ.get("PORT", 5000))
+    print("=======================================================", flush=True)
+    print("🚀 大富豪 上級AI(110次元)・超級AI(163次元 完全体・シミュレーターETA追跡版 v2.2.2)推論 ＆ シミュレーションサーバー", flush=True)
+    print(f"   ポート: {port} / 稼働開始", flush=True)
+    print("=======================================================", flush=True)
+    app.run(host='0.0.0.0', port=port, debug=False)
 
 
