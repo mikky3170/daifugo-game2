@@ -798,27 +798,20 @@ def select_move_by_character_def(cid, hand, field, rev, other_counts, can_pass, 
 
 # === 4-2. [モデルAI専用] 安全弁・戦術フィルター（対王 最適化ガードレール） ===
 def apply_tactical_safety_rails(move, raw_model_scores, hand, field, rev=False):
-    """
-    【超級AI専用】モデルの生スコアに大富豪の基礎戦術（Joker温存・ペア出し優遇・終盤8切り親奪取）のガードレールを適用
-    ※「2」の温存ペナルティは撤廃し、テンポ良く主導権（親番）を取れる攻撃力を維持
-    """
     if not move:
         return -999.0
 
-    # 1. モデルの純粋推論スコア平均
     card_scores = [raw_model_scores[card_to_idx(c)] for c in move if 0 <= card_to_idx(c) < 53]
     s = (sum(card_scores) / max(1, len(card_scores))) if card_scores else 0.0
 
     hand_len = len(hand)
     move_len = len(move)
 
-    # 2. 複数枚出し（手札整理の最大化）ボーナス
     if move_len == 2:
         s += 2.0
     elif move_len >= 3:
         s += 3.5
 
-    # 3. 8切りボーナス（終盤で親権を奪取して一気に上がる）
     first_disp = move[0].display if isinstance(move[0], Card) else (move[0].get('rank') or move[0].get('display'))
     if first_disp == '8':
         if hand_len <= 5:
@@ -826,7 +819,6 @@ def apply_tactical_safety_rails(move, raw_model_scores, hand, field, rev=False):
         else:
             s += 1.0
 
-    # 4. 相手の場札の強さを判定
     f_val = 0
     if field and len(field) > 0:
         if isinstance(field[0], Card):
@@ -835,35 +827,27 @@ def apply_tactical_safety_rails(move, raw_model_scores, hand, field, rev=False):
             r_str = field[0].get('rank') or field[0].get('display') or '3'
             f_val = RANK_VALUE_MAP.get(r_str, 3)
 
-    # 5. Joker温存ガードレール（小札相手の即死暴発を完全阻止）
     is_joker_move = any(
         (c.is_joker if isinstance(c, Card) else (c.get('isJoker') or c.get('rank') == 'JOKER' or c.get('display') == 'JOKER'))
         for c in move
     )
 
     if is_joker_move:
-        # 終盤（手札3枚以下）なら積極的に使って親を取り、上がる
         if hand_len <= 3:
             s += 3.5
         else:
-            # 親番（場なし）でJoker単発は禁止
             if not field or len(field) == 0:
                 s -= 10.0
             else:
-                # 通常時: 相手が10以下(<=8)ならJokerは温存
                 if not rev and f_val <= 8:
                     s -= 7.0
-                # 革命時: 相手が8以上(>=6)ならJoker温存
                 elif rev and f_val >= 6:
                     s -= 7.0
 
     return s
 
-# === 4-3. [モデルAI共通] 統合意思決定エンジン（シミュレーター・Web対戦共通） ===
+# === 4-3. [モデルAI共通] 統合意思決定エンジン ===
 def select_best_neural_move(target_model, is_loaded, required_dim, hand, field, valid_moves, is_rev=False, is_eb=False, cleared_cards=None, is_super=False):
-    """
-    シミュレーションとWeb対戦（/predict）で完全に共有される統一意思決定ロジック
-    """
     if not valid_moves:
         return None, 0.0
 
@@ -922,7 +906,7 @@ def decide_move_sim(seat, seat_chars, hands, field, rev, finished, played_histor
     return select_move_by_character_def(cid, hand, field, rev, other_counts, can_pass, unrevealed, next_cnt)
 
 # ----------------------------------------------------
-# 5. 高速シミュレーション (流れたカード完全追跡 ＆ ETA・モデル追跡対応)
+# 5. 高速シミュレーション
 # ----------------------------------------------------
 latest_batch_data = {
     "episodes": [],
@@ -1115,21 +1099,11 @@ def run_single_game_fast(seat_chars, pattern_name="PATTERN_A", collect_steps=Tru
     return seat_results, episode_record, game_steps
 
 # ----------------------------------------------------
-# 6. Web API ＆ 静的ファイル配信エンドポイント
+# 6. Web API エンドポイント（★APIを最優先でマッチング）
 # ----------------------------------------------------
 app = Flask(__name__)
 CORS(app)
 
-# --- クラウド・Web画面配信ルート（タブレット・PC両対応） ---
-@app.route('/', methods=['GET'])
-def serve_index():
-    return send_from_directory(BASE_DIR, 'index.html')
-
-@app.route('/<path:path>', methods=['GET'])
-def serve_static(path):
-    return send_from_directory(BASE_DIR, path)
-
-# --- APIルート ---
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({
@@ -1352,6 +1326,17 @@ def latest_simulation_data():
         })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+# ----------------------------------------------------
+# 7. 静的Web配信ルート（★APIルートの後ろに配置）
+# ----------------------------------------------------
+@app.route('/', methods=['GET'])
+def serve_index():
+    return send_from_directory(BASE_DIR, 'index.html')
+
+@app.route('/<path:path>', methods=['GET'])
+def serve_static(path):
+    return send_from_directory(BASE_DIR, path)
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
