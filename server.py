@@ -1,5 +1,5 @@
 
-# [Python Server] server.py - 大富豪 上級AI(110次元)・超級AI(163次元 6層深層・Renderクラウド＆シミュレーターETA追跡版 v2.2.2)
+# [Python Server] server.py - 大富豪 上級AI(110次元)・超級AI(163次元 6層深層・新4パターン高速シミュレーター対応版 v2.2.2)
 import os
 import sys
 import json
@@ -117,7 +117,6 @@ def load_flexible_model(target_filenames, default_dim=163, model_role="超級AI"
         try:
             state_dict = torch.load(full_path, map_location=device)
 
-            # ケース0: 6層BN深層モデル（fc1〜fc5 + bn1〜bn4 構造: 163次元または159次元）
             if 'fc5.weight' in state_dict and 'bn4.weight' in state_dict:
                 in_dim = state_dict['fc1.weight'].shape[1]
                 model = ImprovedDaifugoModel(input_size=in_dim).to(device)
@@ -126,7 +125,6 @@ def load_flexible_model(target_filenames, default_dim=163, model_role="超級AI"
                 print(f"✅ {model_role}モデルロード成功 (深層6層BN構造): '{os.path.basename(full_path)}' (入力次元: {in_dim}, 構成: {in_dim} -> 512 -> 256 -> 128 -> 64 -> 53)", flush=True)
                 return model, True, os.path.basename(full_path), in_dim
 
-            # ケース1: 超級AIモデル（旧4層: fc1〜fc4 + bn1, bn2 構造）
             elif 'fc4.weight' in state_dict and 'bn1.weight' in state_dict:
                 in_dim = state_dict['fc1.weight'].shape[1]
                 h1 = state_dict['fc1.weight'].shape[0]
@@ -141,7 +139,6 @@ def load_flexible_model(target_filenames, default_dim=163, model_role="超級AI"
                 print(f"✅ {model_role}モデルロード成功 (旧4層BN構造): '{os.path.basename(full_path)}' (入力次元: {in_dim}, 構成: {in_dim} -> {h1} -> {h2} -> {h3} -> {out_dim})", flush=True)
                 return model, True, os.path.basename(full_path), in_dim
 
-            # ケース2: Sequential構造 ('net.0.weight' など)
             elif any(k.startswith("net.") for k in state_dict):
                 net_keys = list(state_dict.keys())
                 module_dict = nn.ModuleDict()
@@ -173,7 +170,6 @@ def load_flexible_model(target_filenames, default_dim=163, model_role="超級AI"
                 print(f"✅ {model_role}モデルロード成功 (Sequential構造): '{os.path.basename(full_path)}' (入力次元: {in_dim})", flush=True)
                 return model, True, os.path.basename(full_path), in_dim
 
-            # ケース3: 標準3層FC構造 ('fc1.weight' 〜 'fc3.weight')
             elif 'fc1.weight' in state_dict and 'fc3.weight' in state_dict:
                 in_dim = state_dict['fc1.weight'].shape[1]
                 h1 = state_dict['fc1.weight'].shape[0]
@@ -197,17 +193,13 @@ model_hi, model_hi_loaded, hi_model_name, hi_in_dim = load_flexible_model(
     default_dim=110,
     model_role="上級AI"
 )
-if not model_hi_loaded:
-    print("❌ [警告] 上級AIモデル（daifugou_ai_hi.pth）が見つかりません。", flush=True)
 
-# 2. 超級AIモデルのロード（163次元完全版 / 159次元版を自動識別）
+# 2. 超級AIモデルのロード（163次元完全版）
 model_super, model_super_loaded, super_model_name, super_in_dim = load_flexible_model(
     ['daifugou_ai_hi2.pth', 'daifugo_ai_hi2.pth', 'daifugo_ai_163dim.pth', 'daifugo_ai_159dim_improved.pth'],
     default_dim=163,
     model_role="超級AI"
 )
-if not model_super_loaded:
-    print("❌ [警告] 超級AIモデル（daifugou_ai_hi2.pth）が見つかりません。", flush=True)
 
 # ----------------------------------------------------
 # 2. カード定義 & ヘルパー
@@ -709,8 +701,7 @@ def king_decide_move_universal(cpu_key, hand, current_field, rev, all_hands, all
 # 4. キャラクター思考ルーチン ＆ モデルAI意思決定エンジン
 # ----------------------------------------------------
 BASE_10_CHARACTERS = ['DUKE', 'MARQUIS', 'COUNT', 'KNIGHT', 'MERCHANT', 'SCHOLAR', 'STRATEGIST', 'REVOLUTIONARY', 'JESTER', 'KING']
-OTHER_11_CHARACTERS = BASE_10_CHARACTERS + ['BEGINNER_AI']
-ALL_CHARACTERS = BASE_10_CHARACTERS + ['BEGINNER_AI', 'SUPER_AI', 'MID_AI']
+ALL_12_CHARACTERS = BASE_10_CHARACTERS + ['BEGINNER_AI', 'SUPER_AI']
 
 # === 4-1. 通常キャラクター ルールベース思考 ===
 def select_move_by_character_def(cid, hand, field, rev, other_counts, can_pass, unrevealed, next_cnt):
@@ -796,7 +787,7 @@ def select_move_by_character_def(cid, hand, field, rev, other_counts, can_pass, 
     valid_moves.sort(key=evaluate_move_default, reverse=True)
     return valid_moves[0]
 
-# === 4-2. [モデルAI専用] 安全弁・戦術フィルター（対王 最適化ガードレール） ===
+# === 4-2. [モデルAI専用] 安全弁・戦術フィルター ===
 def apply_tactical_safety_rails(move, raw_model_scores, hand, field, rev=False):
     if not move:
         return -999.0
@@ -1099,7 +1090,7 @@ def run_single_game_fast(seat_chars, pattern_name="PATTERN_A", collect_steps=Tru
     return seat_results, episode_record, game_steps
 
 # ----------------------------------------------------
-# 6. Web API エンドポイント（★APIを最優先でマッチング）
+# 6. Web API エンドポイント
 # ----------------------------------------------------
 app = Flask(__name__)
 CORS(app)
@@ -1171,24 +1162,36 @@ def predict():
 def simulate_batch():
     data = request.get_json() or {}
     pattern = data.get('pattern', 'PATTERN_A')
-    
-    default_games = 1000 if pattern == 'PATTERN_C' else 500
+
+    # パターンごとの標準試合数設定
+    if pattern == 'PATTERN_A':
+        default_games = 1500
+    elif pattern == 'PATTERN_B':
+        default_games = 1000
+    elif pattern == 'PATTERN_C':
+        default_games = 500
+    elif pattern == 'PATTERN_D':
+        default_games = 500
+    else:
+        default_games = 500
+
     total_games = int(data.get('totalGames', default_games))
 
     def generate_progress():
         global latest_batch_data
-        print(f"\n🚀 [シミュレーション開始] パターン: {pattern} ({total_games}試合・毎試合シャッフル)...", flush=True)
-        print(f"   使用モデル状況: 超級={'OK (' + str(super_model_name) + ' / ' + str(super_in_dim) + '次元・対王ガードレール)' if model_super_loaded else '未ロード'} / 上級={'OK (' + str(hi_model_name) + ')' if model_hi_loaded else '未ロード'}", flush=True)
+        print(f"\n🚀 [シミュレーション開始] パターン: {pattern} ({total_games}試合・毎試合完全シャッフル)...", flush=True)
+        print(f"   使用モデル状況: 超級={'OK (' + str(super_model_name) + ' / ' + str(super_in_dim) + '次元)' if model_super_loaded else '未ロード'} / 上級={'OK (' + str(hi_model_name) + ')' if model_hi_loaded else '未ロード'}", flush=True)
         start_t = time.time()
 
+        # 出場キャラクターのサマリー枠
         if pattern == 'PATTERN_A':
             expected_chars = ['SUPER_AI', 'KING']
         elif pattern == 'PATTERN_B':
-            expected_chars = ['SUPER_AI', 'KING', 'BEGINNER_AI']
+            expected_chars = ['SUPER_AI', 'BEGINNER_AI', 'KING', 'MERCHANT']
         elif pattern == 'PATTERN_C':
-            expected_chars = ['SUPER_AI'] + BASE_10_CHARACTERS + ['BEGINNER_AI']
+            expected_chars = ['SUPER_AI', 'DUKE', 'MARQUIS', 'COUNT', 'KNIGHT']
         elif pattern == 'PATTERN_D':
-            expected_chars = ['SUPER_AI', 'BEGINNER_AI']
+            expected_chars = ALL_12_CHARACTERS
         else:
             expected_chars = ['SUPER_AI']
 
@@ -1208,20 +1211,36 @@ def simulate_batch():
 
         update_interval = 25
 
+        # パターンD用：12キャラ完全均等プール（各キャラがほぼ同数になるよう制御）
+        char_pool = []
+
         try:
             for g in range(1, total_games + 1):
                 if pattern == 'PATTERN_A':
+                    # パターンA（最重要：1,500試合）: 超級AI × 2 ＋ 王 × 2
                     seat_chars = ['SUPER_AI', 'SUPER_AI', 'KING', 'KING']
+
                 elif pattern == 'PATTERN_B':
-                    seat_chars = ['SUPER_AI', 'SUPER_AI', 'KING', 'BEGINNER_AI']
+                    # パターンB（混戦実戦：1,000試合）: 超級AI ＋ 上級AI ＋ 王 ＋ 商人
+                    seat_chars = ['SUPER_AI', 'BEGINNER_AI', 'KING', 'MERCHANT']
+
                 elif pattern == 'PATTERN_C':
-                    others = random.sample(OTHER_11_CHARACTERS, 2)
-                    seat_chars = ['SUPER_AI', 'SUPER_AI', others[0], others[1]]
+                    # パターンC（汎用戦：500試合）: 超級AI × 2 ＋ 公爵・侯爵・伯爵・騎士からランダム2人
+                    picked_two = random.sample(['DUKE', 'MARQUIS', 'COUNT', 'KNIGHT'], 2)
+                    seat_chars = ['SUPER_AI', 'SUPER_AI', picked_two[0], picked_two[1]]
+
                 elif pattern == 'PATTERN_D':
-                    seat_chars = ['SUPER_AI', 'SUPER_AI', 'BEGINNER_AI', 'BEGINNER_AI']
+                    # パターンD（練習試合：500試合）: 全12人から均等選出
+                    if len(char_pool) < 4:
+                        new_block = list(ALL_12_CHARACTERS)
+                        random.shuffle(new_block)
+                        char_pool.extend(new_block)
+                    seat_chars = [char_pool.pop(0) for _ in range(4)]
+
                 else:
                     seat_chars = ['SUPER_AI', 'SUPER_AI', 'SUPER_AI', 'SUPER_AI']
 
+                # すべての座席を毎試合完全にランダムシャッフル
                 random.shuffle(seat_chars)
 
                 seat_results, episode_rec, game_steps = run_single_game_fast(seat_chars, pattern_name=pattern, collect_steps=True)
@@ -1328,7 +1347,7 @@ def latest_simulation_data():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 # ----------------------------------------------------
-# 7. 静的Web配信ルート（★APIルートの後ろに配置）
+# 7. 静的Web配信ルート（APIルートの後に配置）
 # ----------------------------------------------------
 @app.route('/', methods=['GET'])
 def serve_index():

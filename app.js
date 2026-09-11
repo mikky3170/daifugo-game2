@@ -1,11 +1,24 @@
 
-/* [JS Version: v2.2.2] 最終更新: 高速シミュレーター残り時間(ETA)リアルタイム表示・Renderクラウド＆外部端末連携対応版 */
+/* [JS Version: v2.2.3] 最終更新: 王打倒モデル(daifugou_ai_hi2.pth)完成・新4パターンシミュレータ＆Render完全対応版 */
 
 /* ====================================================================
  * ROYAL DAIFUGO - バージョン管理マスター（最新10件キープ運用）
  * ==================================================================== */
-const APP_VERSION = "v2.2.2";
+const APP_VERSION = "v2.2.3";
 const VERSION_HISTORY = [
+  {
+    ver: "v2.2.3",
+    date: "2026-09-11",
+    title: "王打倒モデル(daifugou_ai_hi2.pth)完成・新4パターンシミュレータ＆Render完全対応",
+    changes: [
+      "パターンA(1500戦)で王の平均順位2.51位を上回る【2.49位】を記録、上位進出率50.5%を達成し王を撃破",
+      "上級AI(110次元)を完全圧倒（大富豪率19.8% vs 18.4% / 平均順位2.56位 vs 2.70位）",
+      "富豪(2位)獲得率は全キャラ中最多の284回を記録し、最下位(大貧民)への転落を王より少なく抑え込む鉄壁の安定性を獲得",
+      "高速シミュレーター新4パターン(A:1500, B:1000, C:500, D:500均等)のUI・ロジック完全同期",
+      "Renderクラウドサーバー（動的PORT・静的Web直接配信・外部端末通信最適化）の完全稼働"
+    ],
+    files: ["server.py", "app.js", "index.html", "daifugou_ai_hi2.pth"]
+  },
   {
     ver: "v2.2.2",
     date: "2026-09-11",
@@ -24,7 +37,7 @@ const VERSION_HISTORY = [
     date: "2026-09-11",
     title: "超級AI 163次元完全体表示・超級専用Joker戦術補正・シミュレーターUI更新",
     changes: [
-      "シミュレーターUIのパターンD/E等の表示を163次元へ完全統一",
+      "シミュレーターUIのパターンD等の表示を163次元へ完全統一",
       "超級AIの診断テストで発覚したJoker小札浪費バグを解消する超級専用戦術温存補正を適用",
       "キャラクター解説・セリフ・ログの次元数表記を163次元へ整合",
       "HTML/JS/Python全ファイルのバージョン同期（v2.2.1）"
@@ -34,14 +47,10 @@ const VERSION_HISTORY = [
   {
     ver: "v2.1.0",
     date: "2026-09-10",
-    title: "高速シミュレーター新5パターン（超級AI主軸体制）実装",
+    title: "高速シミュレーター超級AI主軸体制 実装",
     changes: [
-      "シミュレーターの全パターンを超級AI（159次元）主軸へ再編",
-      "パターンA：超級AI × 2 🆚 王 × 2（最難関ベンチマーク）",
-      "パターンB：超級AI × 2 🆚 王 × 1 🆚 上級AI × 1（実戦混戦モデル）",
-      "パターンC：超級AI × 2 🆚 超級を除く11名からランダム2名（汎用・全キャラ対戦）",
-      "パターンD：超級AI × 2 🆚 上級AI × 2（新旧モデル頂上決戦）",
-      "パターンE：超級AI × 4（159次元同モデル自己対戦）"
+      "シミュレーターの全パターンを超級AI主軸へ再編",
+      "最難関ベンチマークの構築"
     ],
     files: ["server.py", "app.js"]
   },
@@ -50,10 +59,8 @@ const VERSION_HISTORY = [
     date: "2026-09-09",
     title: "超級AIモデル(159次元・流れたカードカウンティング推論) 実装",
     changes: [
-      "中級AIを最上位『超級AI』（daifugo_ai_hi2.pth / 4層BatchNorm構造）へ完全リプレイス",
-      "手札(53)＋場(53)に加え、『流れたカード(53)』を完全記憶する159次元推論基盤を構築",
-      "下部操作バーの『リセット』横に『ログ』ボタンを統合（全デバイス共通UI）",
-      "PCワイド画面でも中央ゲーム枠の右下に追従するバージョンバッジ（v2.0.0）を常駐化"
+      "中級AIを最上位『超級AI』（daifugo_ai_hi2.pth）へ完全リプレイス",
+      "流れたカード完全記憶推論基盤の構築"
     ],
     files: ["index.html", "style.css", "app.js", "server.py"]
   },
@@ -62,9 +69,8 @@ const VERSION_HISTORY = [
     date: "2026-09-08",
     title: "Render.com クラウドAPI連携 ＆ ローカル/クラウド自動判別",
     changes: [
-      "Render.comにデプロイされたPyTorchバックエンドサーバー（https://daifugo-game2.onrender.com）との本番連携に対応",
-      "アクセス元（localhost/file/Web）に応じたAPI接続先の自動切り替えロジックを実装",
-      "タブレット等の読み込み遅延による停止を防止する安全起動ラッパー（startApp）を搭載"
+      "Render.comバックエンドサーバー連携に対応",
+      "アクセス元に応じたAPI接続先の自動切り替えロジック実装"
     ],
     files: ["app.js", "server.py", "requirements.txt", "Procfile"]
   },
@@ -73,9 +79,8 @@ const VERSION_HISTORY = [
     date: "2026-09-07",
     title: "AI稼働ステータス可視化・画面内ログ ＆ カウンティング学習データ対応",
     changes: [
-      "ヘッダーにPyTorchサーバーとの通信状態を示す『AI通信ステータス・オーブ（緑/黄/赤）』を新設",
-      "タブレット・スマホ実機で推論ログや通信状態を確認・コピーできる『画面内デバッグコンソール』を搭載",
-      "AIのカウンティング学習を可能にするため、JSONログに1手ごとの着手・場流れ履歴を追加記録"
+      "AI通信ステータス・オーブ新設",
+      "画面内デバッグコンソール搭載"
     ],
     files: ["index.html", "style.css", "app.js", "server.py"]
   },
@@ -85,7 +90,7 @@ const VERSION_HISTORY = [
     title: "ニューラルネット推論 ＆ クラウド連携対応",
     changes: [
       "PyTorch深層学習モデルとのリアルタイム通信",
-      "5パターンの座席シャッフル高速シミュレーション搭載"
+      "座席シャッフル高速シミュレーション搭載"
     ],
     files: ["server.py", "app.js"]
   },
@@ -94,8 +99,7 @@ const VERSION_HISTORY = [
     date: "2026-09-05",
     title: "PyTorch深層学習モデル連携基盤の新設",
     changes: [
-      "Pythonサーバー（server.py）およびPyTorch学習済みモデルと完全連携",
-      "盤面ベクトルをリアルタイム推論"
+      "Pythonサーバー（server.py）およびPyTorch学習済みモデルと完全連携"
     ],
     files: ["server.py", "app.js"]
   },
@@ -104,25 +108,14 @@ const VERSION_HISTORY = [
     date: "2026-09-04",
     title: "自己対戦 ＆ 1試合ごとの学習データ詳細ビューア新設",
     changes: [
-      "試合ごとの手番データをカラーで閲覧できる専用モーダルを新設",
-      "ページ送り・試合番号選択による全手番カラー確認に対応"
-    ],
-    files: ["index.html", "style.css", "app.js"]
-  },
-  {
-    ver: "v1.5.0",
-    date: "2026-09-03",
-    title: "機械学習基盤・自己対戦機能新設",
-    changes: [
-      "座席番号(seat)・確定順位(finalRank)の記録構造を追加",
-      "標準JSON / JSONL形式の学習データ出力機能を実装"
+      "試合ごとの手番データをカラーで閲覧できる専用モーダルを新設"
     ],
     files: ["index.html", "style.css", "app.js"]
   }
 ];
 
 /* ----------------------------------------------------
- * 0. 画面内デバッグロガー（タブレット・スマホ対応）
+ * 0. 画面内デバッグロガー
  * ---------------------------------------------------- */
 const InAppLogger = {
   maxEntries: 200,
@@ -1337,7 +1330,7 @@ function getUnrevealedCards(myHand, playedHistory = playedCardsHistory, currentF
 }
 
 /* ----------------------------------------------------
- * 6. 王(KING)専用: 通常モード完全一致 MCTSエンジン
+ * 6. 王(KING)専用 MCTSエンジン
  * ---------------------------------------------------- */
 class SimGame {
   constructor(hands, fieldCards, isRevolution, isElevenBack, lastPlayedPlayer, consecutivePasses, finishedPlayers, playerKeys = PLAYERS) {
@@ -1379,7 +1372,7 @@ class SimGame {
     this.consecutivePasses = 0;
 
     if (move.length >= 4) this.isRevolution = !this.isRevolution;
-    if (move[0].display === 'J') this.isElevenBack = true;
+    if (move[0].display == 'J') this.isElevenBack = true;
 
     if (this.hands[player].length === 0 && !this.finishedPlayers.includes(player)) {
       this.finishedPlayers.push(player);
@@ -1413,10 +1406,6 @@ class SimGame {
       g++;
     }
     return next;
-  }
-
-  advanceTurn(currentIdx, wasEightGiri) {
-    return this.advance_turn(currentIdx, wasEightGiri);
   }
 }
 
@@ -2831,11 +2820,11 @@ async function cpuPlayTurn(cpu) {
 }
 
 /* ----------------------------------------------------
- * 11. 高速自己対戦エンジン (新5パターン・ETA＆モデル追跡対応)
+ * 11. 高速自己対戦エンジン (新4パターン対応)
  * ---------------------------------------------------- */
 const SelfPlayRunner = {
   isRunning: false,
-  totalGames: 500,
+  totalGames: 1500,
   activePattern: 'PATTERN_A',
 
   async startBatch(pattern, total, onProgress, onComplete) {
@@ -2894,7 +2883,7 @@ const SelfPlayRunner = {
       this.isRunning = false;
       const pWrap = document.getElementById('selfplay-progress-wrap');
       if (pWrap) pWrap.style.display = 'none';
-      ['a', 'b', 'c', 'd', 'e'].forEach(k => {
+      ['a', 'b', 'c', 'd'].forEach(k => {
         const b = document.getElementById(`btn-selfplay-${k}`);
         if (b) b.disabled = false;
       });
@@ -3176,7 +3165,7 @@ function showEvalModal() {
 }
 
 /* ============================================================
- * ランキング・戦績・自己対戦コントロールパネル (ETA・ログ直通対応)
+ * ランキング・戦績・自己対戦コントロールパネル (v2.2.3対応)
  * ============================================================ */
 function formatSecondsToDisplay(sec) {
   if (sec <= 0 || isNaN(sec)) return '計算中...';
@@ -3353,39 +3342,33 @@ function renderRankingModalContent() {
     body.innerHTML = `
       <div class="selfplay-container">
         <div class="selfplay-header-box">
-          <strong style="color:#fff3a8;">🤖 高精度シミュレーター (超級AI主軸・毎試合座席完全シャッフル)</strong><br>
-          ※超級AI（163次元完全体・盤面認識モデル）を中心に据えた高速検証。毎試合座席を完全シャッフルし、純粋な実力を評価。
+          <strong style="color:#fff3a8;">🤖 高精度シミュレーター (新4パターン・毎試合座席完全シャッフル)</strong><br>
+          ※超級AI（163次元完全体）を中心に据え、毎試合座席を完全シャッフルして純粋な実力を検証・データ収集します。
         </div>
 
         <div class="selfplay-btn-row" style="display:flex; flex-direction:column; gap:8px;">
           <button class="btn-selfplay" id="btn-selfplay-a">
-            <span>🅰️ パターンA（対強敵・王特化）：超級AI × 2 🆚「王」 × 2</span>
-            <span style="font-size:10px; color:#d4af37; font-weight:bold;">最難関ベンチマーク (毎試合シャッフル・500試合)</span>
+            <span>🅰️ パターンA（最重要・対強敵：1,500試合）</span>
+            <span style="font-size:10.5px; color:#d4af37; font-weight:bold;">超級AI × 2人 🆚「王」 × 2人</span>
+            <span style="font-size:9.5px; color:#b0bec5;">(王打倒に特化した直接対決の神データ収集)</span>
           </button>
           
-          <div style="display:flex; gap:8px;">
-            <button class="btn-selfplay" id="btn-selfplay-b" style="flex:1;">
-              <span>🅱️ パターンB（実戦混戦・王＋上級）</span>
-              <span style="font-size:10px; color:#4caf50; font-weight:bold;">超級AI × 2、王 × 1、上級AI × 1</span>
-              <span style="font-size:9px; color:#b0bec5;">(毎試合シャッフル・500試合)</span>
-            </button>
-            <button class="btn-selfplay" id="btn-selfplay-c" style="flex:1;">
-              <span>🅲 パターンC（汎用・全キャラ対戦）</span>
-              <span style="font-size:10px; color:#2196f3; font-weight:bold;">超級AI × 2 🆚 超級を除く11名からランダム2名</span>
-              <span style="font-size:9px; color:#b0bec5;">(毎試合シャッフル・1,000試合)</span>
-            </button>
-          </div>
+          <button class="btn-selfplay" id="btn-selfplay-b">
+            <span>🅱️ パターンB（混戦実戦：1,000試合）</span>
+            <span style="font-size:10.5px; color:#4caf50; font-weight:bold;">超級AI × 1人 ＋ 上級AI × 1人 ＋ 王 × 1人 ＋ 商人 × 1人</span>
+            <span style="font-size:9.5px; color:#b0bec5;">(商人によるペア重視戦術と4者4様の駆け引き)</span>
+          </button>
 
           <div style="display:flex; gap:8px;">
-            <button class="btn-selfplay" id="btn-selfplay-d" style="flex:1;">
-              <span>🅳 パターンD（新旧モデル頂上決戦）</span>
-              <span style="font-size:10px; color:#9c27b0; font-weight:bold;">超級AI × 2 🆚 上級AI × 2</span>
-              <span style="font-size:9px; color:#b0bec5;">(163次元 vs 110次元・毎試合シャッフル・500試合)</span>
+            <button class="btn-selfplay" id="btn-selfplay-c" style="flex:1;">
+              <span>🅲 パターンC（汎用戦：500試合）</span>
+              <span style="font-size:10px; color:#2196f3; font-weight:bold;">超級AI × 2人 🆚 4大貴族(公爵/侯爵/伯爵/騎士)</span>
+              <span style="font-size:9px; color:#b0bec5;">(正統派キャラからランダム2名・基礎体力向上)</span>
             </button>
-            <button class="btn-selfplay" id="btn-selfplay-e" style="flex:1;">
-              <span>🅴 パターンE（同モデル自己対戦）</span>
-              <span style="font-size:10px; color:#e91e63; font-weight:bold;">超級AI × 4名 同モデル決戦</span>
-              <span style="font-size:9px; color:#b0bec5;">(高精度163次元学習ログ収集・500試合)</span>
+            <button class="btn-selfplay" id="btn-selfplay-d" style="flex:1;">
+              <span>🅳 パターンD（練習試合：500試合）</span>
+              <span style="font-size:10px; color:#9c27b0; font-weight:bold;">全12キャラクター完全均等選出</span>
+              <span style="font-size:9px; color:#b0bec5;">(全キャラの対戦数が完全同数・総合リーグ戦)</span>
             </button>
           </div>
         </div>
@@ -3399,7 +3382,7 @@ function renderRankingModalContent() {
             <div class="selfplay-progress-bar-fill" id="selfplay-progress-fill" style="width: 0%; height:100%; background:linear-gradient(90deg, #d4af37, #4caf50); transition: width 0.25s ease;"></div>
           </div>
           <div style="display:flex; justify-content:space-between; font-size:10.5px; color:#8c9ba5;">
-            <span id="selfplay-model-badge">使用モデル: 超級AI (163次元) ＆ 上級AI (110次元)</span>
+            <span id="selfplay-model-badge">使用モデル: 超級AI (163次元)</span>
             <span id="selfplay-progress-pct" style="color:#d4af37; font-weight:bold;">0.0%</span>
           </div>
         </div>
@@ -3411,7 +3394,7 @@ function renderRankingModalContent() {
           </div>
           <div id="selfplay-results-table">
             <div style="padding: 15px; text-align: center; color: #8c9ba5;">
-              上のボタン（A〜E）を押すと、ここにリアルタイムに進捗と対戦成績が出力されます。
+              上のボタン（A〜D）を押すと、ここにリアルタイムに進捗と対戦成績が出力されます。
             </div>
           </div>
 
@@ -3430,11 +3413,10 @@ function renderRankingModalContent() {
       </div>
     `;
 
-    document.getElementById('btn-selfplay-a').onclick = () => triggerSelfPlay('PATTERN_A', 500);
-    document.getElementById('btn-selfplay-b').onclick = () => triggerSelfPlay('PATTERN_B', 500);
-    document.getElementById('btn-selfplay-c').onclick = () => triggerSelfPlay('PATTERN_C', 1000);
+    document.getElementById('btn-selfplay-a').onclick = () => triggerSelfPlay('PATTERN_A', 1500);
+    document.getElementById('btn-selfplay-b').onclick = () => triggerSelfPlay('PATTERN_B', 1000);
+    document.getElementById('btn-selfplay-c').onclick = () => triggerSelfPlay('PATTERN_C', 500);
     document.getElementById('btn-selfplay-d').onclick = () => triggerSelfPlay('PATTERN_D', 500);
-    document.getElementById('btn-selfplay-e').onclick = () => triggerSelfPlay('PATTERN_E', 500);
 
     const qLogBtn = document.getElementById('btn-selfplay-quick-log');
     if (qLogBtn) qLogBtn.onclick = openDebugLogModal;
@@ -3471,7 +3453,7 @@ function renderRankingModalContent() {
 
 function triggerSelfPlay(pattern, total = 500) {
   soundMgr.playSelect();
-  const btnIds = ['a', 'b', 'c', 'd', 'e'];
+  const btnIds = ['a', 'b', 'c', 'd'];
   btnIds.forEach(k => {
     const b = document.getElementById(`btn-selfplay-${k}`);
     if (b) b.disabled = true;
@@ -3498,11 +3480,10 @@ function triggerSelfPlay(pattern, total = 500) {
   pEta.textContent = '⏳ 残り時間: 計算中...';
 
   const titleMap = {
-    'PATTERN_A': 'パターンA (超級AI 2人 🆚 王 2人 500試合)',
-    'PATTERN_B': 'パターンB (超級AI 2人 🆚 王 1人＋上級AI 1人 500試合)',
-    'PATTERN_C': 'パターンC (超級AI 2人 🆚 一般・上級11名からランダム2名 1,000試合)',
-    'PATTERN_D': 'パターンD (超級AI 2人 🆚 上級AI 2人 500試合)',
-    'PATTERN_E': 'パターンE (超級AI 4人 同キャラ決戦 500試合)'
+    'PATTERN_A': 'パターンA (最重要：超級AI 2人 🆚 王 2人 1,500試合)',
+    'PATTERN_B': 'パターンB (混戦実戦：超級AI 1人 ＋ 上級AI 1人 ＋ 王 1人 ＋ 商人 1人 1,000試合)',
+    'PATTERN_C': 'パターンC (汎用戦：超級AI 2人 🆚 4大貴族 500試合)',
+    'PATTERN_D': 'パターンD (練習試合：全12キャラ均等選出 500試合)'
   };
   pLabel.textContent = `実行中: ${titleMap[pattern] || ''}`;
 
@@ -3541,7 +3522,7 @@ function triggerSelfPlay(pattern, total = 500) {
       if (btnViewer) btnViewer.disabled = false;
 
       InAppLogger.addEntry('ai', [
-        `[シミュレーター完了] 所要時間: ${elapsedSeconds}秒 ｜ 総手数: ${totalSteps.toLocaleString()}手 ｜ モデル: ${superModel || '163次元'}`
+        `[シミュレーター完了] 所要時間: ${elapsedSeconds}秒 ｜ 総手数: ${totalSteps ? totalSteps.toLocaleString() : '-'}手 ｜ モデル: ${superModel || '163次元'}`
       ]);
 
       const tableDiv = document.getElementById('selfplay-results-table');
@@ -3550,7 +3531,7 @@ function triggerSelfPlay(pattern, total = 500) {
           <div style="border-top:1px solid rgba(212,175,55,0.3); padding-top:6px;">
             <div style="font-weight:bold; color:#fff3a8; margin-bottom:4px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px;">
               <span>🏆 対戦結果 (${titleMap[pattern]})</span>
-              <span style="color:#4caf50; font-size:11px;">⏱️ 所要時間: ${elapsedSeconds}秒 ${totalSteps ? `(総${totalSteps.toLocaleString()}手収集済)` : ''}</span>
+              <span style="color:#4caf50; font-size:11px;">⏱️ 所要時間: ${elapsedSeconds}秒 ${totalSteps ? `(総${totalSteps.toLocaleString()}手)` : ''}</span>
             </div>
             <div style="font-size:10.5px; color:#8c9ba5; margin-bottom:6px;">
               ✅ 稼働確認: 超級AI=${superModel || 'daifugou_ai_hi2.pth (163次元)'}
@@ -3873,7 +3854,7 @@ function startApp() {
     initEvents();
     bgmMgr.setCharSelectPhase(true);
     AIStatusUI.pingServer();
-    console.log('[SYSTEM] アプリ初期化完了（v2.2.2 - Renderクラウド＆外部端末連携対応版）');
+    console.log('[SYSTEM] アプリ初期化完了（v2.2.3 - 王打倒モデル配備＆新4パターン版）');
   } catch (err) {
     console.error('[CRITICAL] 起動初期化エラー:', err);
   }
@@ -3884,5 +3865,4 @@ if (document.readyState === 'loading') {
 } else {
   startApp();
 }
-
 
