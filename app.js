@@ -1,14 +1,45 @@
 
-/* [JS Version: v2.5.6] 王宮完全調和・外枠撤廃＆下部金枠コンソール版 - 前半（1/2）
- * バージョンJS一元管理・最大10件表示・リセット時多重タイマー完全破棄
- * 王MCTS・深層学習推論・全キャラクターセリフ完全収録（ゲームロジック完全保護）
+/* [JS Version: v2.5.8] キャラクター選択画面完全修復・オーバーレイ＆モーダル再構築版 - 前半（1/2）
+ * バージョンJS一元管理・王MCTS・深層学習推論・全キャラクターセリフ完全収録（ゲームロジック完全保護）
  */
 
 /* ====================================================================
  * ROYAL DAIFUGO - バージョン管理マスター（JavaScript一元管理）
  * ==================================================================== */
-const APP_VERSION = "v2.5.6";
+const APP_VERSION = "v2.5.8";
 const VERSION_HISTORY = [
+  {
+    ver: "v2.5.8",
+    date: "2026-09-13",
+    title: "キャラクター選択画面完全修復・オーバーレイ＆モーダル再構築版",
+    changes: [
+      "キャラクター選択画面オーバーレイ（.char-select-overlay）およびパネル（.char-select-panel）のスタイル完全実装・修復",
+      "各種モーダル共通枠（.modal-overlay, .modal-content）および勝利演出ポップアップのCSS完全復元",
+      "キャラ選択画面の黄金呼吸点滅＆選択促進パルスの挙動安定化",
+      "セーブ＆ロード機能、88pxキャラ名幅、ジョーカー2種差別化等のv2.5.7全機能を完全維持"
+    ],
+    files: ["index.html", "style.css", "app.js"]
+  },
+  {
+    ver: "v2.5.7",
+    date: "2026-09-13",
+    title: "王宮セーブ機能搭載・トランプ差別化・位置ブレ完全固定版",
+    changes: [
+      "ゲーム対戦状況の即時セーブ＆ロード機能を新規実装",
+      "カード交換ボタンの文字完全センタリング配置",
+      "ゲーム画面のキャラ名＆役職バッジ幅を88pxに拡張（大富豪でも改行ゼロ）",
+      "キャラ選択画面にタイトルゆっくり点滅＆選択促進パルスアニメーションを搭載",
+      "プレイヤー肖像画・情報スロットの左右位置完全固定（ブレ根絶）",
+      "「あなたの順番です」バッジをひと回り大きく拡大表示",
+      "CPUカード裏面描画を残り枚数と完全一致化（上限8枚の制限撤廃）",
+      "自動ボタンON時の鮮やかなゴールド選択中ハイライト表示",
+      "ジョーカー2枚の絵柄（黄金仮面・百合 ⇄ 道化師帽子・王冠）と色彩の完全差別化",
+      "CPU1, 3で残り枚数の右にパス回数を横並び配置",
+      "スマホ時、CPU1, 3のカード重なりマージンを倍近く深化（-28px）",
+      "王MCTS、PyTorch深層学習推論、ルール判定、全13キャラセリフ辞書を完全保持"
+    ],
+    files: ["index.html", "style.css", "app.js"]
+  },
   {
     ver: "v2.5.6",
     date: "2026-09-12",
@@ -19,10 +50,7 @@ const VERSION_HISTORY = [
       "下部操作バーからフッター・バージョン表示までを一つの金枠コンソールで一体化",
       "タイトルを添付の王冠・唐草タイトルロゴ画像（title_logo.png）に刷新",
       "キャラ選択画面の右下にもバージョン表示バッジを追加",
-      "パス回数表示の幅を文字ギリギリまで狭小化",
-      "左右CPU（CPU1, 3）の残り枚数・パス表示の横はみ出しを完全解消",
-      "スマホ時のCPU1, 3カード束全体の幅が約0.8倍になるよう重なりを深化",
-      "王MCTS、PyTorch深層学習推論、ルール判定、全13キャラセリフ辞書を完全保持"
+      "パス回数表示の幅を文字ギリギリまで狭小化"
     ],
     files: ["index.html", "style.css", "app.js"]
   },
@@ -35,7 +63,6 @@ const VERSION_HISTORY = [
       "プレイヤーのパス表示枠をCPUと完全同一（幅54px）に強制固定",
       "対戦画面のキャラ名と役職バッジの大きさを縦横同一に統一",
       "プレイヤー肖像画をCPUと同一の大きさに統一",
-      "AI自己対戦モーダル内のボタン文字色を視認性の高い白・ゴールドに改善",
       "中央祭壇のステータス表示（平時・革命中・11 Back!）を1.12倍に拡大"
     ],
     files: ["index.html", "style.css", "app.js"]
@@ -59,8 +86,7 @@ const VERSION_HISTORY = [
       "CPU1〜3の役職（大富豪等）バッジの幅をキャラ名と完全一致＆下段配置に統一",
       "CPU1のセリフ枠を改行なし1行フィットへ改良、枠はみ出しを解消",
       "CPU絵柄拡大を上にはみ出さず下方向へひと回り大きく（1.5倍）拡大表示",
-      "革命・11バック・8切り演出バナーを中央祭壇枠内収容サイズに最適化",
-      "操作ボタン名称を「📊 戦績表示」「🔄 キャラ抽選」に更新、自動ONを左詰め・キャラ抽選を右詰め配置"
+      "革命・11バック・8切り演出バナーを中央祭壇枠内収容サイズに最適化"
     ],
     files: ["index.html", "style.css", "app.js"]
   },
@@ -82,18 +108,6 @@ const VERSION_HISTORY = [
     changes: [
       "スマホ縦画面時、プレイヤー肖像画を手札の左端へドッキング配置し中央縦スペースを解放",
       "タブレット・PC画面時、中央祭壇高さを微小引き締め＆プレイヤー肖像画との安全マージンを強制確保"
-    ],
-    files: ["index.html", "style.css", "app.js"]
-  },
-  {
-    ver: "v2.5.0",
-    date: "2026-09-12",
-    title: "STEP 8: 最終UI調整・高級西洋ファンタジー王宮カードゲーム正式版",
-    changes: [
-      "バージョン情報をJavaScriptで一元管理化（過去最大10件の自動トリミング表示仕様）",
-      "リセットボタン連打による倍速加速バグを完全解消（全タイマー破棄機構 GameTimer 導入）",
-      "キャラ選択画面のタイトル・説明文を完全センタリングし、宮廷調シャンパンゴールドへ刷新",
-      "キャラ紹介モーダルの肖像画サイズを端正なコンパクト金枠（44px×66px）に完全適正化"
     ],
     files: ["index.html", "style.css", "app.js"]
   }
@@ -174,7 +188,7 @@ const InAppLogger = {
 InAppLogger.init();
 
 /* ----------------------------------------------------
- * ★ 進行タイマー管理（リセット時の加速・多重ターン防止マネージャー）
+ * 進行タイマー管理（リセット時の加速・多重ターン防止マネージャー）
  * ---------------------------------------------------- */
 const GameTimer = {
   activeTimerIds: new Set(),
@@ -674,7 +688,9 @@ class BgmManager {
 const soundMgr = new SoundManager();
 const bgmMgr = new BgmManager();
 
-/* 2. AI通信ステータスランプ ＆ Python AI推論サーバー連携 */
+/* ----------------------------------------------------
+ * 2. AI通信ステータスランプ ＆ Python AI推論サーバー連携
+ * ---------------------------------------------------- */
 const AIStatusUI = {
   set(state, text = null) {
     const dot = document.getElementById('ai-orb-dot');
@@ -829,7 +845,9 @@ async function askPythonAI(hand, currentField, validMoves, modelType = 'hi', pla
   return validMoves.length > 0 ? validMoves[0] : null;
 }
 
-/* 3. AIデータロガー (AIDataLogger) */
+/* ----------------------------------------------------
+ * 3. AIデータロガー (AIDataLogger)
+ * ---------------------------------------------------- */
 const AIDataLogger = {
   activeGameId: null,
   activePattern: null,
@@ -975,7 +993,9 @@ const AIDataLogger = {
   }
 };
 
-/* 4. 戦績＆データ管理 (LocalStorage) */
+/* ----------------------------------------------------
+ * 4. 戦績＆データ管理 (LocalStorage)
+ * ---------------------------------------------------- */
 const StorageManager = {
   VERSION_KEY: 'royalStatsSchemaVersion',
   CURRENT_SCHEMA_VER: 'v1.5.0',
@@ -1113,7 +1133,9 @@ const StorageManager = {
   }
 };
 
-/* 5. 基本ルール・カードヘルパー（完全保護） */
+/* ----------------------------------------------------
+ * 5. 基本ルール・カードヘルパー（完全保護）
+ * ---------------------------------------------------- */
 function getCardKey(card) {
   return card.isJoker ? 'JOKER' : card.display;
 }
@@ -1157,6 +1179,7 @@ function createDeck() {
       });
     });
   });
+  // ジョーカー2枚（J1: 赤金・黄金仮面 🎭 ｜ J2: 銀青・道化師帽子 🎪）
   deck.push({ suitSymbol: '★', suitClass: 'joker', display: 'JOKER', isJoker: true, jokerId: 'J1' });
   deck.push({ suitSymbol: '☆', suitClass: 'joker', display: 'JOKER', isJoker: true, jokerId: 'J2' });
   return deck;
@@ -1356,7 +1379,9 @@ function getUnrevealedCards(myHand, playedHistory = playedCardsHistory, currentF
   }));
 }
 
-/* 6. 王(KING)専用 MCTSエンジン（完全保護） */
+/* ----------------------------------------------------
+ * 6. 王(KING)専用 MCTSエンジン（完全保護）
+ * ---------------------------------------------------- */
 class SimGame {
   constructor(hands, fieldCards, isRevolution, isElevenBack, lastPlayedPlayer, consecutivePasses, finishedPlayers, playerKeys = PLAYERS) {
     this.playerKeys = playerKeys;
@@ -1644,7 +1669,9 @@ function kingDecideMoveUniversal(cpuKey, hand, currentField, rev, allHands, allF
   return bestChild ? bestChild.move : candidateMoves[0];
 }
 
-/* 7. CPU思考ロジック（完全保護） */
+/* ----------------------------------------------------
+ * 7. CPU思考ロジック（完全保護）
+ * ---------------------------------------------------- */
 function evaluateMoveDefault(move) {
   const count = move.length;
   const val = getCardValue(move[0]);
@@ -1906,7 +1933,6 @@ function updateStatusUI() {
   updateEvalMeterUI();
 }
 
-/* 勝利予想パネル動的描画（%見切れ完全根絶版） */
 function updateEvalMeterUI() {
   const { rates, topPlayer, diffFromSecond, isFinished } = calculateRealtimeWinRates();
   const gridEl = document.getElementById('eval-rates-grid');
@@ -2009,19 +2035,23 @@ function checkAndTriggerDialogue(player, eventType, extraCards = []) {
   }
 }
 
-/* 全部乗せトランプ要素生成処理 */
 function createCardElement(card) {
   const el = document.createElement('div');
 
   if (card.isJoker) {
-    el.className = 'card joker';
+    const isJ1 = (card.jokerId === 'J1' || card.suitSymbol === '★');
+    const jokerClass = isJ1 ? 'joker-1' : 'joker-2';
+    const icon = isJ1 ? '🎭' : '🎪';
+    const watermark = isJ1 ? '⚜' : '👑';
+
+    el.className = `card joker ${jokerClass}`;
     el.innerHTML = `
       <div class="card-top">
         <span class="card-suit-symbol">${card.suitSymbol}</span>
         <span class="card-rank">JOKER</span>
       </div>
-      <span class="card-center-icon">🎭</span>
-      <div class="card-watermark">⚜</div>
+      <span class="card-center-icon">${icon}</span>
+      <div class="card-watermark">${watermark}</div>
     `;
   } else {
     const isPicture = (card.display === 'J' || card.display === 'Q' || card.display === 'K');
@@ -2045,7 +2075,7 @@ function renderCpuStack(cpuId, count) {
   if (!stack) return;
   stack.innerHTML = '';
   
-  const displayCount = Math.min(count, 8);
+  const displayCount = count;
   for (let i = 0; i < displayCount; i++) {
     const back = document.createElement('div');
     back.className = 'card-back';
@@ -2221,7 +2251,6 @@ function render(isFullRedraw = false) {
 
   ['cpu1', 'cpu2', 'cpu3'].forEach(c => renderCpuStack(c, hands[c].length));
 
-  // 各席の「残り ○枚」＆「パス: ○」更新
   PLAYERS.forEach(p => {
     const countBadge = document.getElementById(`${p}-card-count`);
     if (countBadge) {
@@ -2287,7 +2316,6 @@ function render(isFullRedraw = false) {
       }
     }
 
-    // 役職バッジ（大富豪・富豪・貧民・大貧民）の更新（未確定時は空にしてCSSで非表示化）
     const rankEl = document.getElementById(`${p}-rank`);
     if (rankEl) {
       if (playerStatusMap[p]) rankEl.textContent = playerStatusMap[p];
@@ -2302,6 +2330,11 @@ function updateControlsOnly() {
   const passBtn = document.getElementById('pass-btn');
   const goExBtn = document.getElementById('go-exchange-btn');
   const exBtn = document.getElementById('exchange-btn');
+  const autoBtn = document.getElementById('auto-play-btn');
+
+  if (autoBtn) {
+    autoBtn.classList.toggle('is-active-gold', isAutoPlayMode);
+  }
 
   if (isPreExchangePhase) {
     playBtn.style.display = 'none'; passBtn.style.display = 'none';
@@ -2366,7 +2399,6 @@ function getSpeedMultiplier() {
   return 1.0;
 }
 
-/* リセット：進行中の全タイマーを完全に破棄して安全に再始動 */
 function resetGame(reshuffle = false, keepRanks = false) {
   GameTimer.clearAll();
   isProcessing = false;
@@ -2654,7 +2686,6 @@ function playCardSuccess(player, cards, needFullRedraw = false, playedIndices = 
     soundMgr.playJoker();
   }
 
-  /* ⚡ 【革命】 ＆ 【革命返し】 判定 ＆ アニメーション演出 */
   if (cards.length >= 4) {
     const wasRev = isRevolution;
     isRevolution = !isRevolution;
@@ -2669,7 +2700,6 @@ function playCardSuccess(player, cards, needFullRedraw = false, playedIndices = 
     needFullRedraw = true; hasSpecial = true; specialType = 'REVOLUTION';
   }
 
-  /* ⚡ 【11バック】 判定 ＆ アニメーション演出 */
   if (cards[0].display === 'J') {
     isElevenBack = true;
     actionText += ' 11バック発動！';
@@ -2679,7 +2709,6 @@ function playCardSuccess(player, cards, needFullRedraw = false, playedIndices = 
     if (!specialType) specialType = 'ELEVEN_BACK';
   }
 
-  /* ⚔️ 【8切り】 判定 ＆ アニメーション演出 */
   const isEight = cards[0].display === '8';
   if (isEight) {
     actionText += ' 8切り発動！';
@@ -2928,6 +2957,111 @@ async function cpuPlayTurn(cpu) {
 }
 
 /* ----------------------------------------------------
+ * 10.5 ゲーム状況のセーブ＆ロード管理マネージャー
+ * ---------------------------------------------------- */
+const GameSaveManager = {
+  SAVE_KEY: 'royal_card_game_saved_state_v1',
+
+  saveCurrentGame() {
+    if (gameEnded) {
+      alert('ゲーム終了時はセーブできません。次のゲーム開始後にセーブしてください。');
+      return;
+    }
+    soundMgr.playSelect();
+
+    const state = {
+      timestamp: Date.now(),
+      appVersion: APP_VERSION,
+      hands,
+      playerPassCounts,
+      hasPassedInRound,
+      fieldCards,
+      lastPlayedPlayer,
+      currentTurnIndex,
+      consecutivePasses,
+      finishedPlayers,
+      playerStatusMap,
+      previousRanks,
+      isRevolution,
+      isElevenBack,
+      isExchangePhase,
+      isPreExchangePhase,
+      requiredExchangeCount,
+      assignedCharacters,
+      playedCardsHistory,
+      currentRoundCards,
+      clearedCardsHistory,
+      isAutoPlayMode,
+      currentSpeed
+    };
+
+    try {
+      localStorage.setItem(this.SAVE_KEY, JSON.stringify(state));
+      setMessage('💾 現在の対戦状況をセーブしました！');
+      alert('対戦状況をセーブしました！\n「ロード」ボタンでいつでもこの状態から再開できます。');
+    } catch (e) {
+      console.error('セーブエラー:', e);
+      alert('セーブに失敗しました。ブラウザのストレージ容量をご確認ください。');
+    }
+  },
+
+  loadSavedGame() {
+    const raw = localStorage.getItem(this.SAVE_KEY);
+    if (!raw) {
+      alert('セーブデータが見つかりません。先に「セーブ」を行ってください。');
+      return;
+    }
+    if (!confirm('保存された対戦データを読み込んで再開しますか？\n（現在の進行状況は上書きされます）')) {
+      return;
+    }
+    soundMgr.playSelect();
+
+    try {
+      const state = JSON.parse(raw);
+      GameTimer.clearAll();
+      isProcessing = false;
+
+      hands = state.hands;
+      playerPassCounts = state.playerPassCounts;
+      hasPassedInRound = state.hasPassedInRound;
+      fieldCards = state.fieldCards;
+      lastPlayedPlayer = state.lastPlayedPlayer;
+      currentTurnIndex = state.currentTurnIndex;
+      consecutivePasses = state.consecutivePasses;
+      finishedPlayers = state.finishedPlayers;
+      playerStatusMap = state.playerStatusMap;
+      previousRanks = state.previousRanks;
+      isRevolution = state.isRevolution;
+      isElevenBack = state.isElevenBack;
+      isExchangePhase = state.isExchangePhase;
+      isPreExchangePhase = state.isPreExchangePhase;
+      requiredExchangeCount = state.requiredExchangeCount;
+      assignedCharacters = state.assignedCharacters;
+      playedCardsHistory = state.playedCardsHistory;
+      currentRoundCards = state.currentRoundCards;
+      clearedCardsHistory = state.clearedCardsHistory;
+      isAutoPlayMode = state.isAutoPlayMode;
+      currentSpeed = state.currentSpeed || 1;
+      selectedIndices = [];
+      gameEnded = false;
+
+      updateCharacterUI();
+      updateStatusUI();
+      bgmMgr.update(isRevolution, isElevenBack);
+      render(true);
+
+      setMessage('📂 セーブデータをロードしました！対戦を再開します。');
+      document.getElementById('char-select-overlay').classList.remove('active');
+
+      checkTurn();
+    } catch (e) {
+      console.error('ロードエラー:', e);
+      alert('セーブデータの復元に失敗しました。データが破損している可能性があります。');
+    }
+  }
+};
+
+/* ----------------------------------------------------
  * 11. 高速自己対戦エンジン（完全保護）
  * ---------------------------------------------------- */
 const SelfPlayRunner = {
@@ -3111,7 +3245,6 @@ function updateLogViewerUI() {
   tableWrap.innerHTML = thtml;
 }
 
-/* バージョン履歴モーダル（最新10件制限） */
 function renderVersionHistoryModal() {
   const body = document.getElementById('version-modal-body');
   if (!body) return;
@@ -3195,7 +3328,7 @@ function selectPlayerCharacter(id) {
   const autoBtn = document.getElementById('auto-play-btn');
   if (autoBtn) {
     autoBtn.textContent = isAutoPlayMode ? '自動: ON' : '自動: OFF';
-    autoBtn.classList.toggle('btn-gold', isAutoPlayMode);
+    autoBtn.classList.toggle('is-active-gold', isAutoPlayMode);
   }
   document.getElementById('speed-controls').style.display = isAutoPlayMode ? 'flex' : 'none';
   document.getElementById('char-select-overlay').classList.remove('active');
@@ -3222,7 +3355,6 @@ function renderFinalRanking() {
   }).join('');
 }
 
-/* 戦況分析モーダル */
 function showEvalModal() {
   const { rates, topPlayer, topPct, diffFromSecond } = calculateRealtimeWinRates();
   const body = document.getElementById('eval-modal-body');
@@ -3282,7 +3414,6 @@ function formatSecondsToDisplay(sec) {
   return m > 0 ? `${m}分${s}秒` : `${s}秒`;
 }
 
-/* 個人戦績モーダル */
 function renderRankingModalContent() {
   const body = document.getElementById('stats-body');
   if (!body) return;
@@ -3715,6 +3846,11 @@ function initEvents() {
   if (aiOrbBtn) aiOrbBtn.onclick = openDebugLogModal;
   if (debugBtn) debugBtn.onclick = openDebugLogModal;
 
+  const saveBtn = document.getElementById('save-game-btn');
+  const loadBtn = document.getElementById('load-game-btn');
+  if (saveBtn) saveBtn.onclick = () => GameSaveManager.saveCurrentGame();
+  if (loadBtn) loadBtn.onclick = () => GameSaveManager.loadSavedGame();
+
   if (debugLogModal) {
     document.getElementById('modal-debug-log-close-btn').onclick = () => {
       soundMgr.playDeselect();
@@ -3734,7 +3870,6 @@ function initEvents() {
     };
   }
 
-  // 対戦画面フッター＆キャラ選択画面右下のバージョンバッジを一元管理から同期
   const showVersionModal = () => {
     soundMgr.playSelect();
     renderVersionHistoryModal();
@@ -3850,7 +3985,6 @@ function initEvents() {
     }
   };
 
-  /* 倍速ボタン */
   document.querySelectorAll('.btn-speed').forEach(btn => {
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
@@ -3863,13 +3997,12 @@ function initEvents() {
     });
   });
 
-  /* 自動プレイボタン */
   document.getElementById('auto-play-btn').onclick = () => {
     soundMgr.playSelect();
     isAutoPlayMode = !isAutoPlayMode;
     const btn = document.getElementById('auto-play-btn');
     btn.textContent = isAutoPlayMode ? '自動: ON' : '自動: OFF';
-    btn.classList.toggle('btn-gold', isAutoPlayMode);
+    btn.classList.toggle('is-active-gold', isAutoPlayMode);
 
     const speedControls = document.getElementById('speed-controls');
     if (speedControls) speedControls.style.display = isAutoPlayMode ? 'flex' : 'none';
@@ -3911,7 +4044,6 @@ function initEvents() {
     PLAYERS.filter(p => p !== 'player').forEach(p => checkAndTriggerDialogue(p, 'NEXT_GAME'));
   };
 
-  /* キャラ抽選ボタン */
   document.getElementById('reset-btn').onclick = () => {
     soundMgr.playSelect();
     rulesPanel.classList.remove('open');
@@ -3949,7 +4081,7 @@ function startApp() {
     initEvents();
     bgmMgr.setCharSelectPhase(true);
     AIStatusUI.pingServer();
-    console.log('[SYSTEM] アプリ初期化完了（v2.5.6 正式版）');
+    console.log('[SYSTEM] アプリ初期化完了（v2.5.8 正式版）');
   } catch (err) {
     console.error('[CRITICAL] 起動初期化エラー:', err);
   }
@@ -3960,6 +4092,5 @@ if (document.readyState === 'loading') {
 } else {
   startApp();
 }
-
 
 

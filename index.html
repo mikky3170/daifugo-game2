@@ -1,6 +1,5 @@
-
-<!-- [HTML Version: v2.5.6] 王宮完全調和・外枠撤廃＆下部金枠コンソール版
- * 外枠削除・下部全体金枠・タイトルロゴ画像化・%見切れ根絶・パス幅極小化・CPU左右ハミ出し解消
+<!-- [HTML Version: v2.5.8] キャラクター選択画面完全修復・オーバーレイ＆モーダル再構築版
+ * セーブ/ロード・自動ONハイライト・ジョーカー2種・肖像固定・タイトル点滅・カード枚数完全一致
  -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -12,7 +11,7 @@
 </head>
 <body>
 
-  <!-- ゲーム表示フレーム（外枠ボーダー撤廃・シームレス王宮謁見の間） -->
+  <!-- ゲーム表示フレーム（外枠なし・シームレス背景） -->
   <div id="app-viewport">
 
     <!-- ゲームイベント演出バナー（祭壇枠内収容シネマティック枠） -->
@@ -22,10 +21,10 @@
       </div>
     </div>
 
-    <!-- キャラクター選択画面 -->
+    <!-- キャラクター選択画面（オーバーレイ完全修復・タイトル点滅 ＆ 選択促進パルス搭載） -->
     <div class="char-select-overlay active" id="char-select-overlay">
       <div class="char-select-panel">
-        <!-- タイトルロゴ（添付画像に差し替え） -->
+        <!-- タイトルロゴ画像（ゆっくり黄金点滅） -->
         <div class="title-logo-wrap char-select-main-title">
           <img src="title_logo.png" alt="ROYAL CARD GAME" class="title-logo-img">
         </div>
@@ -39,8 +38,8 @@
 
         <div class="char-select-grid" id="char-select-grid"></div>
 
-        <!-- ★ キャラ選択画面の右下バージョン表示 -->
-        <div class="char-select-version-badge" id="char-select-version-badge" title="クリックで更新履歴を表示">👑 Ver. 2.5.6</div>
+        <!-- キャラ選択画面右下バージョンバッジ -->
+        <div class="char-select-version-badge" id="char-select-version-badge" title="クリックで更新履歴を表示">👑 Ver. 2.5.8</div>
       </div>
     </div>
 
@@ -55,7 +54,7 @@
 
     <!-- ヘッダーエリア -->
     <div id="header-area">
-      <!-- ★ メインタイトルロゴ（添付の王冠・唐草画像に差し替え） -->
+      <!-- メインタイトルロゴ（王冠・唐草画像） -->
       <div class="title-logo-wrap">
         <img src="title_logo.png" alt="ROYAL CARD GAME" class="title-logo-img">
       </div>
@@ -80,7 +79,7 @@
           </ul>
         </div>
 
-        <!-- 勝利予想パネル ＆ AI通信ステータスランプ（%見切れ完全根絶 ＆ AI稼働中枠完全固定） -->
+        <!-- 勝利予想パネル ＆ AI通信ステータスランプ -->
         <div class="header-status-row" id="eval-meter-btn" title="クリックで詳細戦況グラフを表示">
           <!-- 左：勝利予想タイトル -->
           <div class="eval-meter-left">
@@ -89,7 +88,7 @@
             <span class="eval-info-icon">ℹ️</span>
           </div>
 
-          <!-- 中央：4人のリアルタイム勝率グリッド（スマホでも%まで絶対に収まる完全配分） -->
+          <!-- 中央：4人のリアルタイム勝率グリッド -->
           <div class="eval-rates-grid" id="eval-rates-grid">
             <div class="eval-rate-item">
               <span class="eval-color-dot" style="background:#2196f3;"></span>
@@ -117,7 +116,7 @@
             </div>
           </div>
 
-          <!-- 右：AI通信ステータスランプ（サイズ完全固定） -->
+          <!-- 右：AI通信ステータスランプ -->
           <div class="ai-status-orb-btn" id="ai-status-orb" title="クリックでデバッグログを表示">
             <span class="ai-brain-icon">🧠</span>
             <span class="ai-orb-label" id="ai-orb-label">AI: 待機中</span>
@@ -321,7 +320,7 @@
       </div>
     </div>
 
-    <!-- 📜 画面内デバッグ・ログコンソールモーダル -->
+    <!-- 画面内デバッグ・ログコンソールモーダル -->
     <div class="modal-overlay" id="debug-log-modal">
       <div class="modal-content" style="max-width: 720px; width: 96%;">
         <div class="modal-header">
@@ -392,7 +391,7 @@
 
     <!-- ゲーム盤面 -->
     <div id="game-board">
-      <!-- CPU 2 (対面・上部：横並びスリム化 ＆ 役職バッジ幅統一) -->
+      <!-- CPU 2 (対面・上部) -->
       <div class="player-box" id="cpu2">
         <div class="cpu2-layout-plate">
           <!-- 左：肖像画 -->
@@ -402,7 +401,7 @@
             <div class="turn-badge-container">
               <div class="turn-badge" id="cpu2-badge">THINKING</div>
             </div>
-            <!-- キャラ名と役職バッジを縦並び・同幅固定 -->
+            <!-- キャラ名と役職バッジを縦並び・幅88px -->
             <div class="name-rank-stack">
               <div style="display: flex; align-items: center; justify-content: center; gap: 3px; width: 100%;">
                 <span class="ai-brain-dot" id="cpu2-brain-dot" title="AI推論中"></span>
@@ -416,10 +415,11 @@
             </div>
           </div>
         </div>
+        <!-- カード枚数完全一致スタック -->
         <div class="cpu-card-stack" id="cpu2-stack"></div>
       </div>
 
-      <!-- CPU 1 (左：キャラ名の下に大富豪バッジ・枚数＆パス縦積みで横はみ出し遮断) -->
+      <!-- CPU 1 (左) -->
       <div class="player-box" id="cpu1">
         <div class="turn-badge-container">
           <div class="turn-badge" id="cpu1-badge">THINKING</div>
@@ -433,19 +433,18 @@
             </div>
             <div class="rank-badge" id="cpu1-rank"></div>
           </div>
-          <!-- 左右席は横はみ出し防止のため幅76px内に収まる配置 -->
           <div class="char-stats-row">
             <span class="card-count-badge" id="cpu1-card-count">残り -枚</span>
             <span class="pass-count-badge"><span id="cpu1-pass-label">パス: </span><span id="cpu1-pass">0</span></span>
           </div>
         </div>
+        <!-- カード枚数完全一致スタック -->
         <div class="cpu-card-stack" id="cpu1-stack"></div>
       </div>
 
       <!-- 中央：場（宮廷の祭壇） -->
       <div id="field-area">
         <div class="field-altar">
-          <!-- 上部ステータス（👑 革命中 ⚔️ / ⚜️ 平時 ⚜️ / ⚡ 11 Back! ⚡） -->
           <div id="status-area">
             <div id="normal-status" class="status-badge status-normal">⚜️ 平時 ⚜️</div>
             <div id="revolution-status" class="status-badge">👑 革命中 ⚔️</div>
@@ -475,7 +474,7 @@
         </div>
       </div>
 
-      <!-- CPU 3 (右：キャラ名の下に大富豪バッジ・枚数＆パス縦積みで横はみ出し遮断) -->
+      <!-- CPU 3 (右) -->
       <div class="player-box" id="cpu3">
         <div class="turn-badge-container">
           <div class="turn-badge" id="cpu3-badge">THINKING</div>
@@ -494,10 +493,11 @@
             <span class="pass-count-badge"><span id="cpu3-pass-label">パス: </span><span id="cpu3-pass">0</span></span>
           </div>
         </div>
+        <!-- カード枚数完全一致スタック -->
         <div class="cpu-card-stack" id="cpu3-stack"></div>
       </div>
 
-      <!-- プレイヤー (自分：左に絵柄 ｜ 右に手番・名前・役職・枚数) -->
+      <!-- プレイヤー (自分) -->
       <div class="player-box" id="player-area">
         <div class="player-layout-plate">
           <!-- 左：肖像画 -->
@@ -505,11 +505,9 @@
           
           <!-- 右：情報カラム -->
           <div class="player-info-col">
-            <!-- ① 最上段：手番バッジ -->
             <div class="turn-badge-container">
               <div class="your-turn-badge" id="player-badge">あなたの順番です</div>
             </div>
-            <!-- ② 中段：キャラ名と役職バッジ同幅統一 -->
             <div class="name-rank-stack">
               <div style="display: flex; align-items: center; justify-content: center; gap: 3px; width: 100%;">
                 <span class="ai-brain-dot" id="player-brain-dot" title="AI推論中"></span>
@@ -517,7 +515,6 @@
               </div>
               <div class="rank-badge" id="player-rank"></div>
             </div>
-            <!-- ③ 下段：残り枚数 ＆ パス回数（文字ギリギリ幅） -->
             <div class="char-stats-row">
               <span class="card-count-badge" id="player-card-count">残り -枚</span>
               <span class="pass-count-badge"><span id="player-pass-label">パス: </span><span id="player-pass">0</span></span>
@@ -530,10 +527,9 @@
       </div>
     </div>
 
-    <!-- ★★★ 一番下全体（操作ボタン・キャラ抽選・フッター・バージョン）を囲む金枠宮廷コンソール ★★★ -->
+    <!-- 一番下全体を囲む金枠宮廷コンソール -->
     <div class="bottom-console-frame">
       <div id="bottom-bar">
-        <!-- メインアクション群 -->
         <div class="action-group main-actions">
           <div class="card-select-hint-box" id="card-select-hint">カードを選択してください</div>
           <button class="btn btn-gold btn-play-main" id="play-btn">
@@ -548,7 +544,6 @@
           <button class="btn btn-gold btn-exchange-main" id="exchange-btn" style="display: none;">交換決定</button>
         </div>
 
-        <!-- サブアクション群（左詰め自動ON、戦績表示、右詰めキャラ抽選） -->
         <div class="action-group sub-actions">
           <div class="auto-play-wrapper">
             <button class="btn btn-sub" id="auto-play-btn">自動: OFF</button>
@@ -558,6 +553,9 @@
               <button class="btn-speed" data-speed="3">3x</button>
             </div>
           </div>
+          <button class="btn btn-sub" id="save-game-btn" title="対戦状況を即時保存">💾 セーブ</button>
+          <button class="btn btn-sub" id="load-game-btn" title="保存した対戦から再開">📂 ロード</button>
+
           <button class="btn btn-sub" id="stats-btn" title="戦績・ランキング">📊 戦績表示</button>
           <button class="btn btn-sub" id="debug-log-btn" title="デバッグログ">📜 ログ</button>
           <button class="btn btn-sub btn-reset-safe" id="reset-btn" title="対戦メンバーの再抽選">🔄 キャラ抽選</button>
@@ -567,14 +565,12 @@
       <!-- 最下部ブランド＆バージョンフッター -->
       <div id="app-footer-bar">
         <span class="footer-brand">👑 ROYAL CARD GAME</span>
-        <span id="version-badge" title="クリックで更新履歴を表示">👑 Ver. 2.5.6</span>
+        <span id="version-badge" title="クリックで更新履歴を表示">👑 Ver. 2.5.8</span>
       </div>
-    </div> <!-- /.bottom-console-frame -->
+    </div>
 
   </div> <!-- /#app-viewport -->
 
   <script src="app.js"></script>
 </body>
 </html>
-
-
