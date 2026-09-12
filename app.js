@@ -1,7 +1,7 @@
 
 /* [JS Version: v2.6.0] 王宮完全調和・CPUカード束収束・ウィナー肖像＆戦績ボタン版 - 前半（1/2）
- * （重複コード排除・DOM操作クリーンアップ・バージョン動的注入化済）
- * ※このファイルの末尾に後半ファイルとの連結目印が記載されています。
+ * （王MCTS・PyTorch推論・全キャラセリフ辞書・セーブ＆ロード・ルール判定完全収録）
+ * ※このファイルの末尾に後半（2/2）との連結目印が記載されています。
  */
 
 /* ====================================================================
@@ -17,8 +17,8 @@ const VERSION_HISTORY = [
       "CPUのカード束が横に大暴走して中央祭壇を突き破る問題を完全解消（枚数に応じた動的圧縮でCPU1/3は68px、CPU2は120px枠内に完全収束）",
       "場が流れた際のDOMクリア不具合を修正し、前ターンの残骸カード（10など）が新しい手と混ざる表示ズレを根絶",
       "対面（CPU2）の肖像拡大演出を上にはみ出さず、下（手前・祭壇側）に向けて拡大するように制御",
-      "ゲーム終了（次ゲーム準備）ダイアログの最上部にウィナー（1位/大富豪）の肖像画プレートを新設",
-      "ゲーム終了ダイアログ内に「📊 宮廷戦績・ランキングを確認」ボタンを新設",
+      "ゲーム終了ダイアログの最上部にウィナー（1位/大富豪）の横並び肖像画プレートを新設",
+      "ゲーム終了ダイアログ内に「👤 あなたの個人戦績を確認」ボタンを新設し即時最前面表示",
       "カードの強さガイドの反転時ビジュアル化（革命：クリムゾン発光、11バック：シアン発光、2<A...<3<🃏表示）",
       "「カード交換へ」「交換決定」ボタンのCSS競合（!important）を排除し、対戦時は確実に出す/パスのみ表示",
       "プレイヤーとCPUの「パス: ○」バッジを全員38px固定幅化、手番「PASS」枠を76px固定幅化し長さを完全一致",
@@ -1947,7 +1947,6 @@ function decideCpuMove(cpu) {
   return chosen;
 }
 
-
 /* ----------------------------------------------------
  * 8. 戦況評価・勝率メーターエンジン
  * ---------------------------------------------------- */
@@ -2205,23 +2204,21 @@ function createCardElement(card) {
   return el;
 }
 
-/* ★ CPUカード束の動的重なり圧縮（何枚でも枠内に完全収束させるロジック） */
+/* ★ CPUカード束の動的重なり圧縮 */
 function renderCpuStack(cpuId, count) {
   const stack = document.getElementById(`${cpuId}-stack`);
   if (!stack) return;
   stack.innerHTML = '';
   if (count <= 0) return;
 
-  // カードの基準幅（PC〜スマホの基本値）
   const cardW = 34;
-  let maxStackW = 68; // CPU1, CPU3は幅68px内に完全収束
+  let maxStackW = 68;
   if (cpuId === 'cpu2') {
-    maxStackW = 118; // CPU2は幅118px内に中央収束
+    maxStackW = 118;
   }
 
   let overlapPx = -18;
   if (count > 1) {
-    // 全枚数並んだ時の幅が maxStackW を超えないように重なり幅を逆算
     const step = (maxStackW - cardW) / (count - 1);
     overlapPx = Math.min(-6, Math.floor(step - cardW));
   }
@@ -2401,7 +2398,6 @@ function render(isFullRedraw = false) {
     updateHandOverlap();
   }
 
-  // CPUカード束の動的描画
   ['cpu1', 'cpu2', 'cpu3'].forEach(c => renderCpuStack(c, hands[c].length));
 
   PLAYERS.forEach(p => {
@@ -2418,7 +2414,6 @@ function render(isFullRedraw = false) {
     }
   });
 
-  // ★ 場のカードの厳密描画（残骸混入を徹底排除）
   const fieldEl = document.getElementById('field-cards');
   const emptyPlaceholder = document.getElementById('field-empty-placeholder');
   const comboBadge = document.getElementById('field-combo-badge');
@@ -2479,7 +2474,6 @@ function render(isFullRedraw = false) {
   });
 }
 
-/* ★ 操作ボタンの厳格排他制御（CSSクラス着脱によるクリーンな制御） */
 function updateControlsOnly() {
   const playBtn = document.getElementById('play-btn');
   const passBtn = document.getElementById('pass-btn');
@@ -2499,7 +2493,6 @@ function updateControlsOnly() {
     exBtn.classList.remove('is-hidden');
     exBtn.disabled = (selectedIndices.length !== requiredExchangeCount) || isAutoPlayMode;
   } else {
-    // 通常対戦中：絶対に交換ボタンを非表示化
     playBtn.classList.remove('is-hidden');
     passBtn.classList.remove('is-hidden');
     goExBtn.classList.add('is-hidden');
@@ -3001,7 +2994,6 @@ function nextTurn() {
   checkTurn();
 }
 
-/* ★ 場のクリア処理（DOM要素の完全一掃で残骸混入を根絶） */
 function clearField(nextPlayer = null) {
   const speed = getSpeedMultiplier();
   const fieldEl = document.getElementById('field-cards');
@@ -3013,7 +3005,6 @@ function clearField(nextPlayer = null) {
   GameTimer.set(() => {
     fieldCards = [];
     consecutivePasses = 0;
-    // ★ 場のDOM要素を即座に完全一掃
     fieldEl.innerHTML = '';
     fieldEl.classList.remove('clear-animation');
     PLAYERS.forEach(p => hasPassedInRound[p] = false);
@@ -3038,7 +3029,6 @@ function clearField(nextPlayer = null) {
 
     lastPlayedPlayer = null;
     isProcessing = false;
-    // 確実に最新の場（空）と手番を再描画
     render(redraw);
     checkTurn();
   }, 350 / speed);
@@ -3409,7 +3399,6 @@ function renderFinalRanking() {
   const winnerImg = document.getElementById('modal-winner-portrait');
   const winnerName = document.getElementById('modal-winner-name');
 
-  // ウィナー（大富豪/1位）の特定と肖像画セット
   const daifugoPlayer = PLAYERS.find(pl => playerStatusMap[pl] === '大富豪') || finishedPlayers[0];
   if (daifugoPlayer && assignedCharacters[daifugoPlayer]) {
     const wDef = assignedCharacters[daifugoPlayer];
@@ -3588,7 +3577,7 @@ function renderRankingModalContent() {
 
     html += `
       <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(212,175,55,0.25); display: flex; justify-content: flex-end;">
-        <button class="btn-selfplay" id="btn-view-observe-log" style="padding: 6px 12px; font-size: 11px;">
+        <button class="btn-selfplay" id="btn-view-observe-log" style="padding: 6px 14px; font-size: 11.5px;">
           <span>🔍 直近の対戦・観戦ステップログを閲覧</span>
         </button>
       </div>
@@ -3939,11 +3928,15 @@ function initEvents() {
     };
   }
 
-  // ★ ゲーム終了ダイアログ内の「戦績・ランキングを確認」ボタン
+  // ★ ゲーム終了ダイアログ内の「あなたの個人戦績を確認」ボタン（即座に最前面へ個人戦績を開く）
   const nextGameStatsBtn = document.getElementById('btn-next-game-stats');
   if (nextGameStatsBtn) {
     nextGameStatsBtn.onclick = () => {
       soundMgr.playSelect();
+      currentStatsTab = 'my';
+      document.querySelectorAll('.modal-tab-btn').forEach(b => b.classList.remove('active'));
+      const myTabBtn = document.getElementById('tab-my-stats-btn');
+      if (myTabBtn) myTabBtn.classList.add('active');
       renderRankingModalContent();
       statsModal.classList.add('active');
     };
@@ -4147,7 +4140,7 @@ function initEvents() {
     PLAYERS.filter(p => p !== 'player').forEach(p => checkAndTriggerDialogue(p, 'NEXT_GAME'));
   };
 
-  /* キャラ抽選ボタン */
+  /* キャラ再抽選ボタン */
   document.getElementById('reset-btn').onclick = () => {
     soundMgr.playSelect();
     rulesPanel.classList.remove('open');
@@ -4187,7 +4180,6 @@ function startApp() {
     bgmMgr.setCharSelectPhase(true);
     AIStatusUI.pingServer();
     
-    // ★ バージョン番号の動的注入
     const versionBadge = document.getElementById('version-badge');
     const charSelectVerBadge = document.getElementById('char-select-version-badge');
     if (versionBadge) versionBadge.textContent = `👑 Ver. ${APP_VERSION.replace('v', '')}`;

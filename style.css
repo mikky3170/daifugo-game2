@@ -1,6 +1,6 @@
 
 /* [CSS Version: v2.6.0] 王宮完全調和・CPUカード束収束・ウィナー肖像＆戦績ボタン版
- * （イベントバナースタイル新設・CPU1/CPU3祭壇寄せ調整済）
+ * （タイトルパルス発光・CPU1/3位置最適化・WINNER横並び・個人戦績前面化対応）
  */
 
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap');
@@ -508,7 +508,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   box-shadow: 0 0 16px rgba(212, 175, 55, 0.9), 0 6px 18px rgba(0, 0, 0, 0.8);
 }
 
-/* ★ CPU肖像拡大演出のサイド・上方向はみ出し防止 */
+/* CPU肖像拡大演出のサイド・上方向はみ出し防止 */
 .char-portrait.portrait-talk {
   transform: scale(1.5) translateZ(0);
   z-index: 150;
@@ -516,18 +516,18 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   border-color: #fff3a8;
 }
 
-/* ★ CPU2（対面・上部席）：上にはみ出さず、下（手前・祭壇側）に向けて拡大 */
+/* CPU2（対面・上部席）：上にはみ出さず下（手前・祭壇側）に向けて拡大 */
 .portrait-cpu-top.portrait-talk,
 #cpu2-portrait.portrait-talk {
   transform-origin: top center;
 }
 
-/* ★ CPU1（左席）：左上基準で内側（右・祭壇側）へ拡大 */
+/* CPU1（左席）：左上基準で内側（右・祭壇側）へ拡大 */
 .portrait-cpu-left.portrait-talk {
   transform-origin: top left;
 }
 
-/* ★ CPU3（右席）：右上基準で内側（左・祭壇側）へ拡大 */
+/* CPU3（右席）：右上基準で内側（左・祭壇側）へ拡大 */
 .portrait-cpu-right.portrait-talk {
   transform-origin: top right;
 }
@@ -633,7 +633,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   box-shadow: 0 0 8px rgba(255, 82, 82, 0.8);
 }
 
-/* ★ パス枠：CPUもプレイヤーも完全同一の38px固定幅で統一 */
+/* パス枠：全員38px固定幅で統一 */
 .pass-count-badge {
   font-size: 8.5px;
   color: #9cb0c6;
@@ -705,7 +705,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 .player-box.active-turn .turn-badge { visibility: visible; opacity: 1; }
 
 /* ============================================================
- * 7. 各プレイヤー固有レイアウト（★CPU1・CPU3の祭壇寄せ設定）
+ * 7. 各プレイヤー固有レイアウト（★CPU1・CPU3の内側寄せ＆下移動）
  * ============================================================ */
 
 /* CPU 2 (対面・上部) */
@@ -732,7 +732,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   gap: 2px;
 }
 
-/* 左右CPU (CPU 1 & CPU 3) ★祭壇側へ寄せる移動調整 */
+/* 左右CPU (CPU 1 & CPU 3) ★文字2つ分さらに内側＆下へ移動 */
 #cpu1, #cpu3 {
   z-index: 100;
   margin-top: 2px;
@@ -743,18 +743,18 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   padding-top: 2px;
 }
 
-/* ★ CPU1（左）：右（祭壇側）に12px移動 */
+/* ★ CPU1（左）：右へ34px、下へ14px移動 */
 #cpu1 {
   grid-row: 2;
   grid-column: 1;
-  transform: translateX(12px);
+  transform: translate(34px, 14px);
 }
 
-/* ★ CPU3（右）：左（祭壇側）に12px移動 */
+/* ★ CPU3（右）：左へ34px、下へ14px移動 */
 #cpu3 {
   grid-row: 2;
   grid-column: 3;
-  transform: translateX(-12px);
+  transform: translate(-34px, 14px);
 }
 
 #cpu1 .char-row, #cpu3 .char-row {
@@ -888,7 +888,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 #cpu3 .dialogue-bubble { left: auto; right: 0; transform: translate(0, 0) scale(0.9); text-align: right; }
 #cpu3 .dialogue-bubble.show { transform: translate(0, 0) scale(1); }
 
-/* ★ CPUカード束の完全収束 */
+/* CPUカード束 */
 .cpu-card-stack {
   display: flex;
   align-items: center;
@@ -925,7 +925,6 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   opacity: 0.9;
 }
 
-/* ★ CPU2（上部席）：中央120px枠内に完全収束 */
 #cpu2-stack {
   max-width: 120px;
   width: auto;
@@ -933,7 +932,6 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   overflow: visible;
 }
 
-/* ★ CPU1・CPU3（左右席）：幅68px枠内に完全収束 */
 #cpu1-stack, #cpu3-stack {
   width: 68px;
   max-width: 68px;
@@ -1120,7 +1118,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   letter-spacing: 0.8px;
 }
 
-/* カードの強さガイド（通常時 ＆ 反転時ビジュアル化） */
+/* カードの強さガイド */
 .field-strength-guide {
   display: flex;
   align-items: center;
@@ -1145,30 +1143,16 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   border: 1px solid #ffd700;
   box-shadow: 0 0 10px rgba(255, 82, 82, 0.6);
 }
-.field-strength-guide.guide-revolution .guide-label {
-  color: #ffd700;
-  font-weight: 900;
-}
-.field-strength-guide.guide-revolution .guide-order {
-  color: #fffadb;
-  text-shadow: 0 0 6px rgba(255, 215, 0, 0.8);
-  font-weight: 800;
-}
+.field-strength-guide.guide-revolution .guide-label { color: #ffd700; font-weight: 900; }
+.field-strength-guide.guide-revolution .guide-order { color: #fffadb; text-shadow: 0 0 6px rgba(255, 215, 0, 0.8); font-weight: 800; }
 
 .field-strength-guide.guide-eleven-back {
   background: rgba(2, 132, 199, 0.4);
   border: 1px solid #38bdf8;
   box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
 }
-.field-strength-guide.guide-eleven-back .guide-label {
-  color: #7dd3fc;
-  font-weight: 900;
-}
-.field-strength-guide.guide-eleven-back .guide-order {
-  color: #f0f9ff;
-  text-shadow: 0 0 6px rgba(56, 189, 248, 0.8);
-  font-weight: 800;
-}
+.field-strength-guide.guide-eleven-back .guide-label { color: #7dd3fc; font-weight: 900; }
+.field-strength-guide.guide-eleven-back .guide-order { color: #f0f9ff; text-shadow: 0 0 6px rgba(56, 189, 248, 0.8); font-weight: 800; }
 
 #message-text {
   font-size: clamp(10px, 1.3vh, 11.5px);
@@ -1540,10 +1524,12 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   box-shadow: 0 0 12px rgba(255, 215, 0, 0.85), inset 0 0 4px rgba(255, 255, 255, 0.8);
 }
 
+/* ★ 右端に配置されるキャラ再抽選ボタン */
 .btn-reset-safe {
   background: rgba(45, 20, 24, 0.85);
   border: 1px solid rgba(244, 67, 54, 0.4);
   color: #ffcdd2;
+  margin-left: auto; /* 一番右端へピタリと配置 */
 }
 .btn-reset-safe:hover:not(:disabled) {
   background: #5a1e24;
@@ -1627,7 +1613,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 .char-select-version-badge:hover { color: #ffd700; text-shadow: 0 0 6px rgba(255, 215, 0, 0.8); }
 
 /* ============================================================
- * 12. モーダル共通 ＆ 各種ダイアログ
+ * 12. モーダル共通 ＆ 各種ダイアログ（★戦績最前面化）
  * ============================================================ */
 .modal-overlay {
   display: none;
@@ -1643,6 +1629,11 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   transition: opacity 0.25s ease;
 }
 .modal-overlay.active { display: flex; opacity: 1; pointer-events: auto; }
+
+/* ★ 戦績・ランキングモーダル：ゲーム終了画面の上へ最前面化 */
+#stats-modal {
+  z-index: 3200;
+}
 
 .modal-content {
   background:
@@ -1888,47 +1879,60 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   color: #cbd5e1;
 }
 
-/* ★ 次ゲーム準備画面（ウィナー肖像画プレート ＆ 戦績ボタン） */
+/* ★ 次ゲーム準備画面（横並びWINNER肖像画プレート ＆ 個人戦績ボタン） */
 .modal-next-game-compact {
   max-width: 450px;
   padding: 12px;
 }
 
+/* ★ WINNER表示プレート（横並びエレガント設計） */
 .modal-winner-plate {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, rgba(32, 24, 8, 0.9) 0%, rgba(14, 18, 28, 0.95) 100%);
+  gap: 14px;
+  background: linear-gradient(180deg, rgba(36, 26, 10, 0.92) 0%, rgba(14, 18, 28, 0.96) 100%);
   border: 1.5px solid var(--color-gold-bright);
   border-radius: 8px;
-  padding: 8px 12px 6px 12px;
+  padding: 6px 14px;
   margin-bottom: 8px;
   box-shadow: 0 0 18px rgba(212, 175, 55, 0.5), inset 0 0 12px rgba(255, 215, 0, 0.15);
+  min-height: 84px;
 }
 
 .modal-winner-img {
-  width: 52px;
-  height: 76px;
+  width: 56px;
+  height: 82px;
   aspect-ratio: 2 / 3;
   object-fit: cover;
   border-radius: 5px;
   border: 2px solid #ffd700;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.8), 0 0 10px rgba(255, 215, 0, 0.8);
-  margin-bottom: 4px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.8), 0 0 10px rgba(255, 215, 0, 0.85);
+  flex-shrink: 0;
+  margin-bottom: 0;
+}
+
+.modal-winner-info-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 3px;
+  text-align: left;
 }
 
 .modal-winner-title {
   font-family: 'Cinzel', serif;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 900;
   color: #ffd700;
   letter-spacing: 1.5px;
-  text-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.85);
 }
 
 .modal-winner-name {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
   color: #fffadb;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
@@ -2114,16 +2118,19 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   text-shadow: 0 0 12px rgba(212, 175, 55, 0.9);
 }
 
-/* キャラクター選択画面 */
+/* ============================================================
+ * キャラクター選択画面（★上部配置＆タイトルパルス明滅）
+ * ============================================================ */
 .char-select-overlay {
   display: none;
   position: absolute;
   inset: 0;
   z-index: 2000;
   background: radial-gradient(circle at center, #131d2e 0%, #06090f 100%);
-  align-items: center;
+  align-items: flex-start; /* 上部寄り配置 */
   justify-content: center;
   padding: 8px;
+  padding-top: max(8px, env(safe-area-inset-top, 8px));
   overflow-y: auto;
 }
 .char-select-overlay.active { display: flex; }
@@ -2131,19 +2138,40 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 .char-select-panel {
   max-width: 500px;
   width: 100%;
-  margin: auto;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   text-align: center;
   position: relative;
+  padding-top: 2px;
 }
 
 .char-select-main-title {
-  margin: 0 auto 6px auto;
+  margin: 0 auto 4px auto;
   text-align: center;
   justify-content: center;
+}
+
+/* ★ タイトルロゴの優雅なパルス明滅（3.4秒周期） */
+.pulse-title-glow {
+  animation: titleGlowPulse 3.4s ease-in-out infinite;
+}
+
+@keyframes titleGlowPulse {
+  0% {
+    filter: drop-shadow(0 2px 8px rgba(212, 175, 55, 0.4));
+    transform: scale(0.99);
+  }
+  50% {
+    filter: drop-shadow(0 4px 18px rgba(255, 215, 0, 0.85)) drop-shadow(0 0 25px rgba(212, 175, 55, 0.6));
+    transform: scale(1.02);
+  }
+  100% {
+    filter: drop-shadow(0 2px 8px rgba(212, 175, 55, 0.4));
+    transform: scale(0.99);
+  }
 }
 
 .char-select-title {
@@ -2151,9 +2179,29 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   font-size: clamp(17px, 2.8vh, 22px);
   letter-spacing: 2px;
   color: #ffd700;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
   text-align: center;
   text-shadow: 0 0 10px rgba(212, 175, 55, 0.6);
+}
+
+/* ★ タイトル文字のパルス明滅 */
+.pulse-title-text {
+  animation: titleTextPulse 3.4s ease-in-out infinite;
+}
+
+@keyframes titleTextPulse {
+  0% {
+    color: #ffd700;
+    text-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
+  }
+  50% {
+    color: #ffffff;
+    text-shadow: 0 0 16px rgba(255, 243, 168, 1), 0 0 24px rgba(212, 175, 55, 0.9);
+  }
+  100% {
+    color: #ffd700;
+    text-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
+  }
 }
 
 .char-select-sub {
@@ -2339,7 +2387,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 #btn-download-json, #btn-download-jsonl { flex: 1; padding: 8px; font-size: 11px; font-weight: 700; border-radius: 5px; background: #1e2c42; color: #fff3a8; border: 1px solid rgba(212, 175, 55, 0.6); cursor: pointer; }
 #btn-open-viewer { flex: 1.2; padding: 8px; font-size: 11.5px; font-weight: 800; border-radius: 5px; background: linear-gradient(180deg, #fff5b3 0%, #d4af37 100%); color: #0b1017; border: 1px solid #fffadb; cursor: pointer; }
 
-/* ★ AI自己対戦内の「通信ログを確認」ボタン */
+/* AI自己対戦内の「通信ログを確認」ボタン */
 .btn-selfplay-quick-log {
   padding: 4px 10px;
   font-size: 11px;
@@ -2373,6 +2421,26 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 .rcb-f  { background: rgba(76, 175, 80, 0.3); color: #a5d6a7; border: 1px solid #4caf50; }
 .rcb-h  { background: rgba(33, 150, 243, 0.3); color: #90caf9; border: 1px solid #2196f3; }
 .rcb-dh { background: rgba(244, 67, 54, 0.3); color: #ef9a9a; border: 1px solid #f44336; }
+
+/* ★ 直近の対戦を見るボタン（高視認性ゴールドアンバーグラデーション） */
+#btn-view-observe-log {
+  background: linear-gradient(180deg, #fff5b3 0%, #d4af37 60%, #9e7d1e 100%);
+  color: #0b1017;
+  font-weight: 800;
+  border: 1.5px solid #fffadb;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.6);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+#btn-view-observe-log:hover {
+  background: linear-gradient(180deg, #ffffff 0%, #ffe066 60%, #b8860b 100%);
+  box-shadow: 0 0 18px rgba(255, 215, 0, 0.95);
+  transform: translateY(-1px);
+}
+#btn-view-observe-log span {
+  color: #0b1017;
+  font-weight: 900;
+}
 
 /* デバッグ・通信ログツールバー */
 .debug-log-toolbar {
