@@ -1,5 +1,5 @@
 
-<!-- [HTML Version: v2.5.0] STEP 8: 最終UI調整・高級西洋ファンタジー王宮カードゲーム正式版 -->
+<!-- [HTML Version: v2.5.1] スマホ手札横並びドッキング ＆ タブレット完全分離・宮廷レスポンシブ最適化版 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -477,13 +477,13 @@
         <div class="rank-badge" id="cpu3-rank"></div>
       </div>
 
-      <!-- プレイヤー (自分：中央位置完全固定構造) -->
+      <!-- プレイヤー (自分：スマホ時は手札と横並びドッキング / PC・タブレット時は中央独立) -->
       <div class="player-box" id="player-area">
         <div class="player-status-banner">
-          <!-- 左右ブレ防止用スペーサー（左） -->
+          <!-- 左右ブレ防止用スペーサー（PC・タブレット用） -->
           <div class="player-side-spacer"></div>
 
-          <!-- 中央：肖像画＆ステータス（位置完全固定） -->
+          <!-- 肖像画＆ステータス（スマホ時は手札の左端へ自動フィット） -->
           <div class="char-row player-char-row">
             <img class="char-portrait" id="player-portrait" src="" alt="">
             <div class="player-name-row">
@@ -498,12 +498,13 @@
             </div>
           </div>
 
-          <!-- 右側固定スロット：手番バッジ（「あなたの順番です」ゴールドプレート） -->
+          <!-- 手番バッジ（「あなたの順番です」ゴールドプレート） -->
           <div class="turn-badge-container player-turn-slot">
             <div class="your-turn-badge" id="player-badge">あなたの順番です</div>
           </div>
         </div>
 
+        <!-- 手札コンテナ -->
         <div id="player-hand"></div>
       </div>
     </div>
@@ -542,10 +543,10 @@
       </div>
     </div>
 
-    <!-- 最下部ブランド＆バージョンフッター（参考画像完全再現） -->
+    <!-- 最下部ブランド＆バージョンフッター（v2.5.1更新） -->
     <div id="app-footer-bar">
       <span class="footer-brand">👑 ROYAL CARD GAME</span>
-      <span id="version-badge" title="クリックで更新履歴を表示">👑 Ver. 2.5.0</span>
+      <span id="version-badge" title="クリックで更新履歴を表示">👑 Ver. 2.5.1</span>
     </div>
 
   </div> <!-- /#app-viewport -->

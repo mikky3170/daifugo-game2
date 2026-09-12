@@ -1,5 +1,4 @@
-
-/* [JS Version: v2.5.0] STEP 8: 最終UI調整・高級西洋ファンタジー王宮カードゲーム正式版 - 前半（1/2）
+/* [JS Version: v2.5.1] スマホ手札横並びドッキング ＆ タブレット完全分離・宮廷レスポンシブ最適化版 - 前半（1/2）
  * バージョンJS一元管理・最大10件表示・リセット時多重タイマー完全破棄
  * 王MCTS・深層学習推論・全キャラクターセリフ完全収録（ゲームロジック完全保護）
  */
@@ -7,8 +6,20 @@
 /* ====================================================================
  * ROYAL DAIFUGO - バージョン管理マスター（JavaScript一元管理）
  * ==================================================================== */
-const APP_VERSION = "v2.5.0";
+const APP_VERSION = "v2.5.1";
 const VERSION_HISTORY = [
+  {
+    ver: "v2.5.1",
+    date: "2026-09-12",
+    title: "スマホ手札横並びドッキング ＆ タブレット完全分離・宮廷レスポンシブ最適化版",
+    changes: [
+      "スマホ縦画面時、プレイヤー肖像画を手札の左端へドッキング配置し中央縦スペースを広大に解放",
+      "タブレット・PC画面時、中央祭壇高さを微小引き締め＆プレイヤー肖像画との安全マージン（14px）を強制確保",
+      "CPUセリフ吹き出しと中央祭壇の干渉・重なりを解消",
+      "王MCTS、PyTorch深層学習推論、ルール判定、全13キャラセリフ辞書を完全保持"
+    ],
+    files: ["index.html", "style.css", "app.js"]
+  },
   {
     ver: "v2.5.0",
     date: "2026-09-12",
@@ -78,16 +89,6 @@ const VERSION_HISTORY = [
     changes: [
       "画面上部に4人全員の勝率（%）とテーマカラーを2列×2行でリアルタイム表示",
       "各プレイヤーの枠に「残り ○枚」バッジを新設し、3枚以下で危険度ハイライトを付与"
-    ],
-    files: ["index.html", "style.css", "app.js"]
-  },
-  {
-    ver: "v2.3.5",
-    date: "2026-09-11",
-    title: "高速シミュレーター（新4パターン・座席シャッフル検証）版",
-    changes: [
-      "パターンA〜Dによる高精度自己対戦機能の統合",
-      "MCTS探索深度とPyTorch推論の連携強化"
     ],
     files: ["index.html", "style.css", "app.js"]
   }
@@ -726,7 +727,7 @@ const AIStatusUI = {
   }
 };
 
-/* ゲームイベント演出バナー（おしゃれな宮廷シネマティック枠）トリガー関数 */
+/* ゲームイベント演出バナートリガー関数 */
 let eventBannerTimer = null;
 function triggerEventBanner(text, bannerClass) {
   const banner = document.getElementById('event-banner');
@@ -1804,9 +1805,8 @@ function decideCpuMove(cpu) {
   return chosen;
 }
 
-/* ================= ここまで前半 / 続けて後半を結合してください ================= */
 
-/* [JS Version: v2.5.0] STEP 8: 最終UI調整・高級西洋ファンタジー王宮カードゲーム正式版 - 後半（2/2）
+/* [JS Version: v2.5.1] スマホ手札横並びドッキング ＆ タブレット完全分離・宮廷レスポンシブ最適化版 - 後半（2/2）
  * バージョンJS一元管理・最大10件表示・リセット時多重タイマー完全破棄
  * 王MCTS・深層学習推論・全キャラクターセリフ完全収録（ゲームロジック完全保護）
  */
@@ -1905,7 +1905,7 @@ function updateStatusUI() {
   updateEvalMeterUI();
 }
 
-/* 勝利予想パネル（横離し・キャラ名欠け防止・伸縮ミニプログレスバー動的描画） */
+/* 勝利予想パネル動的描画 */
 function updateEvalMeterUI() {
   const { rates, topPlayer, diffFromSecond, isFinished } = calculateRealtimeWinRates();
   const gridEl = document.getElementById('eval-rates-grid');
@@ -2616,7 +2616,6 @@ function playerPass() {
   processPass('player');
 }
 
-/* イベント演出（革命・革命返し・11バック・8切り）フック連動 */
 function playCardSuccess(player, cards, needFullRedraw = false, playedIndices = []) {
   const wasLoneJoker = fieldCards.length === 1 && fieldCards[0].isJoker;
   fieldCards = cards;
@@ -3101,13 +3100,12 @@ function updateLogViewerUI() {
   tableWrap.innerHTML = thtml;
 }
 
-/* ★ バージョン履歴モーダル（常に最新10件のみ表示・それ以上は自動除外） */
+/* バージョン履歴モーダル（最新10件制限） */
 function renderVersionHistoryModal() {
   const body = document.getElementById('version-modal-body');
   if (!body) return;
 
   const rawList = (typeof VERSION_HISTORY !== 'undefined') ? VERSION_HISTORY : [];
-  // 過去最大10件に制限
   const list = rawList.slice(0, 10);
 
   if (list.length === 0) {
@@ -3273,7 +3271,7 @@ function formatSecondsToDisplay(sec) {
   return m > 0 ? `${m}分${s}秒` : `${s}秒`;
 }
 
-/* 個人戦績モーダル（3大金枠カードレイアウト） */
+/* 個人戦績モーダル */
 function renderRankingModalContent() {
   const body = document.getElementById('stats-body');
   if (!body) return;
@@ -3724,7 +3722,7 @@ function initEvents() {
     };
   }
 
-  // ★ バージョンバッジを一元管理から同期
+  // バージョンバッジを一元管理から同期
   if (versionBadge && typeof APP_VERSION !== 'undefined') {
     versionBadge.textContent = `👑 Ver. ${APP_VERSION.replace('v', '')}`;
     versionBadge.onclick = () => {
@@ -3834,7 +3832,7 @@ function initEvents() {
     }
   };
 
-  /* 倍速ボタンの確実なイベント登録＆速度切替 */
+  /* 倍速ボタン */
   document.querySelectorAll('.btn-speed').forEach(btn => {
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
@@ -3847,7 +3845,7 @@ function initEvents() {
     });
   });
 
-  /* 自動プレイボタンの即時キック＆同期 */
+  /* 自動プレイボタン */
   document.getElementById('auto-play-btn').onclick = () => {
     soundMgr.playSelect();
     isAutoPlayMode = !isAutoPlayMode;
@@ -3895,7 +3893,7 @@ function initEvents() {
     PLAYERS.filter(p => p !== 'player').forEach(p => checkAndTriggerDialogue(p, 'NEXT_GAME'));
   };
 
-  /* リセットボタン：タイマー完全破棄を伴う安全なリセット */
+  /* リセットボタン */
   document.getElementById('reset-btn').onclick = () => {
     soundMgr.playSelect();
     rulesPanel.classList.remove('open');
@@ -3933,7 +3931,7 @@ function startApp() {
     initEvents();
     bgmMgr.setCharSelectPhase(true);
     AIStatusUI.pingServer();
-    console.log('[SYSTEM] アプリ初期化完了（v2.5.0 正式版）');
+    console.log('[SYSTEM] アプリ初期化完了（v2.5.1 正式版）');
   } catch (err) {
     console.error('[CRITICAL] 起動初期化エラー:', err);
   }
