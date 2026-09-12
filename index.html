@@ -1,5 +1,6 @@
-<!-- [HTML Version: v2.5.8] キャラクター選択画面完全修復・オーバーレイ＆モーダル再構築版
- * セーブ/ロード・自動ONハイライト・ジョーカー2種・肖像固定・タイトル点滅・カード枚数完全一致
+
+<!-- [HTML Version: v2.6.0] 王宮完全調和・CPUカード束収束・ウィナー肖像＆戦績ボタン版
+ * ゲーム終了画面ウィナー肖像・戦績ボタン新設・CPUカード束幅固定・CPU2下向き拡大
  -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -11,7 +12,7 @@
 </head>
 <body>
 
-  <!-- ゲーム表示フレーム（外枠なし・シームレス背景） -->
+  <!-- ゲーム表示フレーム（外枠ボーダー撤廃・シームレス王宮謁見の間） -->
   <div id="app-viewport">
 
     <!-- ゲームイベント演出バナー（祭壇枠内収容シネマティック枠） -->
@@ -21,29 +22,37 @@
       </div>
     </div>
 
-    <!-- キャラクター選択画面（オーバーレイ完全修復・タイトル点滅 ＆ 選択促進パルス搭載） -->
+    <!-- キャラクター選択画面 -->
     <div class="char-select-overlay active" id="char-select-overlay">
       <div class="char-select-panel">
-        <!-- タイトルロゴ画像（ゆっくり黄金点滅） -->
+        <!-- タイトルロゴ -->
         <div class="title-logo-wrap char-select-main-title">
           <img src="title_logo.png" alt="ROYAL CARD GAME" class="title-logo-img">
         </div>
         <div class="char-select-title">キャラクターを選択</div>
-        <div class="char-select-sub">あなたの分身となる宮廷の戦略家を1人選んでください</div>
+        <div class="char-select-sub pulse-prompt">あなたの分身となる宮廷の戦略家を1人選んでください</div>
         
         <div class="mode-select-container">
           <label><input type="radio" name="playMode" value="manual" checked> 自分でプレイ</label>
           <label><input type="radio" name="playMode" value="auto"> 観戦モード（自動プレイ）</label>
         </div>
 
+        <!-- ロード機能ボタン -->
+        <div class="load-game-container">
+          <button class="btn btn-gold btn-load-game" id="btn-load-game" disabled>
+            <span class="btn-icon">📂</span>
+            <span class="btn-text">前回の続きから再開 (ロード)</span>
+          </button>
+        </div>
+
         <div class="char-select-grid" id="char-select-grid"></div>
 
-        <!-- キャラ選択画面右下バージョンバッジ -->
-        <div class="char-select-version-badge" id="char-select-version-badge" title="クリックで更新履歴を表示">👑 Ver. 2.5.8</div>
+        <!-- キャラ選択画面の右下バージョン表示 -->
+        <div class="char-select-version-badge" id="char-select-version-badge" title="クリックで更新履歴を表示">👑 Ver. 2.6.0</div>
       </div>
     </div>
 
-    <!-- 勝利演出ポップアップ（「大富豪」表示1.5倍拡大） -->
+    <!-- 勝利演出ポップアップ -->
     <div class="victory-popup-overlay" id="victory-popup">
       <div class="victory-popup-content">
         <img id="victory-portrait" src="" alt="">
@@ -54,7 +63,6 @@
 
     <!-- ヘッダーエリア -->
     <div id="header-area">
-      <!-- メインタイトルロゴ（王冠・唐草画像） -->
       <div class="title-logo-wrap">
         <img src="title_logo.png" alt="ROYAL CARD GAME" class="title-logo-img">
       </div>
@@ -85,38 +93,33 @@
           <div class="eval-meter-left">
             <span class="eval-trophy-icon">🏆</span>
             <span class="eval-title-text">勝利予想</span>
-            <span class="eval-info-icon">ℹ️</span>
           </div>
 
           <!-- 中央：4人のリアルタイム勝率グリッド -->
           <div class="eval-rates-grid" id="eval-rates-grid">
             <div class="eval-rate-item">
-              <span class="eval-color-dot" style="background:#2196f3;"></span>
               <span class="eval-name">あなた</span>
               <div class="eval-mini-track"><div class="eval-mini-fill" style="width:25%; background:#2196f3;"></div></div>
               <span class="eval-pct">25%</span>
             </div>
             <div class="eval-rate-item">
-              <span class="eval-color-dot" style="background:#4caf50;"></span>
               <span class="eval-name">軍師</span>
               <div class="eval-mini-track"><div class="eval-mini-fill" style="width:25%; background:#4caf50;"></div></div>
               <span class="eval-pct">25%</span>
             </div>
             <div class="eval-rate-item">
-              <span class="eval-color-dot" style="background:#d4af37;"></span>
               <span class="eval-name">公爵</span>
               <div class="eval-mini-track"><div class="eval-mini-fill" style="width:25%; background:#d4af37;"></div></div>
               <span class="eval-pct">25%</span>
             </div>
             <div class="eval-rate-item">
-              <span class="eval-color-dot" style="background:#e91e63;"></span>
               <span class="eval-name">上級AI</span>
               <div class="eval-mini-track"><div class="eval-mini-fill" style="width:25%; background:#e91e63;"></div></div>
               <span class="eval-pct">25%</span>
             </div>
           </div>
 
-          <!-- 右：AI通信ステータスランプ -->
+          <!-- 右：AIリアルタイムステータスランプ -->
           <div class="ai-status-orb-btn" id="ai-status-orb" title="クリックでデバッグログを表示">
             <span class="ai-brain-icon">🧠</span>
             <span class="ai-orb-label" id="ai-orb-label">AI: 待機中</span>
@@ -170,7 +173,7 @@
             </div>
           </div>
           <div class="char-intro-item">
-            <img class="char-intro-portrait" data-char-img="COUNT" src="" alt="">
+            <img class="char-intro-portrait" data-char-intro="COUNT" src="" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">📜 伯爵 (Count) - 変則展開</div>
               <div>序盤は温存し、手札が5枚以下になると強力なカードを積極的に使い始めます。</div>
@@ -259,7 +262,7 @@
           </div>
           <div class="rule-item">
             <div class="rule-item-title">🃏 ジョーカー (Joker)</div>
-            <div>デッキには2枚のジョーカーが含まれます。単騎で出すと最強カードとして場を支配します。</div>
+            <div>デッキには「太陽の金道化師」と「月の銀道化師」の2枚が含まれます。単騎で出すと最強カードとして場を支配します。</div>
           </div>
           <div class="rule-item">
             <div class="rule-item-title">♠3返し (Spade 3 Return)</div>
@@ -320,7 +323,7 @@
       </div>
     </div>
 
-    <!-- 画面内デバッグ・ログコンソールモーダル -->
+    <!-- 📜 画面内デバッグ・ログコンソールモーダル -->
     <div class="modal-overlay" id="debug-log-modal">
       <div class="modal-content" style="max-width: 720px; width: 96%;">
         <div class="modal-header">
@@ -330,8 +333,8 @@
         <div class="debug-log-toolbar">
           <div class="debug-status-summary" id="debug-status-summary">サーバー: 確認中...</div>
           <div class="debug-actions">
-            <button class="btn-debug-act" id="btn-copy-logs">📋 全コピー</button>
-            <button class="btn-debug-act" id="btn-clear-logs">🗑️ クリア</button>
+            <button class="btn-debug-act btn-debug-copy" id="btn-copy-logs">📋 全コピー</button>
+            <button class="btn-debug-act btn-debug-clear" id="btn-clear-logs">🗑️ クリア</button>
           </div>
         </div>
         <div class="modal-body" style="padding: 0; max-height: 58vh;">
@@ -371,37 +374,44 @@
       </div>
     </div>
 
-    <!-- 次ゲーム準備ダイアログ -->
+    <!-- ★ 次ゲーム準備ダイアログ（ウィナー肖像画 ＆ 戦績確認ボタン追加） -->
     <div class="modal-overlay" id="next-game-modal">
       <div class="modal-content modal-next-game-compact">
         <div class="modal-header">
-          <div class="modal-title">次ゲームの準備</div>
+          <div class="modal-title">ゲーム終了・宮廷清算</div>
         </div>
         <div class="modal-body" style="text-align: center; padding: 4px 0; overflow: hidden;">
-          <p style="font-size: 13px; margin-bottom: 6px; color: #fff3a8;">ゲームが終了しました！</p>
+          <!-- ウィナーの肖像画プレート -->
+          <div class="modal-winner-plate">
+            <img id="modal-winner-portrait" class="modal-winner-img" src="" alt="Winner">
+            <div class="modal-winner-title">👑 WINNER 👑</div>
+            <div class="modal-winner-name" id="modal-winner-name">---</div>
+          </div>
+
           <div class="final-ranking-list" id="final-ranking-list"></div>
-          <p style="font-size: 12px; margin-top: 4px;">対戦相手のキャラクター（CPU）をどうしますか？</p>
+          <p style="font-size: 11.5px; margin-top: 6px; color: #cbd5e1;">次の対局設定を選択してください：</p>
         </div>
         <div class="modal-footer next-game-footer">
-          <button class="btn btn-gold" id="btn-keep-char">👑 同じメンバーで続行<br><span style="font-size: 10px;">(カード交換あり)</span></button>
-          <button class="btn" id="btn-change-char">🎲 メンバーを再抽選<br><span style="font-size: 10px;">(カード交換なし)</span></button>
+          <!-- 戦績確認ボタン -->
+          <button class="btn btn-sub" id="btn-next-game-stats" style="width: 100%; margin-bottom: 6px; height: 28px; font-weight: 800;">📊 宮廷戦績・ランキングを確認</button>
+          <div class="next-game-action-row">
+            <button class="btn btn-gold" id="btn-keep-char">👑 同じメンバーで続行<br><span style="font-size: 10px;">(カード交換あり)</span></button>
+            <button class="btn" id="btn-change-char">🎲 メンバーを再抽選<br><span style="font-size: 10px;">(カード交換なし)</span></button>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- ゲーム盤面 -->
+    <!-- ゲーム盤面（左右幅76px固定・中央祭壇完全不動化） -->
     <div id="game-board">
-      <!-- CPU 2 (対面・上部) -->
+      <!-- CPU 2 (対面・上部：★肖像下向き拡大対応) -->
       <div class="player-box" id="cpu2">
         <div class="cpu2-layout-plate">
-          <!-- 左：肖像画 -->
-          <img class="char-portrait" id="cpu2-portrait" src="" alt="">
-          <!-- 右：情報カラム -->
+          <img class="char-portrait portrait-cpu-top" id="cpu2-portrait" src="" alt="">
           <div class="cpu2-info-col">
             <div class="turn-badge-container">
               <div class="turn-badge" id="cpu2-badge">THINKING</div>
             </div>
-            <!-- キャラ名と役職バッジを縦並び・幅88px -->
             <div class="name-rank-stack">
               <div style="display: flex; align-items: center; justify-content: center; gap: 3px; width: 100%;">
                 <span class="ai-brain-dot" id="cpu2-brain-dot" title="AI推論中"></span>
@@ -415,17 +425,17 @@
             </div>
           </div>
         </div>
-        <!-- カード枚数完全一致スタック -->
-        <div class="cpu-card-stack" id="cpu2-stack"></div>
+        <!-- CPU2カード束（中央120px完全収束） -->
+        <div class="cpu-card-stack fixed-cpu2-stack" id="cpu2-stack"></div>
       </div>
 
-      <!-- CPU 1 (左) -->
-      <div class="player-box" id="cpu1">
+      <!-- CPU 1 (左：肖像画・配置完全固定設計 ＆ 内側拡大) -->
+      <div class="player-box fixed-cpu-box" id="cpu1">
         <div class="turn-badge-container">
           <div class="turn-badge" id="cpu1-badge">THINKING</div>
         </div>
-        <div class="char-row">
-          <img class="char-portrait" id="cpu1-portrait" src="" alt="">
+        <div class="char-row fixed-char-row">
+          <img class="char-portrait fixed-cpu-portrait portrait-cpu-left" id="cpu1-portrait" src="" alt="">
           <div class="name-rank-stack">
             <div style="display: flex; align-items: center; justify-content: center; gap: 3px; width: 100%;">
               <span class="ai-brain-dot" id="cpu1-brain-dot" title="AI推論中"></span>
@@ -438,11 +448,11 @@
             <span class="pass-count-badge"><span id="cpu1-pass-label">パス: </span><span id="cpu1-pass">0</span></span>
           </div>
         </div>
-        <!-- カード枚数完全一致スタック -->
-        <div class="cpu-card-stack" id="cpu1-stack"></div>
+        <!-- CPU1カード束（幅68px完全収束） -->
+        <div class="cpu-card-stack fixed-cpu-side-stack" id="cpu1-stack"></div>
       </div>
 
-      <!-- 中央：場（宮廷の祭壇） -->
+      <!-- 中央：場（宮廷の祭壇・完全不動化） -->
       <div id="field-area">
         <div class="field-altar">
           <div id="status-area">
@@ -451,36 +461,32 @@
             <div id="eleven-back-status" class="status-badge">⚡ 11 Back! ⚡</div>
           </div>
 
-          <!-- 場に出たカードの配置コンテナ -->
           <div class="field-container" id="field-container-el">
             <div id="field-cards"></div>
             <div class="field-empty-placeholder" id="field-empty-placeholder">(場にカードがありません)</div>
           </div>
 
-          <!-- 出された役の種類バッジ -->
           <div class="field-combo-container">
             <div class="field-combo-badge" id="field-combo-badge" style="display:none;"></div>
           </div>
 
-          <!-- カードの強さガイド -->
+          <!-- カードの強さガイド（反転時ビジュアル化＆ℹ️削除） -->
           <div class="field-strength-guide" id="field-strength-guide">
-            <span class="guide-label">カードの強さ</span>
+            <span class="guide-label" id="field-strength-label">カードの強さ</span>
             <span class="guide-order" id="field-strength-order">3 &lt; 4 &lt; 5 ... &lt; 2 &lt; 🃏</span>
-            <span class="eval-info-icon" style="opacity:0.8;">ℹ️</span>
           </div>
 
-          <!-- メッセージバー -->
           <div id="message-text">💬 ゲーム開始！あなたのターンです。</div>
         </div>
       </div>
 
-      <!-- CPU 3 (右) -->
-      <div class="player-box" id="cpu3">
+      <!-- CPU 3 (右：肖像画・配置完全固定設計 ＆ 内側拡大) -->
+      <div class="player-box fixed-cpu-box" id="cpu3">
         <div class="turn-badge-container">
           <div class="turn-badge" id="cpu3-badge">THINKING</div>
         </div>
-        <div class="char-row">
-          <img class="char-portrait" id="cpu3-portrait" src="" alt="">
+        <div class="char-row fixed-char-row">
+          <img class="char-portrait fixed-cpu-portrait portrait-cpu-right" id="cpu3-portrait" src="" alt="">
           <div class="name-rank-stack">
             <div style="display: flex; align-items: center; justify-content: center; gap: 3px; width: 100%;">
               <span class="ai-brain-dot" id="cpu3-brain-dot" title="AI推論中"></span>
@@ -493,19 +499,19 @@
             <span class="pass-count-badge"><span id="cpu3-pass-label">パス: </span><span id="cpu3-pass">0</span></span>
           </div>
         </div>
-        <!-- カード枚数完全一致スタック -->
-        <div class="cpu-card-stack" id="cpu3-stack"></div>
+        <!-- CPU3カード束（幅68px完全収束） -->
+        <div class="cpu-card-stack fixed-cpu-side-stack" id="cpu3-stack"></div>
       </div>
 
-      <!-- プレイヤー (自分) -->
+      <!-- プレイヤー (自分：左端揃え・パス幅統一・あなたの番です拡大) -->
       <div class="player-box" id="player-area">
-        <div class="player-layout-plate">
+        <div class="player-layout-plate fixed-player-anchor">
           <!-- 左：肖像画 -->
           <img class="char-portrait" id="player-portrait" src="" alt="">
           
-          <!-- 右：情報カラム -->
-          <div class="player-info-col">
-            <div class="turn-badge-container">
+          <!-- 右：情報カラム（左端ピタリ揃え設計） -->
+          <div class="player-info-col fixed-player-info">
+            <div class="turn-badge-container turn-badge-container-large">
               <div class="your-turn-badge" id="player-badge">あなたの順番です</div>
             </div>
             <div class="name-rank-stack">
@@ -515,7 +521,7 @@
               </div>
               <div class="rank-badge" id="player-rank"></div>
             </div>
-            <div class="char-stats-row">
+            <div class="char-stats-row player-stats-align">
               <span class="card-count-badge" id="player-card-count">残り -枚</span>
               <span class="pass-count-badge"><span id="player-pass-label">パス: </span><span id="player-pass">0</span></span>
             </div>
@@ -530,6 +536,7 @@
     <!-- 一番下全体を囲む金枠宮廷コンソール -->
     <div class="bottom-console-frame">
       <div id="bottom-bar">
+        <!-- メインアクション群（対戦時はカードを出す/パスのみ、交換時は交換ボタンのみ排他表示） -->
         <div class="action-group main-actions">
           <div class="card-select-hint-box" id="card-select-hint">カードを選択してください</div>
           <button class="btn btn-gold btn-play-main" id="play-btn">
@@ -544,6 +551,7 @@
           <button class="btn btn-gold btn-exchange-main" id="exchange-btn" style="display: none;">交換決定</button>
         </div>
 
+        <!-- サブアクション群 -->
         <div class="action-group sub-actions">
           <div class="auto-play-wrapper">
             <button class="btn btn-sub" id="auto-play-btn">自動: OFF</button>
@@ -553,9 +561,7 @@
               <button class="btn-speed" data-speed="3">3x</button>
             </div>
           </div>
-          <button class="btn btn-sub" id="save-game-btn" title="対戦状況を即時保存">💾 セーブ</button>
-          <button class="btn btn-sub" id="load-game-btn" title="保存した対戦から再開">📂 ロード</button>
-
+          <button class="btn btn-sub" id="save-btn" title="現在のゲーム状態を保存">💾 セーブ</button>
           <button class="btn btn-sub" id="stats-btn" title="戦績・ランキング">📊 戦績表示</button>
           <button class="btn btn-sub" id="debug-log-btn" title="デバッグログ">📜 ログ</button>
           <button class="btn btn-sub btn-reset-safe" id="reset-btn" title="対戦メンバーの再抽選">🔄 キャラ抽選</button>
@@ -565,12 +571,14 @@
       <!-- 最下部ブランド＆バージョンフッター -->
       <div id="app-footer-bar">
         <span class="footer-brand">👑 ROYAL CARD GAME</span>
-        <span id="version-badge" title="クリックで更新履歴を表示">👑 Ver. 2.5.8</span>
+        <span id="version-badge" title="クリックで更新履歴を表示">👑 Ver. 2.6.0</span>
       </div>
-    </div>
+    </div> <!-- /.bottom-console-frame -->
 
   </div> <!-- /#app-viewport -->
 
   <script src="app.js"></script>
 </body>
 </html>
+
+

@@ -1,113 +1,66 @@
 
-/* [JS Version: v2.5.8] キャラクター選択画面完全修復・オーバーレイ＆モーダル再構築版 - 前半（1/2）
- * バージョンJS一元管理・王MCTS・深層学習推論・全キャラクターセリフ完全収録（ゲームロジック完全保護）
+/* [JS Version: v2.6.0] 王宮完全調和・CPUカード束収束・ウィナー肖像＆戦績ボタン版 - 前半（1/2）
+ * ゲーム終了画面ウィナー肖像・戦績ボタン新設・CPUカード束幅固定・CPU2下向き拡大
+ * （※このファイルの末尾に後半ファイルとの統合コメントが記載されています）
  */
 
 /* ====================================================================
  * ROYAL DAIFUGO - バージョン管理マスター（JavaScript一元管理）
  * ==================================================================== */
-const APP_VERSION = "v2.5.8";
+const APP_VERSION = "v2.6.0";
 const VERSION_HISTORY = [
+  {
+    ver: "v2.6.0",
+    date: "2026-09-13",
+    title: "CPUカード束収束・ウィナー肖像＆戦績ボタン版",
+    changes: [
+      "CPUのカード束が横に大暴走して中央祭壇を突き破る問題を完全解消（枚数に応じた動的圧縮でCPU1/3は68px、CPU2は120px枠内に完全収束）",
+      "場が流れた際のDOMクリア不具合を修正し、前ターンの残骸カード（10など）が新しい手と混ざる表示ズレを根絶",
+      "対面（CPU2）の肖像拡大演出を上にはみ出さず、下（手前・祭壇側）に向けて拡大するように制御",
+      "ゲーム終了（次ゲーム準備）ダイアログの最上部にウィナー（1位/大富豪）の肖像画プレートを新設",
+      "ゲーム終了ダイアログ内に「📊 宮廷戦績・ランキングを確認」ボタンを新設",
+      "カードの強さガイドの反転時ビジュアル化（革命：クリムゾン発光、11バック：シアン発光、2<A...<3<🃏表示）",
+      "「カード交換へ」「交換決定」ボタンのCSS競合（!important）を排除し、対戦時は確実に出す/パスのみ表示",
+      "プレイヤーとCPUの「パス: ○」バッジを全員38px固定幅化、手番「PASS」枠を76px固定幅化し長さを完全一致",
+      "プレイヤーの「残り枚数」「パス回数」の左端開始位置を「キャラ名」「大富豪」枠とピタリと一致",
+      "勝利予想の文字サイズ拡大（11.5px・太字）＆案内アイコン（ℹ️）削除"
+    ],
+    files: ["index.html", "style.css", "app.js"]
+  },
+  {
+    ver: "v2.5.9",
+    date: "2026-09-13",
+    title: "中央祭壇不動化・パス枠完全統一・強さ反転視覚化版",
+    changes: [
+      "カードの強さガイドを革命・11バックの反転時に正確（2<A...<3<🃏）かつクリムゾン/シアン発光で視覚化",
+      "カードの強さガイドおよび勝利予想メーターから紛らわしい案内アイコン（ℹ️）を削除",
+      "勝利予想の文字サイズをひと回り大きく（11.5px・太字）拡大し視認性を向上",
+      "「カード交換へ」「交換決定」ボタンのCSS競合（!important）を排除し、対戦時は確実に出す/パスのみ表示",
+      "中央祭壇の高さを完全固定し、左右席のカード枚数減少に伴う上下左右の揺れを根絶"
+    ],
+    files: ["index.html", "style.css", "app.js"]
+  },
   {
     ver: "v2.5.8",
     date: "2026-09-13",
-    title: "キャラクター選択画面完全修復・オーバーレイ＆モーダル再構築版",
+    title: "対戦ボタン排他制御・CPU肖像固定・戦勝メーター色撤廃版",
     changes: [
-      "キャラクター選択画面オーバーレイ（.char-select-overlay）およびパネル（.char-select-panel）のスタイル完全実装・修復",
-      "各種モーダル共通枠（.modal-overlay, .modal-content）および勝利演出ポップアップのCSS完全復元",
-      "キャラ選択画面の黄金呼吸点滅＆選択促進パルスの挙動安定化",
-      "セーブ＆ロード機能、88pxキャラ名幅、ジョーカー2種差別化等のv2.5.7全機能を完全維持"
+      "「カード交換へ」「交換決定」ボタンを対戦中は完全非表示にし、交換フェーズのみ排他表示するよう制御を徹底",
+      "CPU1・CPU3の肖像画および配置コンテナを完全不動化し、手番や吹き出し等による揺れを根絶",
+      "ゲーム終了ダイアログの「大富豪」等の表示幅を固定し、改行させず見やすくスマートに配置"
     ],
     files: ["index.html", "style.css", "app.js"]
   },
   {
     ver: "v2.5.7",
     date: "2026-09-13",
-    title: "王宮セーブ機能搭載・トランプ差別化・位置ブレ完全固定版",
+    title: "セーブ＆ロード・AI思考中ランプ・UI完全最適化版",
     changes: [
-      "ゲーム対戦状況の即時セーブ＆ロード機能を新規実装",
-      "カード交換ボタンの文字完全センタリング配置",
-      "ゲーム画面のキャラ名＆役職バッジ幅を88pxに拡張（大富豪でも改行ゼロ）",
-      "キャラ選択画面にタイトルゆっくり点滅＆選択促進パルスアニメーションを搭載",
-      "プレイヤー肖像画・情報スロットの左右位置完全固定（ブレ根絶）",
-      "「あなたの順番です」バッジをひと回り大きく拡大表示",
-      "CPUカード裏面描画を残り枚数と完全一致化（上限8枚の制限撤廃）",
-      "自動ボタンON時の鮮やかなゴールド選択中ハイライト表示",
-      "ジョーカー2枚の絵柄（黄金仮面・百合 ⇄ 道化師帽子・王冠）と色彩の完全差別化",
-      "CPU1, 3で残り枚数の右にパス回数を横並び配置",
-      "スマホ時、CPU1, 3のカード重なりマージンを倍近く深化（-28px）",
-      "王MCTS、PyTorch深層学習推論、ルール判定、全13キャラセリフ辞書を完全保持"
-    ],
-    files: ["index.html", "style.css", "app.js"]
-  },
-  {
-    ver: "v2.5.6",
-    date: "2026-09-12",
-    title: "王宮完全調和・外枠撤廃＆下部金枠コンソール版",
-    changes: [
-      "勝利予想メーターの「%」見切れをスマホ幅（360px〜）でも完全根絶",
-      "ゲーム全体の金外枠をキャラ選択画面と同様に完全削除",
-      "下部操作バーからフッター・バージョン表示までを一つの金枠コンソールで一体化",
-      "タイトルを添付の王冠・唐草タイトルロゴ画像（title_logo.png）に刷新",
-      "キャラ選択画面の右下にもバージョン表示バッジを追加",
-      "パス回数表示の幅を文字ギリギリまで狭小化"
-    ],
-    files: ["index.html", "style.css", "app.js"]
-  },
-  {
-    ver: "v2.5.5",
-    date: "2026-09-12",
-    title: "王宮完全調和版",
-    changes: [
-      "役職未確定時の空枠線（.rank-badge:empty）を完全非表示化",
-      "プレイヤーのパス表示枠をCPUと完全同一（幅54px）に強制固定",
-      "対戦画面のキャラ名と役職バッジの大きさを縦横同一に統一",
-      "プレイヤー肖像画をCPUと同一の大きさに統一",
-      "中央祭壇のステータス表示（平時・革命中・11 Back!）を1.12倍に拡大"
-    ],
-    files: ["index.html", "style.css", "app.js"]
-  },
-  {
-    ver: "v2.5.4",
-    date: "2026-09-12",
-    title: "プレイヤートランプ全部乗せ ＆ 端末別完全最適化版",
-    changes: [
-      "プレイヤートランプを羊皮紙・細密金枠・中央透かし彫り・Cinzel数字・王冠・浮遊オーラの全部乗せに刷新",
-      "勝利予想メーター100%時のトラック長さを4人全員で完全同一に固定",
-      "タブレット時：CPU肖像画をキャラ名同幅（76px）に拡大、CPUトランプ拡大、セリフ1行横長表示"
-    ],
-    files: ["index.html", "style.css", "app.js"]
-  },
-  {
-    ver: "v2.5.3",
-    date: "2026-09-12",
-    title: "王宮エレガント・バランス微調整版",
-    changes: [
-      "CPU1〜3の役職（大富豪等）バッジの幅をキャラ名と完全一致＆下段配置に統一",
-      "CPU1のセリフ枠を改行なし1行フィットへ改良、枠はみ出しを解消",
-      "CPU絵柄拡大を上にはみ出さず下方向へひと回り大きく（1.5倍）拡大表示",
-      "革命・11バック・8切り演出バナーを中央祭壇枠内収容サイズに最適化"
-    ],
-    files: ["index.html", "style.css", "app.js"]
-  },
-  {
-    ver: "v2.5.2",
-    date: "2026-09-12",
-    title: "王宮エレガント・レスポンシブ完全調和版",
-    changes: [
-      "CPU2（上部）およびプレイヤー（下部）のレイアウトを「左に絵柄 ｜ 右に情報」の横並びスリム化に刷新",
-      "プレイヤー手番バッジ（あなたの順番です）をキャラ名の上段スロットへ端正に配置",
-      "全座席（CPU1〜3・プレイヤー）のパス枠サイズを完全統一"
-    ],
-    files: ["index.html", "style.css", "app.js"]
-  },
-  {
-    ver: "v2.5.1",
-    date: "2026-09-12",
-    title: "スマホ手札横並びドッキング ＆ タブレット完全分離・宮廷レスポンシブ最適化版",
-    changes: [
-      "スマホ縦画面時、プレイヤー肖像画を手札の左端へドッキング配置し中央縦スペースを解放",
-      "タブレット・PC画面時、中央祭壇高さを微小引き締め＆プレイヤー肖像画との安全マージンを強制確保"
+      "セーブ機能（下部コンソール）およびロード機能（キャラ選択画面）を新規実装",
+      "「カード交換へ」ボタンの文字を完全センタリング配置へ修正",
+      "ゲーム終了画面でキャラ名が大富豪等の肩書付きでも改行しないよう1行固定化",
+      "キャラ選択画面でゴールドパルス明滅により選択を優雅に促す演出を追加",
+      "プレイヤーの肖像画・キャラ名・情報枠を完全固定し、手札増減時の左右の揺れを根絶"
     ],
     files: ["index.html", "style.css", "app.js"]
   }
@@ -188,7 +141,7 @@ const InAppLogger = {
 InAppLogger.init();
 
 /* ----------------------------------------------------
- * 進行タイマー管理（リセット時の加速・多重ターン防止マネージャー）
+ * 進行タイマー管理（多重ターン防止マネージャー）
  * ---------------------------------------------------- */
 const GameTimer = {
   activeTimerIds: new Set(),
@@ -688,10 +641,12 @@ class BgmManager {
 const soundMgr = new SoundManager();
 const bgmMgr = new BgmManager();
 
-/* ----------------------------------------------------
- * 2. AI通信ステータスランプ ＆ Python AI推論サーバー連携
- * ---------------------------------------------------- */
+/* ============================================================
+ * AI通信ステータスランプ管理（「AI: 思考中...」に集約）
+ * ============================================================ */
 const AIStatusUI = {
+  isServerOnline: false,
+
   set(state, text = null) {
     const dot = document.getElementById('ai-orb-dot');
     const label = document.getElementById('ai-orb-label');
@@ -702,21 +657,31 @@ const AIStatusUI = {
       dot.classList.remove('status-online', 'status-waking', 'status-offline', 'status-thinking');
     }
 
-    if (state === 'online') {
+    if (state === 'thinking') {
+      if (dot) dot.classList.add('status-thinking');
+      label.textContent = text || 'AI: 思考中...';
+    } else if (state === 'online') {
+      this.isServerOnline = true;
       if (dot) dot.classList.add('status-online');
       label.textContent = text || 'AI: 稼働中';
       if (summary) summary.textContent = `🟢 接続中: ${AI_SERVER_BASE_URL}`;
     } else if (state === 'waking') {
       if (dot) dot.classList.add('status-waking');
-      label.textContent = text || 'AI: 起動中...';
-      if (summary) summary.textContent = `🟡 待機/起動中: ${AI_SERVER_BASE_URL}`;
-    } else if (state === 'thinking') {
-      if (dot) dot.classList.add('status-thinking');
-      label.textContent = text || 'AI: 推論中...';
+      label.textContent = text || 'AI: 接続確認中';
+      if (summary) summary.textContent = `🟡 接続確認中: ${AI_SERVER_BASE_URL}`;
     } else {
+      this.isServerOnline = false;
       if (dot) dot.classList.add('status-offline');
-      label.textContent = text || 'AI: 待機中';
+      label.textContent = text || 'AI: オフライン';
       if (summary) summary.textContent = `🔴 未接続: ${AI_SERVER_BASE_URL}`;
+    }
+  },
+
+  restoreIdleState() {
+    if (this.isServerOnline) {
+      this.set('online', 'AI: 稼働中');
+    } else {
+      this.set('offline', 'AI: オフライン');
     }
   },
 
@@ -743,7 +708,160 @@ const AIStatusUI = {
       }
     } catch (err) {
       console.warn(`⚠️ [ヘルスチェック未到達] サーバー未起動またはオフライン: ${err.message}`);
-      this.set('offline', 'AI: 待機中');
+      this.set('offline', 'AI: オフライン');
+    }
+  }
+};
+
+/* ============================================================
+ * セーブ ＆ ロードマネージャー (SaveLoadManager)
+ * ============================================================ */
+const SaveLoadManager = {
+  SAVE_KEY: 'royalDaifugoSaveData_v1',
+
+  saveGameState() {
+    if (gameEnded) {
+      setMessage('ゲーム終了状態のためセーブできません。次ゲーム開始後に保存してください。');
+      return false;
+    }
+
+    const saveData = {
+      version: APP_VERSION,
+      timestamp: Date.now(),
+      isAutoPlayMode: isAutoPlayMode,
+      currentSpeed: currentSpeed,
+      hands: hands,
+      playerPassCounts: playerPassCounts,
+      hasPassedInRound: hasPassedInRound,
+      fieldCards: fieldCards,
+      lastPlayedPlayer: lastPlayedPlayer,
+      currentTurnIndex: currentTurnIndex,
+      consecutivePasses: consecutivePasses,
+      finishedPlayers: finishedPlayers,
+      playerStatusMap: playerStatusMap,
+      previousRanks: previousRanks,
+      isRevolution: isRevolution,
+      isElevenBack: isElevenBack,
+      isExchangePhase: isExchangePhase,
+      isPreExchangePhase: isPreExchangePhase,
+      requiredExchangeCount: requiredExchangeCount,
+      assignedCharacters: assignedCharacters,
+      playedCardsHistory: playedCardsHistory,
+      currentRoundCards: currentRoundCards,
+      clearedCardsHistory: clearedCardsHistory,
+      cpuCooldowns: cpuCooldowns
+    };
+
+    try {
+      localStorage.setItem(this.SAVE_KEY, JSON.stringify(saveData));
+      console.log('✅ [SAVE] 対局状態を正常に保存しました。');
+      soundMgr.playSpecial();
+      setMessage('💾 対局状態を保存しました。次回キャラ選択画面から再開できます。');
+      this.updateLoadButtonState();
+      return true;
+    } catch (e) {
+      console.error('⚠️ [SAVE FAILED]', e);
+      alert('セーブデータの保存に失敗しました。容量制限等をご確認ください。');
+      return false;
+    }
+  },
+
+  hasSaveData() {
+    try {
+      const data = localStorage.getItem(this.SAVE_KEY);
+      return !!data;
+    } catch {
+      return false;
+    }
+  },
+
+  loadGameState() {
+    try {
+      const raw = localStorage.getItem(this.SAVE_KEY);
+      if (!raw) {
+        alert('セーブデータが見つかりません。');
+        return false;
+      }
+      const data = JSON.parse(raw);
+      GameTimer.clearAll();
+      isProcessing = false;
+
+      isAutoPlayMode = !!data.isAutoPlayMode;
+      currentSpeed = data.currentSpeed || 1;
+      hands = data.hands || { player: [], cpu1: [], cpu2: [], cpu3: [] };
+      playerPassCounts = data.playerPassCounts || { player: 0, cpu1: 0, cpu2: 0, cpu3: 0 };
+      hasPassedInRound = data.hasPassedInRound || { player: false, cpu1: false, cpu2: false, cpu3: false };
+      fieldCards = data.fieldCards || [];
+      lastPlayedPlayer = data.lastPlayedPlayer || null;
+      currentTurnIndex = data.currentTurnIndex || 0;
+      consecutivePasses = data.consecutivePasses || 0;
+      finishedPlayers = data.finishedPlayers || [];
+      playerStatusMap = data.playerStatusMap || {};
+      previousRanks = data.previousRanks || {};
+      isRevolution = !!data.isRevolution;
+      isElevenBack = !!data.isElevenBack;
+      isExchangePhase = !!data.isExchangePhase;
+      isPreExchangePhase = !!data.isPreExchangePhase;
+      requiredExchangeCount = data.requiredExchangeCount || 0;
+      assignedCharacters = data.assignedCharacters || {};
+      playedCardsHistory = data.playedCardsHistory || [];
+      currentRoundCards = data.currentRoundCards || [];
+      clearedCardsHistory = data.clearedCardsHistory || [];
+      cpuCooldowns = data.cpuCooldowns || { cpu1: 0, cpu2: 0, cpu3: 0 };
+      selectedIndices = [];
+      gameEnded = false;
+
+      const autoBtn = document.getElementById('auto-play-btn');
+      if (autoBtn) {
+        autoBtn.textContent = isAutoPlayMode ? '自動: ON' : '自動: OFF';
+        autoBtn.classList.toggle('btn-gold-active', isAutoPlayMode);
+      }
+      const speedControls = document.getElementById('speed-controls');
+      if (speedControls) speedControls.style.display = isAutoPlayMode ? 'flex' : 'none';
+
+      document.querySelectorAll('.btn-speed').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-speed') === String(currentSpeed));
+      });
+
+      updateCharacterUI();
+      updateStatusUI();
+      bgmMgr.setCharSelectPhase(false);
+      bgmMgr.update(isRevolution, isElevenBack);
+
+      document.getElementById('char-select-overlay').classList.remove('active');
+      render(true);
+
+      soundMgr.playWin();
+      setMessage('📂 保存データをロードしました！対局を再開します。');
+      console.log('✅ [LOAD] 対局状態を正常に復元しました。');
+
+      if (isPreExchangePhase) {
+        if (isAutoPlayMode) GameTimer.set(() => proceedToExchange(), 1000 / getSpeedMultiplier());
+      } else if (isExchangePhase) {
+        if (isAutoPlayMode && PLAYERS[currentTurnIndex] === 'player') {
+          if (previousRanks.player === '大富豪') autoSelectExchangeCards('player', 2);
+          else if (previousRanks.player === '富豪') autoSelectExchangeCards('player', 1);
+        }
+      } else {
+        checkTurn();
+      }
+      return true;
+    } catch (e) {
+      console.error('⚠️ [LOAD FAILED]', e);
+      alert('セーブデータの読み込みに失敗しました。');
+      return false;
+    }
+  },
+
+  updateLoadButtonState() {
+    const loadBtn = document.getElementById('btn-load-game');
+    if (!loadBtn) return;
+    const hasData = this.hasSaveData();
+    loadBtn.disabled = !hasData;
+    if (hasData) {
+      loadBtn.title = '前回のセーブデータをロードして再開';
+    } else {
+      loadBtn.title = 'セーブデータがありません';
     }
   }
 };
@@ -794,7 +912,7 @@ function matchReturnedMoveWithHand(hand, returnedCards) {
 }
 
 async function askPythonAI(hand, currentField, validMoves, modelType = 'hi', playerKey = 'cpu2') {
-  AIStatusUI.set('thinking', 'AI: 推論中...');
+  AIStatusUI.set('thinking', 'AI: 思考中...');
 
   try {
     const controller = new AbortController();
@@ -822,7 +940,7 @@ async function askPythonAI(hand, currentField, validMoves, modelType = 'hi', pla
     const resData = await response.json();
 
     if (resData && resData.status === 'success') {
-      AIStatusUI.set('online', 'AI: 稼働中');
+      AIStatusUI.restoreIdleState();
 
       const isSuper = (modelType === 'super' || modelType === 'mid');
       const roleName = isSuper ? '超級AI' : '上級AI';
@@ -839,15 +957,13 @@ async function askPythonAI(hand, currentField, validMoves, modelType = 'hi', pla
     }
   } catch (err) {
     console.warn(`⚠️ Python AI通信エラー (${err.message})。通常思考にフォールバックします。`);
-    AIStatusUI.set('offline', 'AI: 待機中');
+    AIStatusUI.set('offline', 'AI: オフライン');
   }
 
   return validMoves.length > 0 ? validMoves[0] : null;
 }
 
-/* ----------------------------------------------------
- * 3. AIデータロガー (AIDataLogger)
- * ---------------------------------------------------- */
+/* 3. AIデータロガー (AIDataLogger) */
 const AIDataLogger = {
   activeGameId: null,
   activePattern: null,
@@ -993,9 +1109,7 @@ const AIDataLogger = {
   }
 };
 
-/* ----------------------------------------------------
- * 4. 戦績＆データ管理 (LocalStorage)
- * ---------------------------------------------------- */
+/* 4. 戦績＆データ管理 (LocalStorage) */
 const StorageManager = {
   VERSION_KEY: 'royalStatsSchemaVersion',
   CURRENT_SCHEMA_VER: 'v1.5.0',
@@ -1133,9 +1247,7 @@ const StorageManager = {
   }
 };
 
-/* ----------------------------------------------------
- * 5. 基本ルール・カードヘルパー（完全保護）
- * ---------------------------------------------------- */
+/* 5. 基本ルール・カードヘルパー */
 function getCardKey(card) {
   return card.isJoker ? 'JOKER' : card.display;
 }
@@ -1179,9 +1291,8 @@ function createDeck() {
       });
     });
   });
-  // ジョーカー2枚（J1: 赤金・黄金仮面 🎭 ｜ J2: 銀青・道化師帽子 🎪）
-  deck.push({ suitSymbol: '★', suitClass: 'joker', display: 'JOKER', isJoker: true, jokerId: 'J1' });
-  deck.push({ suitSymbol: '☆', suitClass: 'joker', display: 'JOKER', isJoker: true, jokerId: 'J2' });
+  deck.push({ suitSymbol: '★', suitClass: 'joker-sun', display: 'JOKER', isJoker: true, jokerId: 'J1', jokerName: '太陽の道化師' });
+  deck.push({ suitSymbol: '☆', suitClass: 'joker-moon', display: 'JOKER', isJoker: true, jokerId: 'J2', jokerName: '月の道化師' });
   return deck;
 }
 
@@ -1379,9 +1490,7 @@ function getUnrevealedCards(myHand, playedHistory = playedCardsHistory, currentF
   }));
 }
 
-/* ----------------------------------------------------
- * 6. 王(KING)専用 MCTSエンジン（完全保護）
- * ---------------------------------------------------- */
+/* 6. 王(KING)専用 MCTSエンジン */
 class SimGame {
   constructor(hands, fieldCards, isRevolution, isElevenBack, lastPlayedPlayer, consecutivePasses, finishedPlayers, playerKeys = PLAYERS) {
     this.playerKeys = playerKeys;
@@ -1669,9 +1778,7 @@ function kingDecideMoveUniversal(cpuKey, hand, currentField, rev, allHands, allF
   return bestChild ? bestChild.move : candidateMoves[0];
 }
 
-/* ----------------------------------------------------
- * 7. CPU思考ロジック（完全保護）
- * ---------------------------------------------------- */
+/* 7. CPU思考ロジック */
 function evaluateMoveDefault(move) {
   const count = move.length;
   const val = getCardValue(move[0]);
@@ -1825,7 +1932,6 @@ function decideCpuMove(cpu) {
   if (charDef.id === 'KING') {
     chosen = kingDecideMoveUniversal(cpu, hand, fieldCards, rev, hands, finishedPlayers, playedCardsHistory, lastPlayedPlayer, consecutivePasses, PLAYERS, false);
   } else if (charDef.id === 'BEGINNER_AI' || charDef.id === 'SUPER_AI' || charDef.id === 'MID_AI') {
-    const modelType = (charDef.id === 'SUPER_AI' || charDef.id === 'MID_AI') ? 'super' : 'hi';
     chosen = validMoves[0];
   } else {
     const nextIdx = (PLAYERS.indexOf(cpu) + 1) % PLAYERS.length;
@@ -1840,7 +1946,7 @@ function decideCpuMove(cpu) {
 
 
 /* ----------------------------------------------------
- * 8. 戦況評価・勝率メーターエンジン（完全保護）
+ * 8. 戦況評価・勝率メーターエンジン
  * ---------------------------------------------------- */
 function calculateRealtimeWinRates() {
   const active = PLAYERS.filter(p => !finishedPlayers.includes(p));
@@ -1919,16 +2025,35 @@ function setMessage(msg) {
   document.getElementById('message-text').innerHTML = formatted.endsWith('<br>') ? formatted.slice(0, -4) : formatted;
 }
 
+/* カードの強さガイドの反転時ビジュアル化＆ステータス更新 */
 function updateStatusUI() {
   const revEl = document.getElementById('revolution-status');
   const ebEl = document.getElementById('eleven-back-status');
   const normEl = document.getElementById('normal-status');
+  const guideEl = document.getElementById('field-strength-guide');
+  const labelEl = document.getElementById('field-strength-label');
   const orderEl = document.getElementById('field-strength-order');
 
   if (revEl) revEl.classList.toggle('active', !!isRevolution);
   if (ebEl) ebEl.classList.toggle('active', !!isElevenBack);
   if (normEl) normEl.style.display = (!isRevolution && !isElevenBack) ? 'inline-block' : 'none';
-  if (orderEl) orderEl.textContent = effectiveReverse() ? '🃏 < 2 < A < ... < 4 < 3' : '3 < 4 < 5 ... < 2 < 🃏';
+
+  if (guideEl && labelEl && orderEl) {
+    guideEl.classList.remove('guide-revolution', 'guide-eleven-back');
+
+    if (isRevolution) {
+      guideEl.classList.add('guide-revolution');
+      labelEl.textContent = '🔥 革命中';
+      orderEl.textContent = '2 < A < K ... < 4 < 3 < 🃏';
+    } else if (isElevenBack) {
+      guideEl.classList.add('guide-eleven-back');
+      labelEl.textContent = '⚡ 11バック';
+      orderEl.textContent = '2 < A < K ... < 4 < 3 < 🃏';
+    } else {
+      labelEl.textContent = 'カードの強さ';
+      orderEl.textContent = '3 < 4 < 5 ... < 2 < 🃏';
+    }
+  }
 
   updateEvalMeterUI();
 }
@@ -1951,7 +2076,6 @@ function updateEvalMeterUI() {
 
     gridHtml += `
       <div class="eval-rate-item${topClass}">
-        <span class="eval-color-dot" style="background:${color};"></span>
         <span class="eval-name" title="${name}">${crownPrefix}${name}</span>
         <div class="eval-mini-track">
           <div class="eval-mini-fill" style="width:${pct}%; background:${color};"></div>
@@ -2039,20 +2163,28 @@ function createCardElement(card) {
   const el = document.createElement('div');
 
   if (card.isJoker) {
-    const isJ1 = (card.jokerId === 'J1' || card.suitSymbol === '★');
-    const jokerClass = isJ1 ? 'joker-1' : 'joker-2';
-    const icon = isJ1 ? '🎭' : '🎪';
-    const watermark = isJ1 ? '⚜' : '👑';
-
-    el.className = `card joker ${jokerClass}`;
-    el.innerHTML = `
-      <div class="card-top">
-        <span class="card-suit-symbol">${card.suitSymbol}</span>
-        <span class="card-rank">JOKER</span>
-      </div>
-      <span class="card-center-icon">${icon}</span>
-      <div class="card-watermark">${watermark}</div>
-    `;
+    const isSun = (card.jokerId === 'J1' || card.suitClass === 'joker-sun');
+    if (isSun) {
+      el.className = 'card joker joker-sun';
+      el.innerHTML = `
+        <div class="card-top">
+          <span class="card-suit-symbol">★</span>
+          <span class="card-rank">JOKER</span>
+        </div>
+        <span class="card-center-icon">🃏</span>
+        <div class="card-watermark">☀️</div>
+      `;
+    } else {
+      el.className = 'card joker joker-moon';
+      el.innerHTML = `
+        <div class="card-top">
+          <span class="card-suit-symbol">☆</span>
+          <span class="card-rank">JOKER</span>
+        </div>
+        <span class="card-center-icon">🎭</span>
+        <div class="card-watermark">🌙</div>
+      `;
+    }
   } else {
     const isPicture = (card.display === 'J' || card.display === 'Q' || card.display === 'K');
     const crownHtml = isPicture ? '<span class="royal-crown-mini">👑</span>' : '';
@@ -2070,13 +2202,33 @@ function createCardElement(card) {
   return el;
 }
 
+/* ★ CPUカード束の動的重なり圧縮（何枚でも枠内に完全収束させるロジック） */
 function renderCpuStack(cpuId, count) {
   const stack = document.getElementById(`${cpuId}-stack`);
   if (!stack) return;
   stack.innerHTML = '';
-  
-  const displayCount = count;
-  for (let i = 0; i < displayCount; i++) {
+  if (count <= 0) return;
+
+  // カードの基準幅（PC〜スマホの基本値）
+  const cardW = 34;
+  let maxStackW = 68; // CPU1, CPU3は幅68px内に完全収束
+  if (cpuId === 'cpu2') {
+    maxStackW = 118; // CPU2は幅118px内に中央収束
+  }
+
+  let overlapPx = -18;
+  if (count > 1) {
+    // 全枚数並んだ時の幅が maxStackW を超えないように重なり幅を逆算
+    // totalWidth = cardW + (count - 1) * (cardW + overlapPx) <= maxStackW
+    // (count - 1) * (cardW + overlapPx) <= maxStackW - cardW
+    // cardW + overlapPx = (maxStackW - cardW) / (count - 1)
+    const step = (maxStackW - cardW) / (count - 1);
+    overlapPx = Math.min(-6, Math.floor(step - cardW));
+  }
+
+  stack.style.setProperty('--cpu-overlap', `${overlapPx}px`);
+
+  for (let i = 0; i < count; i++) {
     const back = document.createElement('div');
     back.className = 'card-back';
     stack.appendChild(back);
@@ -2249,6 +2401,7 @@ function render(isFullRedraw = false) {
     updateHandOverlap();
   }
 
+  // CPUカード束の動的描画
   ['cpu1', 'cpu2', 'cpu3'].forEach(c => renderCpuStack(c, hands[c].length));
 
   PLAYERS.forEach(p => {
@@ -2265,6 +2418,7 @@ function render(isFullRedraw = false) {
     }
   });
 
+  // ★ 場のカードの厳密描画（残骸混入を徹底排除）
   const fieldEl = document.getElementById('field-cards');
   const emptyPlaceholder = document.getElementById('field-empty-placeholder');
   const comboBadge = document.getElementById('field-combo-badge');
@@ -2325,28 +2479,32 @@ function render(isFullRedraw = false) {
   });
 }
 
+/* ★ 操作ボタンの厳格排他制御（!importantインライン設定によるCSS競合完全遮断） */
 function updateControlsOnly() {
   const playBtn = document.getElementById('play-btn');
   const passBtn = document.getElementById('pass-btn');
   const goExBtn = document.getElementById('go-exchange-btn');
   const exBtn = document.getElementById('exchange-btn');
-  const autoBtn = document.getElementById('auto-play-btn');
-
-  if (autoBtn) {
-    autoBtn.classList.toggle('is-active-gold', isAutoPlayMode);
-  }
 
   if (isPreExchangePhase) {
-    playBtn.style.display = 'none'; passBtn.style.display = 'none';
-    goExBtn.style.display = 'flex'; exBtn.style.display = 'none';
+    playBtn.style.setProperty('display', 'none', 'important');
+    passBtn.style.setProperty('display', 'none', 'important');
+    goExBtn.style.setProperty('display', 'flex', 'important');
+    exBtn.style.setProperty('display', 'none', 'important');
     goExBtn.disabled = isAutoPlayMode;
   } else if (isExchangePhase) {
-    playBtn.style.display = 'none'; passBtn.style.display = 'none';
-    goExBtn.style.display = 'none'; exBtn.style.display = 'flex';
-    exBtn.disabled = selectedIndices.length !== requiredExchangeCount || isAutoPlayMode;
+    playBtn.style.setProperty('display', 'none', 'important');
+    passBtn.style.setProperty('display', 'none', 'important');
+    goExBtn.style.setProperty('display', 'none', 'important');
+    exBtn.style.setProperty('display', 'flex', 'important');
+    exBtn.disabled = (selectedIndices.length !== requiredExchangeCount) || isAutoPlayMode;
   } else {
-    playBtn.style.display = 'flex'; passBtn.style.display = 'flex';
-    goExBtn.style.display = 'none'; exBtn.style.display = 'none';
+    // 通常対戦中：絶対に交換ボタンを非表示化
+    playBtn.style.setProperty('display', 'flex', 'important');
+    passBtn.style.setProperty('display', 'flex', 'important');
+    goExBtn.style.setProperty('display', 'none', 'important');
+    exBtn.style.setProperty('display', 'none', 'important');
+
     const myTurn = (PLAYERS[currentTurnIndex] === 'player') && !isProcessing && !finishedPlayers.includes('player') && !gameEnded;
     playBtn.disabled = !myTurn || selectedIndices.length === 0 || isAutoPlayMode;
     passBtn.disabled = !myTurn || isAutoPlayMode;
@@ -2441,6 +2599,7 @@ function startNewGame() {
 
   updateStatusUI();
   bgmMgr.update(isRevolution, isElevenBack);
+  AIStatusUI.restoreIdleState();
 
   if (Object.keys(previousRanks).length > 0) {
     isPreExchangePhase = true;
@@ -2842,6 +3001,7 @@ function nextTurn() {
   checkTurn();
 }
 
+/* ★ 場のクリア処理（DOM要素の完全一掃で残骸混入を根絶） */
 function clearField(nextPlayer = null) {
   const speed = getSpeedMultiplier();
   const fieldEl = document.getElementById('field-cards');
@@ -2853,6 +3013,8 @@ function clearField(nextPlayer = null) {
   GameTimer.set(() => {
     fieldCards = [];
     consecutivePasses = 0;
+    // ★ 場のDOM要素を即座に完全一掃
+    fieldEl.innerHTML = '';
     fieldEl.classList.remove('clear-animation');
     PLAYERS.forEach(p => hasPassedInRound[p] = false);
 
@@ -2876,7 +3038,8 @@ function clearField(nextPlayer = null) {
 
     lastPlayedPlayer = null;
     isProcessing = false;
-    if (redraw) render(true);
+    // 確実に最新の場（空）と手番を再描画
+    render(redraw);
     checkTurn();
   }, 350 / speed);
 }
@@ -2887,9 +3050,11 @@ function checkTurn() {
 
   if (curr === 'player' && !isAutoPlayMode) {
     isProcessing = false;
+    AIStatusUI.restoreIdleState();
     render(false);
   } else {
     isProcessing = true;
+    AIStatusUI.set('thinking', 'AI: 思考中...');
     render(false);
     GameTimer.set(() => cpuPlayTurn(curr), 850 / getSpeedMultiplier());
   }
@@ -2925,6 +3090,8 @@ async function cpuPlayTurn(cpu) {
     move
   );
 
+  AIStatusUI.restoreIdleState();
+
   if (move) {
     const indices = move.map(c => hands[cpu].indexOf(c));
     if (cpu === 'player') {
@@ -2957,112 +3124,7 @@ async function cpuPlayTurn(cpu) {
 }
 
 /* ----------------------------------------------------
- * 10.5 ゲーム状況のセーブ＆ロード管理マネージャー
- * ---------------------------------------------------- */
-const GameSaveManager = {
-  SAVE_KEY: 'royal_card_game_saved_state_v1',
-
-  saveCurrentGame() {
-    if (gameEnded) {
-      alert('ゲーム終了時はセーブできません。次のゲーム開始後にセーブしてください。');
-      return;
-    }
-    soundMgr.playSelect();
-
-    const state = {
-      timestamp: Date.now(),
-      appVersion: APP_VERSION,
-      hands,
-      playerPassCounts,
-      hasPassedInRound,
-      fieldCards,
-      lastPlayedPlayer,
-      currentTurnIndex,
-      consecutivePasses,
-      finishedPlayers,
-      playerStatusMap,
-      previousRanks,
-      isRevolution,
-      isElevenBack,
-      isExchangePhase,
-      isPreExchangePhase,
-      requiredExchangeCount,
-      assignedCharacters,
-      playedCardsHistory,
-      currentRoundCards,
-      clearedCardsHistory,
-      isAutoPlayMode,
-      currentSpeed
-    };
-
-    try {
-      localStorage.setItem(this.SAVE_KEY, JSON.stringify(state));
-      setMessage('💾 現在の対戦状況をセーブしました！');
-      alert('対戦状況をセーブしました！\n「ロード」ボタンでいつでもこの状態から再開できます。');
-    } catch (e) {
-      console.error('セーブエラー:', e);
-      alert('セーブに失敗しました。ブラウザのストレージ容量をご確認ください。');
-    }
-  },
-
-  loadSavedGame() {
-    const raw = localStorage.getItem(this.SAVE_KEY);
-    if (!raw) {
-      alert('セーブデータが見つかりません。先に「セーブ」を行ってください。');
-      return;
-    }
-    if (!confirm('保存された対戦データを読み込んで再開しますか？\n（現在の進行状況は上書きされます）')) {
-      return;
-    }
-    soundMgr.playSelect();
-
-    try {
-      const state = JSON.parse(raw);
-      GameTimer.clearAll();
-      isProcessing = false;
-
-      hands = state.hands;
-      playerPassCounts = state.playerPassCounts;
-      hasPassedInRound = state.hasPassedInRound;
-      fieldCards = state.fieldCards;
-      lastPlayedPlayer = state.lastPlayedPlayer;
-      currentTurnIndex = state.currentTurnIndex;
-      consecutivePasses = state.consecutivePasses;
-      finishedPlayers = state.finishedPlayers;
-      playerStatusMap = state.playerStatusMap;
-      previousRanks = state.previousRanks;
-      isRevolution = state.isRevolution;
-      isElevenBack = state.isElevenBack;
-      isExchangePhase = state.isExchangePhase;
-      isPreExchangePhase = state.isPreExchangePhase;
-      requiredExchangeCount = state.requiredExchangeCount;
-      assignedCharacters = state.assignedCharacters;
-      playedCardsHistory = state.playedCardsHistory;
-      currentRoundCards = state.currentRoundCards;
-      clearedCardsHistory = state.clearedCardsHistory;
-      isAutoPlayMode = state.isAutoPlayMode;
-      currentSpeed = state.currentSpeed || 1;
-      selectedIndices = [];
-      gameEnded = false;
-
-      updateCharacterUI();
-      updateStatusUI();
-      bgmMgr.update(isRevolution, isElevenBack);
-      render(true);
-
-      setMessage('📂 セーブデータをロードしました！対戦を再開します。');
-      document.getElementById('char-select-overlay').classList.remove('active');
-
-      checkTurn();
-    } catch (e) {
-      console.error('ロードエラー:', e);
-      alert('セーブデータの復元に失敗しました。データが破損している可能性があります。');
-    }
-  }
-};
-
-/* ----------------------------------------------------
- * 11. 高速自己対戦エンジン（完全保護）
+ * 11. 高速自己対戦エンジン
  * ---------------------------------------------------- */
 const SelfPlayRunner = {
   isRunning: false,
@@ -3328,7 +3390,7 @@ function selectPlayerCharacter(id) {
   const autoBtn = document.getElementById('auto-play-btn');
   if (autoBtn) {
     autoBtn.textContent = isAutoPlayMode ? '自動: ON' : '自動: OFF';
-    autoBtn.classList.toggle('is-active-gold', isAutoPlayMode);
+    autoBtn.classList.toggle('btn-gold-active', isAutoPlayMode);
   }
   document.getElementById('speed-controls').style.display = isAutoPlayMode ? 'flex' : 'none';
   document.getElementById('char-select-overlay').classList.remove('active');
@@ -3337,8 +3399,20 @@ function selectPlayerCharacter(id) {
   resetGame(true, false);
 }
 
+/* ★ ゲーム終了画面の描画（ウィナー肖像画＆名前の反映） */
 function renderFinalRanking() {
   const container = document.getElementById('final-ranking-list');
+  const winnerImg = document.getElementById('modal-winner-portrait');
+  const winnerName = document.getElementById('modal-winner-name');
+
+  // ウィナー（大富豪/1位）の特定と肖像画セット
+  const daifugoPlayer = PLAYERS.find(pl => playerStatusMap[pl] === '大富豪') || finishedPlayers[0];
+  if (daifugoPlayer && assignedCharacters[daifugoPlayer]) {
+    const wDef = assignedCharacters[daifugoPlayer];
+    if (winnerImg) winnerImg.src = CHAR_IMAGES[wDef.id] || '';
+    if (winnerName) winnerName.textContent = getPlayerDisplayName(daifugoPlayer, true);
+  }
+
   if (!container) return;
   const order = ['大富豪', '富豪', '貧民', '大貧民'];
   container.innerHTML = order.map((rankName, idx) => {
@@ -3460,7 +3534,7 @@ function renderRankingModalContent() {
     let html = `
       <div style="margin-bottom: 8px; font-size: 11.5px; color: #b0bec5; line-height: 1.45;">
         宮廷総合格付け（全13名・大富豪率 順）<br>
-        <span style="font-size:10px; color:#8c9ba5;">※AIは自動観戦プレイ時、あなたは手動プレイ時のみ集計されます。</span>
+        <span style="font-size:10px; color:#8c9ba5;">※AIは自動観戦プレイ時、あなたは手動対局時のみ集計されます。</span>
       </div>
       <div class="ranking-table-container">
         <table class="ranking-table">
@@ -3627,7 +3701,7 @@ function renderRankingModalContent() {
         <div class="selfplay-summary-box">
           <div class="rule-item-title" style="margin-bottom: 6px; display:flex; justify-content:space-between; align-items:center;">
             <span>📊 最新シミュレーション結果サマリー</span>
-            <button class="btn" id="btn-selfplay-quick-log" style="padding: 2px 6px; font-size: 10px; background:rgba(212,175,55,0.15); border:1px solid #d4af37;">📜 通信ログを確認</button>
+            <button class="btn btn-selfplay-quick-log" id="btn-selfplay-quick-log">📜 通信ログを確認</button>
           </div>
           <div id="selfplay-results-table">
             <div style="padding: 12px; text-align: center; color: #8c9ba5; font-size: 11px;">
@@ -3846,10 +3920,30 @@ function initEvents() {
   if (aiOrbBtn) aiOrbBtn.onclick = openDebugLogModal;
   if (debugBtn) debugBtn.onclick = openDebugLogModal;
 
-  const saveBtn = document.getElementById('save-game-btn');
-  const loadBtn = document.getElementById('load-game-btn');
-  if (saveBtn) saveBtn.onclick = () => GameSaveManager.saveCurrentGame();
-  if (loadBtn) loadBtn.onclick = () => GameSaveManager.loadSavedGame();
+  const saveBtn = document.getElementById('save-btn');
+  if (saveBtn) {
+    saveBtn.onclick = () => {
+      SaveLoadManager.saveGameState();
+    };
+  }
+
+  const loadBtn = document.getElementById('btn-load-game');
+  if (loadBtn) {
+    loadBtn.onclick = () => {
+      soundMgr.playSelect();
+      SaveLoadManager.loadGameState();
+    };
+  }
+
+  // ★ ゲーム終了ダイアログ内の「戦績・ランキングを確認」ボタン
+  const nextGameStatsBtn = document.getElementById('btn-next-game-stats');
+  if (nextGameStatsBtn) {
+    nextGameStatsBtn.onclick = () => {
+      soundMgr.playSelect();
+      renderRankingModalContent();
+      statsModal.classList.add('active');
+    };
+  }
 
   if (debugLogModal) {
     document.getElementById('modal-debug-log-close-btn').onclick = () => {
@@ -3985,6 +4079,7 @@ function initEvents() {
     }
   };
 
+  /* 倍速ボタン */
   document.querySelectorAll('.btn-speed').forEach(btn => {
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
@@ -3997,12 +4092,13 @@ function initEvents() {
     });
   });
 
+  /* 自動プレイボタン */
   document.getElementById('auto-play-btn').onclick = () => {
     soundMgr.playSelect();
     isAutoPlayMode = !isAutoPlayMode;
     const btn = document.getElementById('auto-play-btn');
     btn.textContent = isAutoPlayMode ? '自動: ON' : '自動: OFF';
-    btn.classList.toggle('is-active-gold', isAutoPlayMode);
+    btn.classList.toggle('btn-gold-active', isAutoPlayMode);
 
     const speedControls = document.getElementById('speed-controls');
     if (speedControls) speedControls.style.display = isAutoPlayMode ? 'flex' : 'none';
@@ -4044,6 +4140,7 @@ function initEvents() {
     PLAYERS.filter(p => p !== 'player').forEach(p => checkAndTriggerDialogue(p, 'NEXT_GAME'));
   };
 
+  /* キャラ抽選ボタン */
   document.getElementById('reset-btn').onclick = () => {
     soundMgr.playSelect();
     rulesPanel.classList.remove('open');
@@ -4079,9 +4176,10 @@ function startApp() {
     initRuleTexts();
     buildCharSelectGrid();
     initEvents();
+    SaveLoadManager.updateLoadButtonState();
     bgmMgr.setCharSelectPhase(true);
     AIStatusUI.pingServer();
-    console.log('[SYSTEM] アプリ初期化完了（v2.5.8 正式版）');
+    console.log('[SYSTEM] アプリ初期化完了（v2.6.0 正式版）');
   } catch (err) {
     console.error('[CRITICAL] 起動初期化エラー:', err);
   }
