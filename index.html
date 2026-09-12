@@ -1,6 +1,6 @@
 
-<!-- [HTML Version: v2.5.4] プレイヤートランプ全部乗せ ＆ 端末別完全最適化版
- * 羊皮紙・細密金枠・透かし・Cinzel・王冠・浮遊オーラ・メーター統一・座席シフト
+<!-- [HTML Version: v2.5.5] 王宮完全調和版
+ * パス枠・キャラ名役職枠完全同一化・プレイヤー肖像同サイズ化・AI自己対戦ボタン視認性改善・祭壇ステータス1.12倍
  -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -492,7 +492,7 @@
       <!-- プレイヤー (自分：左に絵柄 ｜ 右に手番・名前・役職・枚数) -->
       <div class="player-box" id="player-area">
         <div class="player-layout-plate">
-          <!-- 左：肖像画 -->
+          <!-- 左：肖像画（CPUと同一の基本寸法） -->
           <img class="char-portrait" id="player-portrait" src="" alt="">
           
           <!-- 右：情報カラム -->
@@ -509,7 +509,7 @@
               </div>
               <div class="rank-badge" id="player-rank"></div>
             </div>
-            <!-- ③ 下段：残り枚数 ＆ パス回数（完全統一50px枠） -->
+            <!-- ③ 下段：残り枚数 ＆ パス回数（全座席完全統一54px枠） -->
             <div class="char-stats-row">
               <span class="card-count-badge" id="player-card-count">残り -枚</span>
               <span class="pass-count-badge"><span id="player-pass-label">パス: </span><span id="player-pass">0</span></span>
@@ -558,7 +558,7 @@
     <!-- 最下部ブランド＆バージョンフッター -->
     <div id="app-footer-bar">
       <span class="footer-brand">👑 ROYAL CARD GAME</span>
-      <span id="version-badge" title="クリックで更新履歴を表示">👑 Ver. 2.5.4</span>
+      <span id="version-badge" title="クリックで更新履歴を表示">👑 Ver. 2.5.5</span>
     </div>
 
   </div> <!-- /#app-viewport -->
@@ -566,5 +566,4 @@
   <script src="app.js"></script>
 </body>
 </html>
-
 
