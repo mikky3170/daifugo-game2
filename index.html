@@ -1,6 +1,7 @@
 
 <!-- [HTML Version: v2.6.0] 王宮完全調和・CPUカード束収束・ウィナー肖像＆戦績ボタン版
  * ゲーム終了画面ウィナー肖像・戦績ボタン新設・CPUカード束幅固定・CPU2下向き拡大
+ * （キャラ紹介画像属性修正済）
  -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -47,8 +48,8 @@
 
         <div class="char-select-grid" id="char-select-grid"></div>
 
-        <!-- キャラ選択画面の右下バージョン表示 -->
-        <div class="char-select-version-badge" id="char-select-version-badge" title="クリックで更新履歴を表示">👑 Ver. 2.6.0</div>
+        <!-- キャラ選択画面の右下バージョン表示（JSから動的注入） -->
+        <div class="char-select-version-badge" id="char-select-version-badge" title="クリックで更新履歴を表示"></div>
       </div>
     </div>
 
@@ -97,26 +98,7 @@
 
           <!-- 中央：4人のリアルタイム勝率グリッド -->
           <div class="eval-rates-grid" id="eval-rates-grid">
-            <div class="eval-rate-item">
-              <span class="eval-name">あなた</span>
-              <div class="eval-mini-track"><div class="eval-mini-fill" style="width:25%; background:#2196f3;"></div></div>
-              <span class="eval-pct">25%</span>
-            </div>
-            <div class="eval-rate-item">
-              <span class="eval-name">軍師</span>
-              <div class="eval-mini-track"><div class="eval-mini-fill" style="width:25%; background:#4caf50;"></div></div>
-              <span class="eval-pct">25%</span>
-            </div>
-            <div class="eval-rate-item">
-              <span class="eval-name">公爵</span>
-              <div class="eval-mini-track"><div class="eval-mini-fill" style="width:25%; background:#d4af37;"></div></div>
-              <span class="eval-pct">25%</span>
-            </div>
-            <div class="eval-rate-item">
-              <span class="eval-name">上級AI</span>
-              <div class="eval-mini-track"><div class="eval-mini-fill" style="width:25%; background:#e91e63;"></div></div>
-              <span class="eval-pct">25%</span>
-            </div>
+            <!-- JSで動的に生成・更新されます -->
           </div>
 
           <!-- 右：AIリアルタイムステータスランプ -->
@@ -173,7 +155,7 @@
             </div>
           </div>
           <div class="char-intro-item">
-            <img class="char-intro-portrait" data-char-intro="COUNT" src="" alt="">
+            <img class="char-intro-portrait" data-char-img="COUNT" src="" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">📜 伯爵 (Count) - 変則展開</div>
               <div>序盤は温存し、手札が5枚以下になると強力なカードを積極的に使い始めます。</div>
@@ -194,7 +176,7 @@
             </div>
           </div>
           <div class="char-intro-item">
-            <img class="char-intro-portrait" data-char-intro="SCHOLAR" src="" alt="">
+            <img class="char-intro-portrait" data-char-img="SCHOLAR" src="" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">📖 学者 (Scholar) - 慎重・観察</div>
               <div>場の流れを分析し、相手が複数出しをしてきた場合に合わせてカウンターを狙います。</div>
@@ -281,7 +263,7 @@
 
     <!-- 戦績＆総合ランキングモーダル -->
     <div class="modal-overlay" id="stats-modal">
-      <div class="modal-content" style="max-width: 680px; width: 95%;">
+      <div class="modal-content modal-wide">
         <div class="modal-header">
           <div class="modal-title">宮廷格付け ＆ 戦績記録</div>
           <button class="modal-close" id="modal-stats-close-x">&times;</button>
@@ -293,7 +275,7 @@
         </div>
         <div class="modal-body" id="stats-body"></div>
         <div class="modal-footer">
-          <button class="btn-modal-danger" id="modal-stats-clear-btn" style="margin-right: auto;">全戦績リセット</button>
+          <button class="btn-modal-danger btn-left" id="modal-stats-clear-btn">全戦績リセット</button>
           <button class="btn-modal-close" id="modal-stats-close-btn">閉じる</button>
         </div>
       </div>
@@ -301,7 +283,7 @@
 
     <!-- 1試合ごとの学習データ詳細ビューア -->
     <div class="modal-overlay" id="log-viewer-modal">
-      <div class="modal-content" style="max-width: 760px; width: 96%;">
+      <div class="modal-content modal-extra-wide">
         <div class="modal-header">
           <div class="modal-title">🔍 試合データ詳細ビューア</div>
           <button class="modal-close" id="modal-log-viewer-close-x">&times;</button>
@@ -314,7 +296,7 @@
           </div>
           <div class="log-episode-summary" id="log-episode-summary"></div>
         </div>
-        <div class="modal-body" style="padding: 4px 0; max-height: 60vh;">
+        <div class="modal-body modal-body-log">
           <div class="step-preview-scroll" id="modal-step-table-wrap"></div>
         </div>
         <div class="modal-footer">
@@ -325,7 +307,7 @@
 
     <!-- 📜 画面内デバッグ・ログコンソールモーダル -->
     <div class="modal-overlay" id="debug-log-modal">
-      <div class="modal-content" style="max-width: 720px; width: 96%;">
+      <div class="modal-content modal-extra-wide">
         <div class="modal-header">
           <div class="modal-title">📜 デバッグ ＆ AI通信ログ</div>
           <button class="modal-close" id="modal-debug-log-close-x">&times;</button>
@@ -337,7 +319,7 @@
             <button class="btn-debug-act btn-debug-clear" id="btn-clear-logs">🗑️ クリア</button>
           </div>
         </div>
-        <div class="modal-body" style="padding: 0; max-height: 58vh;">
+        <div class="modal-body modal-body-debug">
           <div class="debug-log-container" id="debug-log-container"></div>
         </div>
         <div class="modal-footer">
@@ -348,7 +330,7 @@
 
     <!-- 戦況分析（勝率グラフ）モーダル -->
     <div class="modal-overlay" id="eval-modal">
-      <div class="modal-content" style="max-width: 520px;">
+      <div class="modal-content modal-medium">
         <div class="modal-header">
           <div class="modal-title">📊 リアルタイム戦況分析</div>
           <button class="modal-close" id="modal-eval-close-x">&times;</button>
@@ -362,7 +344,7 @@
 
     <!-- 更新履歴（バージョン）モーダル -->
     <div class="modal-overlay" id="version-modal">
-      <div class="modal-content" style="max-width: 540px;">
+      <div class="modal-content modal-medium">
         <div class="modal-header">
           <div class="modal-title">📜 システム更新履歴</div>
           <button class="modal-close" id="modal-version-close-x">&times;</button>
@@ -380,7 +362,7 @@
         <div class="modal-header">
           <div class="modal-title">ゲーム終了・宮廷清算</div>
         </div>
-        <div class="modal-body" style="text-align: center; padding: 4px 0; overflow: hidden;">
+        <div class="modal-body modal-body-next-game">
           <!-- ウィナーの肖像画プレート -->
           <div class="modal-winner-plate">
             <img id="modal-winner-portrait" class="modal-winner-img" src="" alt="Winner">
@@ -389,14 +371,14 @@
           </div>
 
           <div class="final-ranking-list" id="final-ranking-list"></div>
-          <p style="font-size: 11.5px; margin-top: 6px; color: #cbd5e1;">次の対局設定を選択してください：</p>
+          <p class="next-game-prompt">次の対局設定を選択してください：</p>
         </div>
         <div class="modal-footer next-game-footer">
           <!-- 戦績確認ボタン -->
-          <button class="btn btn-sub" id="btn-next-game-stats" style="width: 100%; margin-bottom: 6px; height: 28px; font-weight: 800;">📊 宮廷戦績・ランキングを確認</button>
+          <button class="btn btn-sub btn-next-game-stats" id="btn-next-game-stats">📊 宮廷戦績・ランキングを確認</button>
           <div class="next-game-action-row">
-            <button class="btn btn-gold" id="btn-keep-char">👑 同じメンバーで続行<br><span style="font-size: 10px;">(カード交換あり)</span></button>
-            <button class="btn" id="btn-change-char">🎲 メンバーを再抽選<br><span style="font-size: 10px;">(カード交換なし)</span></button>
+            <button class="btn btn-gold" id="btn-keep-char">👑 同じメンバーで続行<br><span class="text-small">(カード交換あり)</span></button>
+            <button class="btn" id="btn-change-char">🎲 メンバーを再抽選<br><span class="text-small">(カード交換なし)</span></button>
           </div>
         </div>
       </div>
@@ -413,7 +395,7 @@
               <div class="turn-badge" id="cpu2-badge">THINKING</div>
             </div>
             <div class="name-rank-stack">
-              <div style="display: flex; align-items: center; justify-content: center; gap: 3px; width: 100%;">
+              <div class="char-badge-container">
                 <span class="ai-brain-dot" id="cpu2-brain-dot" title="AI推論中"></span>
                 <div class="char-badge" id="cpu2-char-title">---</div>
               </div>
@@ -437,7 +419,7 @@
         <div class="char-row fixed-char-row">
           <img class="char-portrait fixed-cpu-portrait portrait-cpu-left" id="cpu1-portrait" src="" alt="">
           <div class="name-rank-stack">
-            <div style="display: flex; align-items: center; justify-content: center; gap: 3px; width: 100%;">
+            <div class="char-badge-container">
               <span class="ai-brain-dot" id="cpu1-brain-dot" title="AI推論中"></span>
               <div class="char-badge" id="cpu1-char-title">---</div>
             </div>
@@ -467,10 +449,10 @@
           </div>
 
           <div class="field-combo-container">
-            <div class="field-combo-badge" id="field-combo-badge" style="display:none;"></div>
+            <div class="field-combo-badge is-hidden" id="field-combo-badge"></div>
           </div>
 
-          <!-- カードの強さガイド（反転時ビジュアル化＆ℹ️削除） -->
+          <!-- カードの強さガイド（反転時ビジュアル化） -->
           <div class="field-strength-guide" id="field-strength-guide">
             <span class="guide-label" id="field-strength-label">カードの強さ</span>
             <span class="guide-order" id="field-strength-order">3 &lt; 4 &lt; 5 ... &lt; 2 &lt; 🃏</span>
@@ -488,7 +470,7 @@
         <div class="char-row fixed-char-row">
           <img class="char-portrait fixed-cpu-portrait portrait-cpu-right" id="cpu3-portrait" src="" alt="">
           <div class="name-rank-stack">
-            <div style="display: flex; align-items: center; justify-content: center; gap: 3px; width: 100%;">
+            <div class="char-badge-container">
               <span class="ai-brain-dot" id="cpu3-brain-dot" title="AI推論中"></span>
               <div class="char-badge" id="cpu3-char-title">---</div>
             </div>
@@ -515,7 +497,7 @@
               <div class="your-turn-badge" id="player-badge">あなたの順番です</div>
             </div>
             <div class="name-rank-stack">
-              <div style="display: flex; align-items: center; justify-content: center; gap: 3px; width: 100%;">
+              <div class="char-badge-container">
                 <span class="ai-brain-dot" id="player-brain-dot" title="AI推論中"></span>
                 <div class="char-badge" id="player-char-title">---</div>
               </div>
@@ -547,15 +529,15 @@
             <span class="btn-icon">⏭️</span>
             <span class="btn-text">パス</span>
           </button>
-          <button class="btn btn-gold btn-exchange-main" id="go-exchange-btn" style="display: none;">カード交換へ</button>
-          <button class="btn btn-gold btn-exchange-main" id="exchange-btn" style="display: none;">交換決定</button>
+          <button class="btn btn-gold btn-exchange-main is-hidden" id="go-exchange-btn">カード交換へ</button>
+          <button class="btn btn-gold btn-exchange-main is-hidden" id="exchange-btn">交換決定</button>
         </div>
 
         <!-- サブアクション群 -->
         <div class="action-group sub-actions">
           <div class="auto-play-wrapper">
             <button class="btn btn-sub" id="auto-play-btn">自動: OFF</button>
-            <div class="speed-controls" id="speed-controls" style="display: none;">
+            <div class="speed-controls is-hidden" id="speed-controls">
               <button class="btn-speed active" data-speed="1">1x</button>
               <button class="btn-speed" data-speed="2">2x</button>
               <button class="btn-speed" data-speed="3">3x</button>
@@ -571,7 +553,8 @@
       <!-- 最下部ブランド＆バージョンフッター -->
       <div id="app-footer-bar">
         <span class="footer-brand">👑 ROYAL CARD GAME</span>
-        <span id="version-badge" title="クリックで更新履歴を表示">👑 Ver. 2.6.0</span>
+        <!-- JSから動的注入 -->
+        <span id="version-badge" title="クリックで更新履歴を表示"></span>
       </div>
     </div> <!-- /.bottom-console-frame -->
 

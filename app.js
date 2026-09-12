@@ -1,7 +1,7 @@
 
 /* [JS Version: v2.6.0] 王宮完全調和・CPUカード束収束・ウィナー肖像＆戦績ボタン版 - 前半（1/2）
- * ゲーム終了画面ウィナー肖像・戦績ボタン新設・CPUカード束幅固定・CPU2下向き拡大
- * （※このファイルの末尾に後半ファイルとの統合コメントが記載されています）
+ * （重複コード排除・DOM操作クリーンアップ・バージョン動的注入化済）
+ * ※このファイルの末尾に後半ファイルとの連結目印が記載されています。
  */
 
 /* ====================================================================
@@ -817,7 +817,10 @@ const SaveLoadManager = {
         autoBtn.classList.toggle('btn-gold-active', isAutoPlayMode);
       }
       const speedControls = document.getElementById('speed-controls');
-      if (speedControls) speedControls.style.display = isAutoPlayMode ? 'flex' : 'none';
+      if (speedControls) {
+        if (isAutoPlayMode) speedControls.classList.remove('is-hidden');
+        else speedControls.classList.add('is-hidden');
+      }
 
       document.querySelectorAll('.btn-speed').forEach(b => {
         b.classList.toggle('active', b.getAttribute('data-speed') === String(currentSpeed));
@@ -2219,9 +2222,6 @@ function renderCpuStack(cpuId, count) {
   let overlapPx = -18;
   if (count > 1) {
     // 全枚数並んだ時の幅が maxStackW を超えないように重なり幅を逆算
-    // totalWidth = cardW + (count - 1) * (cardW + overlapPx) <= maxStackW
-    // (count - 1) * (cardW + overlapPx) <= maxStackW - cardW
-    // cardW + overlapPx = (maxStackW - cardW) / (count - 1)
     const step = (maxStackW - cardW) / (count - 1);
     overlapPx = Math.min(-6, Math.floor(step - cardW));
   }
@@ -2436,7 +2436,7 @@ function render(isFullRedraw = false) {
   }
   if (comboBadge) {
     if (fieldCards.length > 0) {
-      comboBadge.style.display = 'inline-block';
+      comboBadge.classList.remove('is-hidden');
       let comboName = '単体';
       if (fieldCards.length === 1 && fieldCards[0].isJoker) comboName = '🃏 ジョーカー単騎';
       else if (fieldCards.length === 2) comboName = 'ペア';
@@ -2444,7 +2444,7 @@ function render(isFullRedraw = false) {
       else if (fieldCards.length >= 4) comboName = '革命 (4枚出し)';
       comboBadge.textContent = comboName;
     } else {
-      comboBadge.style.display = 'none';
+      comboBadge.classList.add('is-hidden');
     }
   }
 
@@ -2479,7 +2479,7 @@ function render(isFullRedraw = false) {
   });
 }
 
-/* ★ 操作ボタンの厳格排他制御（!importantインライン設定によるCSS競合完全遮断） */
+/* ★ 操作ボタンの厳格排他制御（CSSクラス着脱によるクリーンな制御） */
 function updateControlsOnly() {
   const playBtn = document.getElementById('play-btn');
   const passBtn = document.getElementById('pass-btn');
@@ -2487,23 +2487,23 @@ function updateControlsOnly() {
   const exBtn = document.getElementById('exchange-btn');
 
   if (isPreExchangePhase) {
-    playBtn.style.setProperty('display', 'none', 'important');
-    passBtn.style.setProperty('display', 'none', 'important');
-    goExBtn.style.setProperty('display', 'flex', 'important');
-    exBtn.style.setProperty('display', 'none', 'important');
+    playBtn.classList.add('is-hidden');
+    passBtn.classList.add('is-hidden');
+    goExBtn.classList.remove('is-hidden');
+    exBtn.classList.add('is-hidden');
     goExBtn.disabled = isAutoPlayMode;
   } else if (isExchangePhase) {
-    playBtn.style.setProperty('display', 'none', 'important');
-    passBtn.style.setProperty('display', 'none', 'important');
-    goExBtn.style.setProperty('display', 'none', 'important');
-    exBtn.style.setProperty('display', 'flex', 'important');
+    playBtn.classList.add('is-hidden');
+    passBtn.classList.add('is-hidden');
+    goExBtn.classList.add('is-hidden');
+    exBtn.classList.remove('is-hidden');
     exBtn.disabled = (selectedIndices.length !== requiredExchangeCount) || isAutoPlayMode;
   } else {
     // 通常対戦中：絶対に交換ボタンを非表示化
-    playBtn.style.setProperty('display', 'flex', 'important');
-    passBtn.style.setProperty('display', 'flex', 'important');
-    goExBtn.style.setProperty('display', 'none', 'important');
-    exBtn.style.setProperty('display', 'none', 'important');
+    playBtn.classList.remove('is-hidden');
+    passBtn.classList.remove('is-hidden');
+    goExBtn.classList.add('is-hidden');
+    exBtn.classList.add('is-hidden');
 
     const myTurn = (PLAYERS[currentTurnIndex] === 'player') && !isProcessing && !finishedPlayers.includes('player') && !gameEnded;
     playBtn.disabled = !myTurn || selectedIndices.length === 0 || isAutoPlayMode;
@@ -3392,7 +3392,11 @@ function selectPlayerCharacter(id) {
     autoBtn.textContent = isAutoPlayMode ? '自動: ON' : '自動: OFF';
     autoBtn.classList.toggle('btn-gold-active', isAutoPlayMode);
   }
-  document.getElementById('speed-controls').style.display = isAutoPlayMode ? 'flex' : 'none';
+  const speedControls = document.getElementById('speed-controls');
+  if (speedControls) {
+    if (isAutoPlayMode) speedControls.classList.remove('is-hidden');
+    else speedControls.classList.add('is-hidden');
+  }
   document.getElementById('char-select-overlay').classList.remove('active');
 
   bgmMgr.setCharSelectPhase(false);
@@ -4101,7 +4105,10 @@ function initEvents() {
     btn.classList.toggle('btn-gold-active', isAutoPlayMode);
 
     const speedControls = document.getElementById('speed-controls');
-    if (speedControls) speedControls.style.display = isAutoPlayMode ? 'flex' : 'none';
+    if (speedControls) {
+      if (isAutoPlayMode) speedControls.classList.remove('is-hidden');
+      else speedControls.classList.add('is-hidden');
+    }
 
     if (!isAutoPlayMode) {
       currentSpeed = 1;
@@ -4179,7 +4186,14 @@ function startApp() {
     SaveLoadManager.updateLoadButtonState();
     bgmMgr.setCharSelectPhase(true);
     AIStatusUI.pingServer();
-    console.log('[SYSTEM] アプリ初期化完了（v2.6.0 正式版）');
+    
+    // ★ バージョン番号の動的注入
+    const versionBadge = document.getElementById('version-badge');
+    const charSelectVerBadge = document.getElementById('char-select-version-badge');
+    if (versionBadge) versionBadge.textContent = `👑 Ver. ${APP_VERSION.replace('v', '')}`;
+    if (charSelectVerBadge) charSelectVerBadge.textContent = `👑 Ver. ${APP_VERSION.replace('v', '')}`;
+
+    console.log(`[SYSTEM] アプリ初期化完了（${APP_VERSION} 正式版）`);
   } catch (err) {
     console.error('[CRITICAL] 起動初期化エラー:', err);
   }
