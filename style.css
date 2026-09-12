@@ -1,5 +1,7 @@
 
-/* [CSS Version: v2.5.1] スマホ手札横並びドッキング ＆ タブレット完全分離・宮廷レスポンシブ最適化版 */
+/* [CSS Version: v2.5.2] 王宮エレガント・レスポンシブ完全調和版
+ * CPU2＆プレイヤーの横並びスリム化・セリフ枠自動フィット・パス枠完全統一
+ */
 
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap');
 
@@ -294,7 +296,7 @@ body {
 .rules-list li::before { content: "◆"; color: #d4af37; font-size: 8px; margin-right: 4px; }
 
 /* ============================================================
- * 勝利予想パネル（横離し ＆ ミニグラフ完全対応・枠サイズ固定）
+ * 勝利予想パネル
  * ============================================================ */
 .header-status-row {
   display: flex;
@@ -471,12 +473,12 @@ body {
 }
 
 /* ============================================================
- * ゲーム盤面 & CPUキャラクターエリア
+ * ゲーム盤面 & 席グリッド
  * ============================================================ */
 #game-board {
   display: grid;
   grid-template-rows: auto 1fr auto;
-  grid-template-columns: minmax(78px, 20%) 1fr minmax(78px, 20%);
+  grid-template-columns: minmax(76px, 19%) 1fr minmax(76px, 19%);
   width: 100%;
   flex: 1;
   padding: 2px 4px;
@@ -492,21 +494,12 @@ body {
   align-items: center;
   justify-content: center;
   position: relative;
-  padding: 2px;
+  padding: 1px;
   min-height: 0;
 }
 
-.char-row {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  margin-bottom: 2px;
-  position: relative;
-}
-
 .char-portrait {
-  width: clamp(44px, 7.5vh, 64px);
+  width: clamp(44px, 7.2vh, 60px);
   aspect-ratio: 2 / 3;
   object-fit: cover;
   border-radius: 6px;
@@ -527,20 +520,11 @@ body {
 }
 
 .char-portrait.portrait-talk {
-  transform: scale(1.35) translateZ(0);
+  transform: scale(1.3) translateZ(0);
   transform-origin: center center;
   z-index: 150;
   box-shadow: 0 0 24px rgba(212, 175, 55, 0.95), 0 8px 24px rgba(0, 0, 0, 0.85);
   border-color: #fff3a8;
-}
-
-.player-name-row {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  margin-top: 1px;
 }
 
 .char-badge {
@@ -549,17 +533,21 @@ body {
   background: linear-gradient(180deg, rgba(26, 38, 58, 0.95) 0%, rgba(13, 20, 32, 0.95) 100%);
   border: 1px solid var(--color-border-gold);
   border-radius: 4px;
-  padding: 1px 5px;
+  padding: 1px 6px;
   font-weight: 700;
   white-space: nowrap;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
 }
 
+/* ★ 全座席共通：残り枚数 ＆ パス回数の完全調和バッジ */
 .char-stats-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 3px;
+  justify-content: flex-start;
+  gap: 4px;
   margin-top: 2px;
   width: 100%;
 }
@@ -571,10 +559,13 @@ body {
   background: linear-gradient(180deg, #182336 0%, #0a101a 100%);
   border: 1px solid rgba(212, 175, 55, 0.5);
   border-radius: 4px;
-  padding: 1px 4px;
+  padding: 1px 5px;
   letter-spacing: 0.3px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.7);
   white-space: nowrap;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .card-count-badge.danger-few {
@@ -584,19 +575,27 @@ body {
   box-shadow: 0 0 8px rgba(255, 82, 82, 0.8) !important;
 }
 
+/* ★ パスの枠の長さをCPU・プレイヤー間で完全統一 */
 .pass-count-badge {
   font-size: 9px;
   color: #9cb0c6;
   background: rgba(10, 16, 26, 0.85);
   border: 1px solid rgba(212, 175, 55, 0.3);
   border-radius: 4px;
-  padding: 1px 4px;
+  padding: 1px 5px;
   font-weight: 600;
   white-space: nowrap;
+  min-width: 50px;
+  text-align: center;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .turn-badge-container {
-  height: clamp(15px, 2.0vh, 20px);
+  height: clamp(16px, 2.2vh, 20px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -631,45 +630,86 @@ body {
 
 .player-box.active-turn .turn-badge { visibility: visible; opacity: 1; }
 
-#cpu2 { grid-row: 1; grid-column: 2; margin-bottom: 1px; }
+/* ============================================================
+ * ★ CPU 2 (対面・上部)：左に絵柄 ｜ 右に情報の横並びスリム化
+ * ============================================================ */
+#cpu2 {
+  grid-row: 1;
+  grid-column: 2;
+  margin-bottom: 2px;
+}
+
+.cpu2-layout-plate {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px; /* 絵柄と情報の心地よい間隔 */
+  position: relative;
+}
+
+.cpu2-info-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+}
+
+/* ============================================================
+ * 左右CPU (CPU 1 & CPU 3)
+ * ============================================================ */
 #cpu1 { grid-row: 2; grid-column: 1; z-index: 100; margin-top: 2px; }
 #cpu3 { grid-row: 2; grid-column: 3; z-index: 100; margin-top: 2px; }
 
-/* CPUセリフ吹き出し */
+.char-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 2px;
+  position: relative;
+}
+
+/* ★ セリフ吹き出し枠：セリフ長さに合わせて自然にフィット（全CPU共通） */
 .dialogue-bubble {
   position: absolute;
-  top: calc(100% + 10px);
+  top: calc(100% + 8px);
   left: 50%;
   transform: translate(-50%, 0) scale(0.9);
-  background: rgba(13, 20, 32, 0.98);
-  border: 1px solid var(--color-gold-primary);
+  background: linear-gradient(180deg, rgba(16, 26, 42, 0.98) 0%, rgba(8, 12, 20, 0.98) 100%);
+  border: 1.5px solid var(--color-gold-primary);
   color: #fff3a8;
-  padding: 3px 8px;
-  border-radius: 5px;
+  padding: 4px 9px;
+  border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
-  line-height: 1.3;
+  line-height: 1.35;
   pointer-events: none;
   z-index: 600;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.9), 0 0 10px rgba(212, 175, 55, 0.4);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.95), 0 0 12px rgba(212, 175, 55, 0.45);
   opacity: 0;
   transition: opacity 0.22s ease, transform 0.22s ease;
-  white-space: nowrap;
-  max-width: 140px;
+  width: fit-content !important;
+  max-width: min(210px, 48vw) !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+  text-align: center;
+  box-sizing: border-box;
 }
 .dialogue-bubble.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
 
-#cpu1 .dialogue-bubble { left: 0; transform: translate(0, 0) scale(0.9); }
+#cpu1 .dialogue-bubble { left: 0; transform: translate(0, 0) scale(0.9); text-align: left; }
 #cpu1 .dialogue-bubble.show { transform: translate(0, 0) scale(1); }
 #cpu3 .dialogue-bubble { left: auto; right: 0; transform: translate(0, 0) scale(0.9); text-align: right; }
 #cpu3 .dialogue-bubble.show { transform: translate(0, 0) scale(1); }
 
-/* CPUカード裏面の紋章模様（百合の紋章⚜️） */
+/* ★ CPUカード裏面の重なり拡大（百合の紋章と束感を美しく展開） */
 .cpu-card-stack {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 1px 0;
+  margin: 2px 0;
   min-height: calc(var(--card-height) * 0.55);
   width: 100%;
 }
@@ -697,13 +737,19 @@ body {
   opacity: 0.9;
 }
 
-#cpu2 .cpu-card-stack .card-back { margin-left: calc(var(--card-overlap) * 0.55); }
+#cpu2 .cpu-card-stack .card-back { margin-left: calc(var(--card-overlap) * 0.45); }
 #cpu2 .cpu-card-stack .card-back:first-child { margin-left: 0; }
-#cpu1 .cpu-card-stack .card-back, #cpu3 .cpu-card-stack .card-back { margin-left: calc(var(--card-width) * -0.5); }
-#cpu1 .cpu-card-stack .card-back:first-child, #cpu3 .cpu-card-stack .card-back:first-child { margin-left: 0; }
+
+/* 左右CPUのカードの重なりを広げて見やすく調整 */
+#cpu1 .cpu-card-stack .card-back, #cpu3 .cpu-card-stack .card-back {
+  margin-left: calc(var(--card-width) * -0.36) !important;
+}
+#cpu1 .cpu-card-stack .card-back:first-child, #cpu3 .cpu-card-stack .card-back:first-child {
+  margin-left: 0 !important;
+}
 
 /* ============================================================
- * 中央のゲームフィールド（タブレット適正化：高さ微小引き締め・完全独立）
+ * 中央のゲームフィールド（祭壇）
  * ============================================================ */
 #field-area {
   grid-row: 2;
@@ -754,7 +800,6 @@ body {
   flex-shrink: 0;
 }
 
-/* ステータスバッジ */
 .status-badge {
   font-family: 'Cinzel', 'Noto Serif JP', serif;
   font-size: clamp(12px, 1.6vh, 14px);
@@ -921,7 +966,7 @@ body {
 }
 
 /* ============================================================
- * プレイヤーエリア（PC・タブレット用王道十字レイアウト：14px分離）
+ * ★ プレイヤーエリア（下部）：左に絵柄 ｜ 右に手番＆情報（三段整列）
  * ============================================================ */
 #player-area {
   grid-row: 3;
@@ -931,38 +976,28 @@ body {
   align-items: center;
   justify-content: flex-end;
   position: relative;
-  margin-top: 14px; /* タブレットで祭壇メッセージ枠と絶対に重ならない安全マージン */
+  margin-top: 6px; /* 祭壇との間に十分かつ端正な余白を確保 */
   z-index: 50;
   width: 100%;
 }
 
-.player-status-banner {
-  display: grid !important;
-  grid-template-columns: 1fr auto 1fr !important;
-  align-items: center !important;
-  justify-items: center !important;
-  width: 100% !important;
-  max-width: 480px !important;
-  margin-bottom: 2px !important;
-  position: relative !important;
+.player-layout-plate {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px; /* 絵柄と手番・名前の美しい間隔 */
+  margin-bottom: 2px;
+  position: relative;
 }
 
-.player-side-spacer { width: 100%; height: 1px; }
-
-.player-char-row {
-  grid-column: 2 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  margin: 0 !important;
-}
-
-.player-turn-slot {
-  grid-column: 3 !important;
-  justify-self: start !important;
-  margin-left: 8px !important;
-  margin-bottom: 0 !important;
-  width: 100% !important;
+/* プレイヤー情報カラム：上段（手番）/ 中段（名前）/ 下段（枚数＆パス） */
+.player-info-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
 }
 
 .your-turn-badge {
@@ -970,15 +1005,19 @@ body {
   opacity: 0;
   background: linear-gradient(180deg, #fffadb 0%, #d4af37 100%);
   color: #0b1017;
-  font-size: clamp(9.5px, 1.35vh, 11.5px);
+  font-size: clamp(9px, 1.25vh, 10.5px);
   font-weight: 900;
-  padding: 2px 9px;
-  border-radius: 5px;
+  padding: 1px 8px;
+  border-radius: 4px;
   letter-spacing: 0.5px;
-  box-shadow: 0 0 14px rgba(212, 175, 55, 0.85);
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.85);
   transition: opacity 0.2s ease, visibility 0.2s ease;
   white-space: nowrap;
   text-align: center;
+  height: 17px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .your-turn-badge.is-pass {
@@ -1097,117 +1136,6 @@ body {
   z-index: 999 !important;
   transition: all calc(0.35s / var(--speed-factor, 1)) cubic-bezier(0.25, 1, 0.5, 1) !important;
   pointer-events: none;
-}
-
-/* ============================================================
- * ★ スマホ特化レイアウト（パターン2：手札横並びドッキング ＆ 縦空間解放）
- * ============================================================ */
-@media (max-width: 600px) {
-  #game-board {
-    grid-template-columns: 66px 1fr 66px;
-    padding: 1px 2px;
-  }
-
-  /* 上CPUの引き締め */
-  #cpu2 { margin-bottom: 0; }
-  #cpu2 .char-portrait { width: 42px; }
-
-  /* 左右CPUのスリム化 */
-  .char-portrait { width: 44px; }
-  .cpu-card-stack { min-height: 36px; }
-  .cpu-card-stack .card-back { width: 22px; height: 32px; }
-
-  /* 中央祭壇（フィールド）のスマホ最適化：縦をコンパクトにし左右CPUと離す */
-  .field-altar {
-    height: clamp(170px, 25vh, 192px) !important;
-    min-height: clamp(170px, 25vh, 192px) !important;
-    max-height: clamp(170px, 25vh, 192px) !important;
-    max-width: calc(100vw - 148px) !important;
-    padding: 3px 4px !important;
-  }
-  #status-area { height: 21px; min-height: 21px; max-height: 21px; }
-  .status-badge { font-size: 11.5px; padding: 1px 8px; }
-  .field-container { height: calc(var(--card-height) + 2px); min-height: calc(var(--card-height) + 2px); }
-  .field-combo-container { height: 15px; min-height: 15px; }
-  .field-combo-badge { font-size: 9px; padding: 0 8px; }
-  .field-strength-guide { font-size: 8px; height: 12px; min-height: 12px; gap: 2px; }
-  #message-text { height: 26px; min-height: 26px; max-height: 26px; font-size: 10px; padding: 1px 4px; }
-
-  /* 【パターン2の中核】プレイヤーエリアを手札＋肖像画の横並びに刷新 */
-  #player-area {
-    margin-top: 2px !important;
-    flex-direction: row !important;
-    align-items: flex-end !important;
-    justify-content: center !important;
-    padding: 0 2px !important;
-    gap: 4px !important;
-  }
-
-  /* 肖像画スロットを手札の左端へ独立配置 */
-  .player-status-banner {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: flex-end !important;
-    width: auto !important;
-    max-width: 64px !important;
-    flex: 0 0 64px !important;
-    margin: 0 !important;
-    padding-bottom: 2px !important;
-  }
-
-  .player-side-spacer { display: none !important; }
-
-  .player-char-row {
-    margin: 0 !important;
-    gap: 1px !important;
-  }
-
-  .player-char-row .char-portrait {
-    width: 44px !important;
-    height: 60px !important;
-  }
-
-  .player-char-row .char-badge {
-    font-size: 8.5px !important;
-    padding: 0 3px !important;
-    max-width: 60px !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-  }
-
-  .player-char-row .char-stats-row {
-    gap: 2px !important;
-    margin-top: 1px !important;
-  }
-  .player-char-row .card-count-badge, .player-char-row .pass-count-badge {
-    font-size: 8px !important;
-    padding: 0 2px !important;
-  }
-
-  /* 「あなたの順番です」バッジは手札上部にフローティング出現 */
-  .player-turn-slot {
-    position: absolute !important;
-    top: -24px !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    margin: 0 !important;
-    width: auto !important;
-    z-index: 120 !important;
-  }
-  .your-turn-badge {
-    font-size: 10px !important;
-    padding: 2px 10px !important;
-  }
-
-  /* 手札エリアを右側いっぱいに展開 */
-  #player-hand {
-    flex: 1 1 auto !important;
-    max-width: calc(100% - 68px) !important;
-    height: calc(var(--card-height) + 16px) !important;
-    padding: 0 2px !important;
-    margin-bottom: 0 !important;
-  }
 }
 
 /* ============================================================
@@ -1412,7 +1340,7 @@ body {
 #version-badge:hover { color: #ffd700; }
 
 .rank-badge {
-  font-size: clamp(10.5px, 1.4vh, 13.5px);
+  font-size: clamp(10px, 1.35vh, 12.5px);
   color: var(--color-gold-primary);
   font-weight: 700;
   text-shadow: 0 2px 4px rgba(0,0,0,0.7);

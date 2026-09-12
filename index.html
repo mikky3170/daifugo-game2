@@ -1,5 +1,7 @@
 
-<!-- [HTML Version: v2.5.1] スマホ手札横並びドッキング ＆ タブレット完全分離・宮廷レスポンシブ最適化版 -->
+<!-- [HTML Version: v2.5.2] 王宮エレガント・レスポンシブ完全調和版
+ * CPU2＆プレイヤーの横並びスリム化・手番バッジ上段配置・パス枠完全統一
+ -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -116,7 +118,7 @@
       </div>
     </div>
 
-    <!-- キャラクター紹介モーダル（上品な宮廷カード化・肖像画サイズ完全適正化） -->
+    <!-- キャラクター紹介モーダル -->
     <div class="modal-overlay" id="char-modal">
       <div class="modal-content">
         <div class="modal-header">
@@ -215,7 +217,7 @@
       </div>
     </div>
 
-    <!-- ルール解説モーダル（宮廷古書調カードレイアウト） -->
+    <!-- ルール解説モーダル -->
     <div class="modal-overlay" id="rule-modal">
       <div class="modal-content">
         <div class="modal-header">
@@ -379,24 +381,27 @@
       </div>
     </div>
 
-    <!-- ゲーム盤面（参考画像配置） -->
+    <!-- ゲーム盤面 -->
     <div id="game-board">
-      <!-- CPU 2 (対面) -->
+      <!-- CPU 2 (対面・上部：左に絵柄 ｜ 右に情報の横並びスリム化) -->
       <div class="player-box" id="cpu2">
-        <div class="turn-badge-container">
-          <div class="turn-badge" id="cpu2-badge">THINKING</div>
-        </div>
-        <div class="char-row">
+        <div class="cpu2-layout-plate">
+          <!-- 左：肖像画 -->
           <img class="char-portrait" id="cpu2-portrait" src="" alt="">
-          <div class="player-name-row">
-            <span class="ai-brain-dot" id="cpu2-brain-dot" title="AI推論中"></span>
-            <div class="char-badge" id="cpu2-char-title">---</div>
-            <div class="rank-badge" id="cpu2-rank"></div>
-          </div>
-          <!-- 残り枚数 ＆ パス回数（横並び固定） -->
-          <div class="char-stats-row">
-            <span class="card-count-badge" id="cpu2-card-count">残り -枚</span>
-            <span class="pass-count-badge"><span id="cpu2-pass-label">パス: </span><span id="cpu2-pass">0</span></span>
+          <!-- 右：情報カラム -->
+          <div class="cpu2-info-col">
+            <div class="turn-badge-container">
+              <div class="turn-badge" id="cpu2-badge">THINKING</div>
+            </div>
+            <div class="player-name-row">
+              <span class="ai-brain-dot" id="cpu2-brain-dot" title="AI推論中"></span>
+              <div class="char-badge" id="cpu2-char-title">---</div>
+              <div class="rank-badge" id="cpu2-rank"></div>
+            </div>
+            <div class="char-stats-row">
+              <span class="card-count-badge" id="cpu2-card-count">残り -枚</span>
+              <span class="pass-count-badge"><span id="cpu2-pass-label">パス: </span><span id="cpu2-pass">0</span></span>
+            </div>
           </div>
         </div>
         <div class="cpu-card-stack" id="cpu2-stack"></div>
@@ -413,7 +418,6 @@
             <span class="ai-brain-dot" id="cpu1-brain-dot" title="AI推論中"></span>
             <div class="char-badge" id="cpu1-char-title">---</div>
           </div>
-          <!-- 残り枚数 ＆ パス回数（横並び固定） -->
           <div class="char-stats-row">
             <span class="card-count-badge" id="cpu1-card-count">残り -枚</span>
             <span class="pass-count-badge"><span id="cpu1-pass-label">パス: </span><span id="cpu1-pass">0</span></span>
@@ -423,7 +427,7 @@
         <div class="rank-badge" id="cpu1-rank"></div>
       </div>
 
-      <!-- 中央：場（宮廷の祭壇・参考画像完全再現枠） -->
+      <!-- 中央：場（宮廷の祭壇） -->
       <div id="field-area">
         <div class="field-altar">
           <!-- 上部ステータス（👑 革命中 ⚔️ / ⚜️ 平時 ⚜️ / ⚡ 11 Back! ⚡） -->
@@ -467,7 +471,6 @@
             <span class="ai-brain-dot" id="cpu3-brain-dot" title="AI推論中"></span>
             <div class="char-badge" id="cpu3-char-title">---</div>
           </div>
-          <!-- 残り枚数 ＆ パス回数（横並び固定） -->
           <div class="char-stats-row">
             <span class="card-count-badge" id="cpu3-card-count">残り -枚</span>
             <span class="pass-count-badge"><span id="cpu3-pass-label">パス: </span><span id="cpu3-pass">0</span></span>
@@ -477,30 +480,29 @@
         <div class="rank-badge" id="cpu3-rank"></div>
       </div>
 
-      <!-- プレイヤー (自分：スマホ時は手札と横並びドッキング / PC・タブレット時は中央独立) -->
+      <!-- プレイヤー (自分：左に絵柄 ｜ 右に手番・名前・枚数の三段横並びスリム化) -->
       <div class="player-box" id="player-area">
-        <div class="player-status-banner">
-          <!-- 左右ブレ防止用スペーサー（PC・タブレット用） -->
-          <div class="player-side-spacer"></div>
-
-          <!-- 肖像画＆ステータス（スマホ時は手札の左端へ自動フィット） -->
-          <div class="char-row player-char-row">
-            <img class="char-portrait" id="player-portrait" src="" alt="">
+        <div class="player-layout-plate">
+          <!-- 左：肖像画 -->
+          <img class="char-portrait" id="player-portrait" src="" alt="">
+          
+          <!-- 右：情報カラム（手番バッジをキャラ名の上に配置） -->
+          <div class="player-info-col">
+            <!-- ① 最上段：手番バッジ -->
+            <div class="turn-badge-container">
+              <div class="your-turn-badge" id="player-badge">あなたの順番です</div>
+            </div>
+            <!-- ② 中段：キャラ名＆役職 -->
             <div class="player-name-row">
               <span class="ai-brain-dot" id="player-brain-dot" title="AI推論中"></span>
               <div class="char-badge" id="player-char-title">---</div>
               <div class="rank-badge" id="player-rank"></div>
             </div>
-            <!-- 残り枚数 ＆ パス回数（横並び固定） -->
+            <!-- ③ 下段：残り枚数 ＆ パス回数（CPUと枠の長さを完全統一） -->
             <div class="char-stats-row">
               <span class="card-count-badge" id="player-card-count">残り -枚</span>
               <span class="pass-count-badge"><span id="player-pass-label">パス: </span><span id="player-pass">0</span></span>
             </div>
-          </div>
-
-          <!-- 手番バッジ（「あなたの順番です」ゴールドプレート） -->
-          <div class="turn-badge-container player-turn-slot">
-            <div class="your-turn-badge" id="player-badge">あなたの順番です</div>
           </div>
         </div>
 
@@ -538,15 +540,14 @@
         </div>
         <button class="btn btn-sub" id="stats-btn" title="戦績・ランキング">📊 戦績</button>
         <button class="btn btn-sub" id="debug-log-btn" title="デバッグログ">📜 ログ</button>
-        <!-- 誤操作防止：右端へ独立したリセットボタン -->
         <button class="btn btn-sub btn-reset-safe" id="reset-btn" title="ゲームリセット">🔄 リセット</button>
       </div>
     </div>
 
-    <!-- 最下部ブランド＆バージョンフッター（v2.5.1更新） -->
+    <!-- 最下部ブランド＆バージョンフッター -->
     <div id="app-footer-bar">
       <span class="footer-brand">👑 ROYAL CARD GAME</span>
-      <span id="version-badge" title="クリックで更新履歴を表示">👑 Ver. 2.5.1</span>
+      <span id="version-badge" title="クリックで更新履歴を表示">👑 Ver. 2.5.2</span>
     </div>
 
   </div> <!-- /#app-viewport -->

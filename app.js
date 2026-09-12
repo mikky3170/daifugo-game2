@@ -1,4 +1,5 @@
-/* [JS Version: v2.5.1] スマホ手札横並びドッキング ＆ タブレット完全分離・宮廷レスポンシブ最適化版 - 前半（1/2）
+
+/* [JS Version: v2.5.2] 王宮エレガント・レスポンシブ完全調和版 - 前半（1/2）
  * バージョンJS一元管理・最大10件表示・リセット時多重タイマー完全破棄
  * 王MCTS・深層学習推論・全キャラクターセリフ完全収録（ゲームロジック完全保護）
  */
@@ -6,17 +7,29 @@
 /* ====================================================================
  * ROYAL DAIFUGO - バージョン管理マスター（JavaScript一元管理）
  * ==================================================================== */
-const APP_VERSION = "v2.5.1";
+const APP_VERSION = "v2.5.2";
 const VERSION_HISTORY = [
+  {
+    ver: "v2.5.2",
+    date: "2026-09-12",
+    title: "王宮エレガント・レスポンシブ完全調和版",
+    changes: [
+      "CPU2（上部）およびプレイヤー（下部）のレイアウトを「左に絵柄 ｜ 右に情報」の横並びスリム化に刷新",
+      "プレイヤー手番バッジ（あなたの順番です）をキャラ名の上段スロットへ端正に配置",
+      "全座席（CPU1〜3・プレイヤー）のパス枠サイズ（min-width: 50px）を完全統一",
+      "CPU1〜3のセリフ吹き出し枠を文字数に応じた自然伸縮（fit-content）へ改良、枠はみ出しを完全根絶",
+      "左右CPU（CPU1, 3）のカード裏面束の重なり幅を広げ、百合の紋章と束感を美しく展開",
+      "王MCTS、PyTorch深層学習推論、ルール判定、全13キャラセリフ辞書を完全保持"
+    ],
+    files: ["index.html", "style.css", "app.js"]
+  },
   {
     ver: "v2.5.1",
     date: "2026-09-12",
     title: "スマホ手札横並びドッキング ＆ タブレット完全分離・宮廷レスポンシブ最適化版",
     changes: [
-      "スマホ縦画面時、プレイヤー肖像画を手札の左端へドッキング配置し中央縦スペースを広大に解放",
-      "タブレット・PC画面時、中央祭壇高さを微小引き締め＆プレイヤー肖像画との安全マージン（14px）を強制確保",
-      "CPUセリフ吹き出しと中央祭壇の干渉・重なりを解消",
-      "王MCTS、PyTorch深層学習推論、ルール判定、全13キャラセリフ辞書を完全保持"
+      "スマホ縦画面時、プレイヤー肖像画を手札の左端へドッキング配置し中央縦スペースを解放",
+      "タブレット・PC画面時、中央祭壇高さを微小引き締め＆プレイヤー肖像画との安全マージンを強制確保"
     ],
     files: ["index.html", "style.css", "app.js"]
   },
@@ -79,16 +92,6 @@ const VERSION_HISTORY = [
       "AI通信ステータスランプ（緑・黄・赤・シアン）の表示ロジックを完全復元",
       "リアルタイム勝利予想の1位プレイヤーに王冠＆ゴールドグロー点滅ハイライトを付与",
       "ゲーム終了画面の「同じメンバーで続行」「メンバーを再抽選」ボタンを左右50%均等の美しい横並びに固定"
-    ],
-    files: ["index.html", "style.css", "app.js"]
-  },
-  {
-    ver: "v2.3.6",
-    date: "2026-09-12",
-    title: "勝利予想・戦況UI改修（4人勝率グリッド・残り枚数・危険度表示）版",
-    changes: [
-      "画面上部に4人全員の勝率（%）とテーマカラーを2列×2行でリアルタイム表示",
-      "各プレイヤーの枠に「残り ○枚」バッジを新設し、3枚以下で危険度ハイライトを付与"
     ],
     files: ["index.html", "style.css", "app.js"]
   }
@@ -1793,6 +1796,7 @@ function decideCpuMove(cpu) {
   if (charDef.id === 'KING') {
     chosen = kingDecideMoveUniversal(cpu, hand, fieldCards, rev, hands, finishedPlayers, playedCardsHistory, lastPlayedPlayer, consecutivePasses, PLAYERS, false);
   } else if (charDef.id === 'BEGINNER_AI' || charDef.id === 'SUPER_AI' || charDef.id === 'MID_AI') {
+    const modelType = (charDef.id === 'SUPER_AI' || charDef.id === 'MID_AI') ? 'super' : 'hi';
     chosen = validMoves[0];
   } else {
     const nextIdx = (PLAYERS.indexOf(cpu) + 1) % PLAYERS.length;
@@ -1806,10 +1810,10 @@ function decideCpuMove(cpu) {
 }
 
 
-/* [JS Version: v2.5.1] スマホ手札横並びドッキング ＆ タブレット完全分離・宮廷レスポンシブ最適化版 - 後半（2/2）
- * バージョンJS一元管理・最大10件表示・リセット時多重タイマー完全破棄
- * 王MCTS・深層学習推論・全キャラクターセリフ完全収録（ゲームロジック完全保護）
- */
+/* ====================================================================
+ * ★★★【app.js 後半（2/2）ここから結合】★★★
+ * 先ほど出力した【app.js 前半（1/2）】の直下に、このまま貼り付けてください
+ * ==================================================================== */
 
 /* ----------------------------------------------------
  * 8. 戦況評価・勝率メーターエンジン（完全保護）
@@ -1941,15 +1945,15 @@ function showCharacterDialogue(player, text) {
   const box = document.getElementById(player);
   if (!box) return;
 
-  const charRow = box.querySelector('.char-row');
+  const targetAnchor = box.querySelector('.cpu2-layout-plate') || box.querySelector('.char-row') || box;
   const portrait = document.getElementById(`${player}-portrait`);
-  if (!charRow || !portrait) return;
+  if (!portrait) return;
 
-  let bubble = charRow.querySelector('.dialogue-bubble');
+  let bubble = box.querySelector('.dialogue-bubble');
   if (!bubble) {
     bubble = document.createElement('div');
     bubble.className = 'dialogue-bubble';
-    charRow.appendChild(bubble);
+    targetAnchor.appendChild(bubble);
   }
 
   if (bubble.timeoutId) GameTimer.clear(bubble.timeoutId);
@@ -2211,7 +2215,7 @@ function render(isFullRedraw = false) {
 
   ['cpu1', 'cpu2', 'cpu3'].forEach(c => renderCpuStack(c, hands[c].length));
 
-  // 各席の「残り ○枚」＆「パス: ○」横並び更新
+  // 各席の「残り ○枚」＆「パス: ○」完全統一更新
   PLAYERS.forEach(p => {
     const countBadge = document.getElementById(`${p}-card-count`);
     if (countBadge) {
@@ -3931,7 +3935,7 @@ function startApp() {
     initEvents();
     bgmMgr.setCharSelectPhase(true);
     AIStatusUI.pingServer();
-    console.log('[SYSTEM] アプリ初期化完了（v2.5.1 正式版）');
+    console.log('[SYSTEM] アプリ初期化完了（v2.5.2 正式版）');
   } catch (err) {
     console.error('[CRITICAL] 起動初期化エラー:', err);
   }
