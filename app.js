@@ -1,5 +1,5 @@
 
-/* [JS Version: v2.5.3] 王宮エレガント・バランス微調整版 - 前半（1/2）
+/* [JS Version: v2.5.4] プレイヤートランプ全部乗せ ＆ 端末別完全最適化版 - 前半（1/2）
  * バージョンJS一元管理・最大10件表示・リセット時多重タイマー完全破棄
  * 王MCTS・深層学習推論・全キャラクターセリフ完全収録（ゲームロジック完全保護）
  */
@@ -7,8 +7,22 @@
 /* ====================================================================
  * ROYAL DAIFUGO - バージョン管理マスター（JavaScript一元管理）
  * ==================================================================== */
-const APP_VERSION = "v2.5.3";
+const APP_VERSION = "v2.5.4";
 const VERSION_HISTORY = [
+  {
+    ver: "v2.5.4",
+    date: "2026-09-12",
+    title: "プレイヤートランプ全部乗せ ＆ 端末別完全最適化版",
+    changes: [
+      "プレイヤートランプを羊皮紙・細密金枠・中央透かし彫り・Cinzel数字・王冠・浮遊オーラの全部乗せに刷新",
+      "勝利予想メーター100%時のトラック長さを4人全員で完全同一（36px）に固定",
+      "プレイヤーおよび全CPUのパス枠の長さを完全統一（50px）",
+      "タブレット時：CPU肖像画をキャラ名同幅（76px）に拡大、CPUトランプ拡大、セリフ1行横長表示",
+      "スマホ時：CPU1右移動・CPU3左移動、CPU1/3カード束を枚数+パス幅（約96px）に収束",
+      "王MCTS、PyTorch深層学習推論、ルール判定、全13キャラセリフ辞書を完全保持"
+    ],
+    files: ["index.html", "style.css", "app.js"]
+  },
   {
     ver: "v2.5.3",
     date: "2026-09-12",
@@ -18,12 +32,8 @@ const VERSION_HISTORY = [
       "CPU1のセリフ枠を改行なし1行フィットへ改良、枠はみ出しを解消",
       "CPU絵柄拡大を上にはみ出さず下方向へひと回り大きく（1.5倍）拡大表示",
       "革命・11バック・8切り演出バナーを中央祭壇枠内収容サイズに最適化",
-      "バージョン履歴モーダルの各バージョンを美麗な金枠カード化",
       "全ボタンフォントをCinzel＋Noto Serif JPの宮廷明朝体に統一",
-      "WINNER表示の役職文字サイズを1.5倍に拡大",
-      "勝利予想の「AI稼働中」枠サイズを完全固定（文字変化による揺れ防止）",
-      "操作ボタン名称を「📊 戦績表示」「🔄 キャラ抽選」に更新、自動ONを左詰め・キャラ抽選を右詰め配置",
-      "スマホ時の中央祭壇幅＆トランプカードサイズを縮小、左右CPUカード重なりを深く調整"
+      "操作ボタン名称を「📊 戦績表示」「🔄 キャラ抽選」に更新、自動ONを左詰め・キャラ抽選を右詰め配置"
     ],
     files: ["index.html", "style.css", "app.js"]
   },
@@ -34,9 +44,7 @@ const VERSION_HISTORY = [
     changes: [
       "CPU2（上部）およびプレイヤー（下部）のレイアウトを「左に絵柄 ｜ 右に情報」の横並びスリム化に刷新",
       "プレイヤー手番バッジ（あなたの順番です）をキャラ名の上段スロットへ端正に配置",
-      "全座席（CPU1〜3・プレイヤー）のパス枠サイズ（min-width: 50px）を完全統一",
-      "CPU1〜3のセリフ吹き出し枠を文字数に応じた自然伸縮（fit-content）へ改良、枠はみ出しを完全根絶",
-      "左右CPU（CPU1, 3）のカード裏面束の重なり幅を広げ、百合の紋章と束感を美しく展開"
+      "全座席（CPU1〜3・プレイヤー）のパス枠サイズ（min-width: 50px）を完全統一"
     ],
     files: ["index.html", "style.css", "app.js"]
   },
@@ -58,11 +66,7 @@ const VERSION_HISTORY = [
       "バージョン情報をJavaScriptで一元管理化（過去最大10件の自動トリミング表示仕様）",
       "リセットボタン連打による倍速加速バグを完全解消（全タイマー破棄機構 GameTimer 導入）",
       "キャラ選択画面のタイトル・説明文を完全センタリングし、宮廷調シャンパンゴールドへ刷新",
-      "キャラ紹介モーダルの肖像画サイズを端正なコンパクト金枠（44px×66px）に完全適正化",
-      "キャラ紹介およびルール解説の背景・文字色・枠線を高級宮廷カード調に刷新",
-      "上部勝利予想のキャラクター名（上級AI・革命家等）の文字欠け・重なりを完全根絶",
-      "対戦画面の「⚜️ 平時 ⚜️」「👑 革命中 ⚔️」「⚡ 11 Back! ⚡」を大文字・格式高い宮廷プレートへ刷新",
-      "CPUカード裏面に参考画像を忠実に再現した「深いネイビー＋金枠＋百合の紋章（⚜️）」を描画"
+      "キャラ紹介モーダルの肖像画サイズを端正なコンパクト金枠（44px×66px）に完全適正化"
     ],
     files: ["index.html", "style.css", "app.js"]
   },
@@ -83,20 +87,7 @@ const VERSION_HISTORY = [
     title: "UI枠サイズ完全固定・パス回数横並び・プレイヤー位置ブレ解消版",
     changes: [
       "カードの捨てる場（中央祭壇）の外枠サイズを完全固定（上下揺れを遮断）",
-      "パス回数表示を全座席で「残り枚数」のすぐ右側へスマートに横並び配置",
-      "プレイヤー手番バッジの出現・非出現による肖像画の左右位置ブレを完全解消"
-    ],
-    files: ["index.html", "style.css", "app.js"]
-  },
-  {
-    ver: "v2.4.0",
-    date: "2026-09-12",
-    title: "ゲームイベント演出（革命・革命返し・11バック・8切り）完全対応版",
-    changes: [
-      "革命成立時の中央「⚡ REVOLUTION ⚡」迫力アニメーション演出を追加",
-      "革命返し成立時の中央「⚡ 革命返し！ ⚡」黄金閃光演出を追加",
-      "11バック成立時の中央「⚡ 11 BACK ⚡」蒼炎演出を追加",
-      "8切り成立時の「⚔️ 8切り ⚔️」シックな白銀斬撃演出を追加"
+      "パス回数表示を全座席で「残り枚数」のすぐ右側へスマートに横並び配置"
     ],
     files: ["index.html", "style.css", "app.js"]
   }
@@ -1819,6 +1810,7 @@ function decideCpuMove(cpu) {
  * 続けて、次のメッセージでお出しする【app.js 後半（2/2）】をこの直下に結合してください
  * ==================================================================== */
 
+
 /* ====================================================================
  * ★★★【app.js 後半（2/2）ここから結合】★★★
  * 先ほど出力した【app.js 前半（1/2）】の直下に、このまま貼り付けてください
@@ -1918,7 +1910,7 @@ function updateStatusUI() {
   updateEvalMeterUI();
 }
 
-/* 勝利予想パネル動的描画 */
+/* 勝利予想パネル動的描画（100%時の長さ完全統一） */
 function updateEvalMeterUI() {
   const { rates, topPlayer, diffFromSecond, isFinished } = calculateRealtimeWinRates();
   const gridEl = document.getElementById('eval-rates-grid');
@@ -2021,23 +2013,34 @@ function checkAndTriggerDialogue(player, eventType, extraCards = []) {
   }
 }
 
+/* ★★★ 全部乗せトランプ要素生成処理 ★★★
+ * 透かし彫りマーク・ミニ王冠・最強2金細工・黄金仮面ジョーカー
+ */
 function createCardElement(card) {
   const el = document.createElement('div');
-  el.className = `card ${card.suitClass}`;
+
   if (card.isJoker) {
+    el.className = 'card joker';
     el.innerHTML = `
       <div class="card-top">
         <span class="card-suit-symbol">${card.suitSymbol}</span>
         <span class="card-rank">JOKER</span>
       </div>
-      <span class="card-center-icon">${card.suitSymbol}</span>
+      <span class="card-center-icon">🎭</span>
+      <div class="card-watermark">⚜</div>
     `;
   } else {
+    const isPicture = (card.display === 'J' || card.display === 'Q' || card.display === 'K');
+    const crownHtml = isPicture ? '<span class="royal-crown-mini">👑</span>' : '';
+    const rankClass = (card.display === '2') ? ' card-rank-2' : '';
+    
+    el.className = `card ${card.suitClass}${rankClass}`;
     el.innerHTML = `
       <div class="card-top">
         <span class="card-suit-symbol">${card.suitSymbol}</span>
-        <span class="card-rank">${card.display}</span>
+        <span class="card-rank">${card.display}${crownHtml}</span>
       </div>
+      <div class="card-watermark">${card.suitSymbol}</div>
     `;
   }
   return el;
@@ -3114,7 +3117,7 @@ function updateLogViewerUI() {
   tableWrap.innerHTML = thtml;
 }
 
-/* ★ バージョン履歴モーダル（各バージョン枠付きカード・最大10件制限） */
+/* バージョン履歴モーダル（最新10件制限） */
 function renderVersionHistoryModal() {
   const body = document.getElementById('version-modal-body');
   if (!body) return;
@@ -3945,7 +3948,7 @@ function startApp() {
     initEvents();
     bgmMgr.setCharSelectPhase(true);
     AIStatusUI.pingServer();
-    console.log('[SYSTEM] アプリ初期化完了（v2.5.3 正式版）');
+    console.log('[SYSTEM] アプリ初期化完了（v2.5.4 正式版）');
   } catch (err) {
     console.error('[CRITICAL] 起動初期化エラー:', err);
   }
@@ -3956,6 +3959,5 @@ if (document.readyState === 'loading') {
 } else {
   startApp();
 }
-
 
 

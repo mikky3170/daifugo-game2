@@ -1,6 +1,5 @@
-
-/* [CSS Version: v2.5.3] 王宮エレガント・バランス微調整版
- * 役職バッジ幅統一・下方向肖像画拡大・セリフ改行なし・ボタン明朝体・祭壇内バナー完全対応
+/* [CSS Version: v2.5.4] プレイヤートランプ全部乗せ ＆ 端末別完全最適化版
+ * 羊皮紙・細密金枠・透かし・Cinzel・王冠・浮遊オーラ・メーター統一・座席シフト完全対応
  */
 
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap');
@@ -20,6 +19,10 @@
   --color-bg-surface: rgba(10, 18, 32, 0.94);
   --color-border-gold: rgba(212, 175, 55, 0.55);
   --color-border-glow: rgba(255, 243, 168, 0.85);
+
+  /* 宮廷インクカラー */
+  --ink-red: #981b1e;
+  --ink-black: #121a24;
 }
 
 * {
@@ -95,7 +98,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 }
 
 /* ============================================================
- * ゲームイベント演出バナー（中央祭壇の枠内にぴったり収まる設計）
+ * ゲームイベント演出バナー（祭壇枠内収容シネマティック枠）
  * ============================================================ */
 .event-banner {
   position: absolute;
@@ -110,7 +113,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   justify-content: center;
   text-align: center;
   width: 86%;
-  max-width: 250px; /* 祭壇幅から絶対にはみ出さない */
+  max-width: 250px;
   padding: 2px;
   border-radius: 8px;
   backdrop-filter: blur(8px);
@@ -304,7 +307,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 .rules-list li::before { content: "◆"; color: #d4af37; font-size: 8px; margin-right: 4px; }
 
 /* ============================================================
- * 勝利予想パネル ＆ 「AI稼働中」完全固定枠
+ * 勝利予想パネル ＆ メーター100%時の長さ完全統一
  * ============================================================ */
 .header-status-row {
   display: flex;
@@ -403,21 +406,26 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 .eval-name {
   color: #e0e6ed;
   font-size: 10px;
-  max-width: 52px;
+  width: 48px;
+  min-width: 48px;
+  max-width: 48px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
+/* ★ 勝利予想メーター：100%時のトラック長さを4人全員で完全同一に固定 */
 .eval-mini-track {
-  flex: 1 1 auto;
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
   height: 4px;
   background: rgba(255, 255, 255, 0.12);
   border-radius: 2px;
   overflow: hidden;
   margin: 0 2px;
-  min-width: 10px;
+  flex: 0 0 36px !important;
 }
 .eval-mini-fill {
   height: 100%;
@@ -435,7 +443,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   flex-shrink: 0;
 }
 
-/* ★ 勝利予想の「AI稼働中」等の表示枠：文字が変わってもサイズを絶対固定 */
+/* AI稼働中プレート（完全サイズ固定） */
 .ai-status-orb-btn {
   display: flex;
   align-items: center;
@@ -536,7 +544,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   box-shadow: 0 0 16px rgba(212, 175, 55, 0.9), 0 6px 18px rgba(0, 0, 0, 0.8);
 }
 
-/* ★ CPU絵柄拡大：上からはみ出さないよう「下方向」へ拡大 ＆ ひと回り大きく (scale: 1.5) */
+/* CPU絵柄拡大：上からはみ出さず下方向へひと回り大きく（scale: 1.5） */
 .char-portrait.portrait-talk {
   transform-origin: top center !important;
   transform: scale(1.5) translateZ(0) !important;
@@ -545,7 +553,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   border-color: #fff3a8;
 }
 
-/* ★ キャラ名と役職バッジ（大富豪等）の幅・デザイン完全統一 */
+/* キャラ名と役職バッジ（大富豪等）の幅統一 */
 .name-rank-stack {
   display: flex;
   flex-direction: column;
@@ -622,7 +630,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   box-shadow: 0 0 8px rgba(255, 82, 82, 0.8) !important;
 }
 
-/* パスの枠の長さをCPU・プレイヤー間で完全統一 */
+/* ★ パスの枠の長さ：プレイヤーと全CPUで完全同一（50px） */
 .pass-count-badge {
   font-size: 9px;
   color: #9cb0c6;
@@ -632,13 +640,16 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   padding: 1px 5px;
   font-weight: 600;
   white-space: nowrap;
-  min-width: 50px;
+  width: 50px !important;
+  min-width: 50px !important;
+  max-width: 50px !important;
   text-align: center;
   height: 18px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .turn-badge-container {
@@ -678,7 +689,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 .player-box.active-turn .turn-badge { visibility: visible; opacity: 1; }
 
 /* ============================================================
- * CPU 2 (対面・上部)：左に絵柄 ｜ 右に情報の横並びスリム化
+ * CPU 2 (対面・上部)
  * ============================================================ */
 #cpu2 {
   grid-row: 1;
@@ -718,19 +729,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   position: relative;
 }
 
-/* ★ CPU1セリフ：改行なし・枠から出ないように表示 */
-#cpu1 .dialogue-bubble {
-  left: 0;
-  transform: translate(0, 0) scale(0.9);
-  text-align: left;
-  white-space: nowrap !important;
-  word-break: keep-all !important;
-  max-width: none !important;
-  padding: 3px 8px !important;
-}
-#cpu1 .dialogue-bubble.show { transform: translate(0, 0) scale(1); }
-
-/* CPU2・CPU3セリフ枠 */
+/* CPUセリフ枠 */
 .dialogue-bubble {
   position: absolute;
   top: calc(100% + 8px);
@@ -739,7 +738,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   background: linear-gradient(180deg, rgba(16, 26, 42, 0.98) 0%, rgba(8, 12, 20, 0.98) 100%);
   border: 1.5px solid var(--color-gold-primary);
   color: #fff3a8;
-  padding: 4px 9px;
+  padding: 3px 8px;
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
@@ -750,18 +749,19 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   opacity: 0;
   transition: opacity 0.22s ease, transform 0.22s ease;
   width: fit-content !important;
-  max-width: min(210px, 48vw) !important;
-  white-space: normal;
-  word-break: break-word;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
   text-align: center;
   box-sizing: border-box;
 }
 .dialogue-bubble.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
 
+#cpu1 .dialogue-bubble { left: 0; transform: translate(0, 0) scale(0.9); text-align: left; }
+#cpu1 .dialogue-bubble.show { transform: translate(0, 0) scale(1); }
 #cpu3 .dialogue-bubble { left: auto; right: 0; transform: translate(0, 0) scale(0.9); text-align: right; }
 #cpu3 .dialogue-bubble.show { transform: translate(0, 0) scale(1); }
 
-/* ★ CPU1, CPU3のトランプの重なり：少し深くし再度（両端）にはみ出さない */
+/* CPUカード裏面の重なり */
 .cpu-card-stack {
   display: flex;
   align-items: center;
@@ -798,7 +798,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 #cpu2 .cpu-card-stack .card-back:first-child { margin-left: 0; }
 
 #cpu1 .cpu-card-stack .card-back, #cpu3 .cpu-card-stack .card-back {
-  margin-left: calc(var(--card-width) * -0.48) !important; /* 少し深くして端からはみ出さない */
+  margin-left: calc(var(--card-width) * -0.46) !important;
 }
 #cpu1 .cpu-card-stack .card-back:first-child, #cpu3 .cpu-card-stack .card-back:first-child {
   margin-left: 0 !important;
@@ -1100,46 +1100,70 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   overflow: visible;
 }
 
+/* ============================================================
+ * ★★★ プレイヤートランプ「全部乗せ」極上デザイン ★★★
+ * 羊皮紙グラデーション・二重細密金枠・透かし彫り・Cinzel・深紅＆オニキス黒
+ * ============================================================ */
 .card {
   width: var(--card-width);
   height: var(--card-height);
-  background: #fafcff !important;
+  /* アイボリー羊皮紙グラデーション（中心から外側へ淡く古風な深み） */
+  background: radial-gradient(ellipse at 50% 45%, #fffdf6 0%, #f7f2e5 75%, #ece3ce 100%) !important;
   border-radius: 5px;
-  border: 1px solid rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(180, 145, 45, 0.7);
+  /* 細密金枠（内側二重フレーム 0.8px）＋ 立体ペーパーシャドウ */
   box-shadow:
-    0 3px 8px rgba(0, 0, 0, 0.55),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.85);
+    0 3px 10px rgba(0, 0, 0, 0.65),
+    inset 0 0 0 1.2px rgba(255, 255, 255, 0.95),
+    inset 0 0 0 2.2px rgba(212, 175, 55, 0.4),
+    inset 0 0 6px rgba(180, 145, 45, 0.15);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   padding: 3px 4px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   user-select: none;
-  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.18s ease, border-color 0.18s ease;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s ease, border-color 0.2s ease;
   position: relative;
   flex-shrink: 0;
   touch-action: manipulation;
+  overflow: hidden;
 }
 
+/* ★ 中央スート透かし彫り（ウォーターマーク：不透明度8%で上品に浮かび上がる） */
+.card-watermark {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: clamp(26px, 4.8vh, 38px);
+  color: rgba(180, 145, 45, 0.12);
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+  line-height: 1;
+}
+
+/* ★ 手札選択時の「浮遊ゴールドオーラ」 */
 #player-hand .card {
   cursor: pointer;
   margin-left: var(--hand-overlap, var(--card-overlap));
 }
-
 #player-hand .card:first-child { margin-left: 0; }
 
 #player-hand .card:hover {
   transform: translateY(-6px);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.65);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.75), 0 0 8px rgba(212, 175, 55, 0.35);
 }
 
 #player-hand .card.selected {
   transform: translateY(-14px) !important;
-  border: 2px solid #d4af37 !important;
+  border: 1.5px solid #fffadb !important;
+  /* 黄金の浮遊オーラグロー ＋ 浮き上がりシャドウ */
   box-shadow:
-    0 0 10px rgba(212, 175, 55, 0.65),
-    0 6px 14px rgba(0, 0, 0, 0.6) !important;
-  background: #ffffff !important;
+    0 0 16px rgba(255, 215, 0, 0.8),
+    0 10px 24px rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1.5px #ffd700 !important;
+  background: radial-gradient(ellipse at 50% 45%, #ffffff 0%, #fffbf0 70%, #f7eccf 100%) !important;
   z-index: 100 !important;
 }
 
@@ -1147,43 +1171,87 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  line-height: 0.95;
+  line-height: 0.92;
   pointer-events: none;
+  z-index: 2;
+  position: relative;
 }
 
 .card-suit-symbol {
-  font-size: clamp(10px, 1.55vh, 14px);
+  font-size: clamp(10px, 1.55vh, 13.5px);
   line-height: 1;
   margin-bottom: 1px;
 }
 
+/* ★ 数字フォント：王室セリフ体『Cinzel』 */
 .card-rank {
-  font-size: clamp(11px, 1.7vh, 15px);
-  font-weight: 800;
+  font-family: 'Cinzel', serif !important;
+  font-size: clamp(12px, 1.75vh, 16px);
+  font-weight: 900;
   letter-spacing: -0.5px;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  gap: 1.5px;
 }
 
-.card.spade, .card.club { color: #0f141c; }
-.card.heart, .card.diamond { color: #ba1a1a; }
+/* ★ 絵札（J, Q, K）のミニ王冠装飾 */
+.royal-crown-mini {
+  font-size: 8px;
+  line-height: 1;
+  filter: drop-shadow(0 0 2px rgba(212, 175, 55, 0.8));
+}
 
+/* ★ 最強カード（2）のコーナー金細工 */
+.card-rank-2::before {
+  content: "✦";
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-size: 8px;
+  color: var(--color-gold-primary);
+  opacity: 0.8;
+  z-index: 2;
+}
+.card-rank-2::after {
+  content: "✦";
+  position: absolute;
+  bottom: 2px;
+  left: 3px;
+  font-size: 8px;
+  color: var(--color-gold-primary);
+  opacity: 0.8;
+  z-index: 2;
+}
+
+/* ★ 宮廷インクカラー（オニキス黒 ＆ クリムゾン深紅） */
+.card.spade, .card.club { color: var(--ink-black); }
+.card.heart, .card.diamond { color: var(--ink-red); }
+
+/* ★ ジョーカー（黄金仮面タロットカード風） */
 .card.joker {
-  color: #8a6500;
-  background: #fffbeb !important;
-  border: 1.5px solid #d4af37;
+  color: #8c6a15;
+  background: radial-gradient(ellipse at center, #fffdf2 0%, #f9f1d2 60%, #eedaa2 100%) !important;
+  border: 1.5px solid #d4af37 !important;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.7),
+    inset 0 0 0 1.5px rgba(255, 243, 168, 0.85),
+    inset 0 0 8px rgba(212, 175, 55, 0.4) !important;
 }
 .card.joker .card-rank {
-  font-size: clamp(7.5px, 1.2vh, 9.5px);
-  letter-spacing: 0.2px;
+  font-size: clamp(8px, 1.2vh, 10px);
+  letter-spacing: 0.3px;
+  font-weight: 900;
 }
 .card.joker .card-center-icon {
   position: absolute;
-  top: 50%;
+  top: 52%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: clamp(14px, 2.5vh, 22px);
-  color: #d4af37;
-  opacity: 0.9;
+  font-size: clamp(16px, 2.8vh, 24px);
+  color: #c4951a;
+  filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.8));
+  z-index: 2;
 }
 
 .card-play-anim {
@@ -1194,38 +1262,83 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 }
 
 /* ============================================================
- * ★ スマホ特化レイアウト（祭壇幅・トランプ縮小 ＆ CPU束のスリム化）
+ * ★ タブレット特化スタイル（幅 > 600px）
+ * 絵柄をキャラ名同幅化（76px）、CPUトランプ拡大、セリフ1行横長
+ * ============================================================ */
+@media (min-width: 601px) {
+  /* CPU絵柄をキャラ名と同じ幅の大きさ（76px）で表示 */
+  #cpu1 .char-portrait, #cpu2 .char-portrait, #cpu3 .char-portrait {
+    width: 76px !important;
+    height: 106px !important;
+  }
+
+  /* CPUのトランプはひと回り大きく表示 */
+  .cpu-card-stack .card-back {
+    width: calc(var(--card-width) * 0.68) !important;
+    height: calc(var(--card-height) * 0.68) !important;
+  }
+  .cpu-card-stack {
+    min-height: calc(var(--card-height) * 0.68) !important;
+  }
+
+  /* CPUのセリフは横に長く1行表示 */
+  .dialogue-bubble {
+    white-space: nowrap !important;
+    max-width: none !important;
+    width: fit-content !important;
+    padding: 4px 12px !important;
+  }
+}
+
+/* ============================================================
+ * ★ スマホ特化スタイル（幅 <= 600px）
+ * CPU1右移動・CPU3左移動・カード束幅を「枚数+パス」と同一化
  * ============================================================ */
 @media (max-width: 600px) {
   #game-board {
-    grid-template-columns: 70px 1fr 70px;
+    grid-template-columns: 78px 1fr 78px;
     padding: 1px 2px;
   }
 
-  /* 中央祭壇の幅を少し短くし、内部のトランプもコンパクト化 */
+  /* CPU1は全体的に右に移動、CPU3は全体的に左へ移動 */
+  #cpu1 {
+    margin-left: 8px !important;
+    margin-right: -8px !important;
+  }
+  #cpu3 {
+    margin-right: 8px !important;
+    margin-left: -8px !important;
+  }
+
+  /* 中央祭壇の幅を少し短く、トランプも小さく */
   .field-altar {
     max-width: 236px !important;
     padding: 3px 4px !important;
   }
   .field-container {
-    height: calc(var(--card-height) * 0.9) !important;
-    min-height: calc(var(--card-height) * 0.9) !important;
+    height: calc(var(--card-height) * 0.88) !important;
+    min-height: calc(var(--card-height) * 0.88) !important;
   }
   #field-cards .card {
-    width: calc(var(--card-width) * 0.88) !important;
-    height: calc(var(--card-height) * 0.88) !important;
+    width: calc(var(--card-width) * 0.86) !important;
+    height: calc(var(--card-height) * 0.86) !important;
   }
-  #field-cards .card-suit-symbol { font-size: 10px !important; }
-  #field-cards .card-rank { font-size: 11px !important; }
 
-  /* スマホ時のCPU1, CPU3のトランプの重なり：深くして画面サイドにはみ出さない */
+  /* CPU1, CPU3のカード：残り枚数+パス回数の幅（約96px）と同じになる重なりで固定表示 */
+  #cpu1 .cpu-card-stack, #cpu3 .cpu-card-stack {
+    max-width: 96px !important;
+    overflow: visible;
+  }
   #cpu1 .cpu-card-stack .card-back, #cpu3 .cpu-card-stack .card-back {
-    margin-left: calc(var(--card-width) * -0.56) !important;
+    margin-left: -13px !important; /* 8枚並びで約96pxに完全収束 */
+  }
+  #cpu1 .cpu-card-stack .card-back:first-child, #cpu3 .cpu-card-stack .card-back:first-child {
+    margin-left: 0 !important;
   }
 }
 
 /* ============================================================
- * 下部操作パネル（自動ONは左詰め、戦績表示、キャラ抽選は右端）
+ * 下部操作パネル
  * ============================================================ */
 #bottom-bar {
   width: 100%;
@@ -1323,7 +1436,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   border-radius: 7px;
 }
 
-/* サブアクションバー（自動ONは左詰め、キャラ抽選は右詰め） */
+/* サブアクションバー（自動ONは左詰め、キャラ抽選は右端） */
 .sub-actions {
   display: flex;
   align-items: center;
@@ -1352,7 +1465,6 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   border-color: #d4af37;
 }
 
-/* ★ キャラ抽選（旧リセット）ボタン：右端へ独立 */
 .btn-reset-safe {
   margin-left: auto !important;
   background: rgba(45, 20, 24, 0.85) !important;
@@ -1368,7 +1480,6 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 .auto-play-wrapper {
   position: relative;
   display: flex;
-  margin-right: 0; /* 左詰めの起点 */
 }
 
 .speed-controls {
@@ -1518,7 +1629,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 }
 .btn-modal-danger:hover { background: #ad2d2d; color: #fff; }
 
-/* ★ バージョン履歴：各バージョンごとに明確な金枠を付けて表示 */
+/* バージョン履歴（金枠カード化） */
 .version-card {
   background: linear-gradient(135deg, rgba(16, 26, 44, 0.9) 0%, rgba(8, 12, 22, 0.95) 100%);
   border: 1.5px solid var(--color-border-gold);
@@ -1772,7 +1883,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   border: 1.5px solid rgba(212, 175, 55, 0.5) !important;
 }
 
-/* ★ WINNER勝利演出ポップアップ（「大富豪」等の表示を1.5倍大きく） */
+/* WINNER勝利演出ポップアップ */
 .victory-popup-overlay {
   display: none !important;
   position: absolute;
@@ -1809,7 +1920,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 }
 .victory-popup-label {
   font-family: 'Cinzel', serif;
-  font-size: clamp(24px, 3.6vh, 32px) !important; /* 1.5倍大きく */
+  font-size: clamp(24px, 3.6vh, 32px) !important;
   font-weight: 900;
   color: var(--color-gold-bright) !important;
   margin-top: 10px;
@@ -1817,7 +1928,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   text-align: center;
 }
 .victory-popup-name {
-  font-size: 22px !important; /* 1.5倍大きく */
+  font-size: 22px !important;
   font-weight: 900 !important;
   color: #fffadb !important;
   margin-top: 4px;
@@ -1970,4 +2081,5 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 
 .debug-log-toolbar { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(10, 16, 26, 0.85); border-bottom: 1px solid var(--color-border-gold); }
 .debug-log-container { background: #090e15; border-radius: 4px; padding: 6px; height: 50vh; overflow-y: auto; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; }
+
 
