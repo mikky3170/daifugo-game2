@@ -1,6 +1,6 @@
 
-<!-- [HTML Version: v2.5.5] 王宮完全調和版
- * パス枠・キャラ名役職枠完全同一化・プレイヤー肖像同サイズ化・AI自己対戦ボタン視認性改善・祭壇ステータス1.12倍
+<!-- [HTML Version: v2.5.6] 王宮完全調和・外枠撤廃＆下部金枠コンソール版
+ * 外枠削除・下部全体金枠・タイトルロゴ画像化・%見切れ根絶・パス幅極小化・CPU左右ハミ出し解消
  -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -12,7 +12,7 @@
 </head>
 <body>
 
-  <!-- ゲーム表示フレーム（王宮謁見の間） -->
+  <!-- ゲーム表示フレーム（外枠ボーダー撤廃・シームレス王宮謁見の間） -->
   <div id="app-viewport">
 
     <!-- ゲームイベント演出バナー（祭壇枠内収容シネマティック枠） -->
@@ -22,10 +22,13 @@
       </div>
     </div>
 
-    <!-- キャラクター選択画面（完全センタリング＆優美なシャンパンゴールド調） -->
+    <!-- キャラクター選択画面 -->
     <div class="char-select-overlay active" id="char-select-overlay">
       <div class="char-select-panel">
-        <div class="main-title char-select-main-title">ROYAL CARD GAME</div>
+        <!-- タイトルロゴ（添付画像に差し替え） -->
+        <div class="title-logo-wrap char-select-main-title">
+          <img src="title_logo.png" alt="ROYAL CARD GAME" class="title-logo-img">
+        </div>
         <div class="char-select-title">キャラクターを選択</div>
         <div class="char-select-sub">あなたの分身となる宮廷の戦略家を1人選んでください</div>
         
@@ -35,6 +38,9 @@
         </div>
 
         <div class="char-select-grid" id="char-select-grid"></div>
+
+        <!-- ★ キャラ選択画面の右下バージョン表示 -->
+        <div class="char-select-version-badge" id="char-select-version-badge" title="クリックで更新履歴を表示">👑 Ver. 2.5.6</div>
       </div>
     </div>
 
@@ -49,7 +55,10 @@
 
     <!-- ヘッダーエリア -->
     <div id="header-area">
-      <div class="main-title">ROYAL CARD GAME</div>
+      <!-- ★ メインタイトルロゴ（添付の王冠・唐草画像に差し替え） -->
+      <div class="title-logo-wrap">
+        <img src="title_logo.png" alt="ROYAL CARD GAME" class="title-logo-img">
+      </div>
 
       <div id="rules-panel">
         <div class="rules-header">
@@ -71,16 +80,16 @@
           </ul>
         </div>
 
-        <!-- 勝利予想パネル ＆ AI通信ステータスランプ（メーター100%時長さ完全統一 ＆ AI稼働中枠完全固定） -->
+        <!-- 勝利予想パネル ＆ AI通信ステータスランプ（%見切れ完全根絶 ＆ AI稼働中枠完全固定） -->
         <div class="header-status-row" id="eval-meter-btn" title="クリックで詳細戦況グラフを表示">
-          <!-- 左：勝利予想タイトル（横幅固定） -->
+          <!-- 左：勝利予想タイトル -->
           <div class="eval-meter-left">
             <span class="eval-trophy-icon">🏆</span>
             <span class="eval-title-text">勝利予想</span>
             <span class="eval-info-icon">ℹ️</span>
           </div>
 
-          <!-- 中央：4人のリアルタイム勝率グリッド（100%時のバー長さを完全統一） -->
+          <!-- 中央：4人のリアルタイム勝率グリッド（スマホでも%まで絶対に収まる完全配分） -->
           <div class="eval-rates-grid" id="eval-rates-grid">
             <div class="eval-rate-item">
               <span class="eval-color-dot" style="background:#2196f3;"></span>
@@ -183,7 +192,7 @@
             </div>
           </div>
           <div class="char-intro-item">
-            <img class="char-intro-portrait" data-char-img="SCHOLAR" src="" alt="">
+            <img class="char-intro-portrait" data-char-intro="SCHOLAR" src="" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">📖 学者 (Scholar) - 慎重・観察</div>
               <div>場の流れを分析し、相手が複数出しをしてきた場合に合わせてカウンターを狙います。</div>
@@ -410,14 +419,13 @@
         <div class="cpu-card-stack" id="cpu2-stack"></div>
       </div>
 
-      <!-- CPU 1 (左：キャラ名の下に大富豪バッジ・同幅統一) -->
+      <!-- CPU 1 (左：キャラ名の下に大富豪バッジ・枚数＆パス縦積みで横はみ出し遮断) -->
       <div class="player-box" id="cpu1">
         <div class="turn-badge-container">
           <div class="turn-badge" id="cpu1-badge">THINKING</div>
         </div>
         <div class="char-row">
           <img class="char-portrait" id="cpu1-portrait" src="" alt="">
-          <!-- キャラ名と役職バッジを縦並び・同幅固定 -->
           <div class="name-rank-stack">
             <div style="display: flex; align-items: center; justify-content: center; gap: 3px; width: 100%;">
               <span class="ai-brain-dot" id="cpu1-brain-dot" title="AI推論中"></span>
@@ -425,6 +433,7 @@
             </div>
             <div class="rank-badge" id="cpu1-rank"></div>
           </div>
+          <!-- 左右席は横はみ出し防止のため幅76px内に収まる配置 -->
           <div class="char-stats-row">
             <span class="card-count-badge" id="cpu1-card-count">残り -枚</span>
             <span class="pass-count-badge"><span id="cpu1-pass-label">パス: </span><span id="cpu1-pass">0</span></span>
@@ -466,14 +475,13 @@
         </div>
       </div>
 
-      <!-- CPU 3 (右：キャラ名の下に大富豪バッジ・同幅統一) -->
+      <!-- CPU 3 (右：キャラ名の下に大富豪バッジ・枚数＆パス縦積みで横はみ出し遮断) -->
       <div class="player-box" id="cpu3">
         <div class="turn-badge-container">
           <div class="turn-badge" id="cpu3-badge">THINKING</div>
         </div>
         <div class="char-row">
           <img class="char-portrait" id="cpu3-portrait" src="" alt="">
-          <!-- キャラ名と役職バッジを縦並び・同幅固定 -->
           <div class="name-rank-stack">
             <div style="display: flex; align-items: center; justify-content: center; gap: 3px; width: 100%;">
               <span class="ai-brain-dot" id="cpu3-brain-dot" title="AI推論中"></span>
@@ -492,7 +500,7 @@
       <!-- プレイヤー (自分：左に絵柄 ｜ 右に手番・名前・役職・枚数) -->
       <div class="player-box" id="player-area">
         <div class="player-layout-plate">
-          <!-- 左：肖像画（CPUと同一の基本寸法） -->
+          <!-- 左：肖像画 -->
           <img class="char-portrait" id="player-portrait" src="" alt="">
           
           <!-- 右：情報カラム -->
@@ -509,7 +517,7 @@
               </div>
               <div class="rank-badge" id="player-rank"></div>
             </div>
-            <!-- ③ 下段：残り枚数 ＆ パス回数（全座席完全統一54px枠） -->
+            <!-- ③ 下段：残り枚数 ＆ パス回数（文字ギリギリ幅） -->
             <div class="char-stats-row">
               <span class="card-count-badge" id="player-card-count">残り -枚</span>
               <span class="pass-count-badge"><span id="player-pass-label">パス: </span><span id="player-pass">0</span></span>
@@ -522,48 +530,51 @@
       </div>
     </div>
 
-    <!-- 下部操作バー -->
-    <div id="bottom-bar">
-      <!-- メインアクション群 -->
-      <div class="action-group main-actions">
-        <div class="card-select-hint-box" id="card-select-hint">カードを選択してください</div>
-        <button class="btn btn-gold btn-play-main" id="play-btn">
-          <span class="btn-icon">🃏</span>
-          <span class="btn-text">カードを出す</span>
-        </button>
-        <button class="btn btn-pass-sub" id="pass-btn">
-          <span class="btn-icon">⏭️</span>
-          <span class="btn-text">パス</span>
-        </button>
-        <button class="btn btn-gold btn-exchange-main" id="go-exchange-btn" style="display: none;">カード交換へ</button>
-        <button class="btn btn-gold btn-exchange-main" id="exchange-btn" style="display: none;">交換決定</button>
-      </div>
-
-      <!-- サブアクション群（左詰め自動ON、戦績表示、右詰めキャラ抽選） -->
-      <div class="action-group sub-actions">
-        <div class="auto-play-wrapper">
-          <button class="btn btn-sub" id="auto-play-btn">自動: OFF</button>
-          <div class="speed-controls" id="speed-controls" style="display: none;">
-            <button class="btn-speed active" data-speed="1">1x</button>
-            <button class="btn-speed" data-speed="2">2x</button>
-            <button class="btn-speed" data-speed="3">3x</button>
-          </div>
+    <!-- ★★★ 一番下全体（操作ボタン・キャラ抽選・フッター・バージョン）を囲む金枠宮廷コンソール ★★★ -->
+    <div class="bottom-console-frame">
+      <div id="bottom-bar">
+        <!-- メインアクション群 -->
+        <div class="action-group main-actions">
+          <div class="card-select-hint-box" id="card-select-hint">カードを選択してください</div>
+          <button class="btn btn-gold btn-play-main" id="play-btn">
+            <span class="btn-icon">🃏</span>
+            <span class="btn-text">カードを出す</span>
+          </button>
+          <button class="btn btn-pass-sub" id="pass-btn">
+            <span class="btn-icon">⏭️</span>
+            <span class="btn-text">パス</span>
+          </button>
+          <button class="btn btn-gold btn-exchange-main" id="go-exchange-btn" style="display: none;">カード交換へ</button>
+          <button class="btn btn-gold btn-exchange-main" id="exchange-btn" style="display: none;">交換決定</button>
         </div>
-        <button class="btn btn-sub" id="stats-btn" title="戦績・ランキング">📊 戦績表示</button>
-        <button class="btn btn-sub" id="debug-log-btn" title="デバッグログ">📜 ログ</button>
-        <button class="btn btn-sub btn-reset-safe" id="reset-btn" title="対戦メンバーの再抽選">🔄 キャラ抽選</button>
-      </div>
-    </div>
 
-    <!-- 最下部ブランド＆バージョンフッター -->
-    <div id="app-footer-bar">
-      <span class="footer-brand">👑 ROYAL CARD GAME</span>
-      <span id="version-badge" title="クリックで更新履歴を表示">👑 Ver. 2.5.5</span>
-    </div>
+        <!-- サブアクション群（左詰め自動ON、戦績表示、右詰めキャラ抽選） -->
+        <div class="action-group sub-actions">
+          <div class="auto-play-wrapper">
+            <button class="btn btn-sub" id="auto-play-btn">自動: OFF</button>
+            <div class="speed-controls" id="speed-controls" style="display: none;">
+              <button class="btn-speed active" data-speed="1">1x</button>
+              <button class="btn-speed" data-speed="2">2x</button>
+              <button class="btn-speed" data-speed="3">3x</button>
+            </div>
+          </div>
+          <button class="btn btn-sub" id="stats-btn" title="戦績・ランキング">📊 戦績表示</button>
+          <button class="btn btn-sub" id="debug-log-btn" title="デバッグログ">📜 ログ</button>
+          <button class="btn btn-sub btn-reset-safe" id="reset-btn" title="対戦メンバーの再抽選">🔄 キャラ抽選</button>
+        </div>
+      </div>
+
+      <!-- 最下部ブランド＆バージョンフッター -->
+      <div id="app-footer-bar">
+        <span class="footer-brand">👑 ROYAL CARD GAME</span>
+        <span id="version-badge" title="クリックで更新履歴を表示">👑 Ver. 2.5.6</span>
+      </div>
+    </div> <!-- /.bottom-console-frame -->
 
   </div> <!-- /#app-viewport -->
 
   <script src="app.js"></script>
 </body>
 </html>
+
 

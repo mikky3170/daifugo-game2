@@ -1,5 +1,5 @@
 
-/* [JS Version: v2.5.5] 王宮完全調和版 - 前半（1/2）
+/* [JS Version: v2.5.6] 王宮完全調和・外枠撤廃＆下部金枠コンソール版 - 前半（1/2）
  * バージョンJS一元管理・最大10件表示・リセット時多重タイマー完全破棄
  * 王MCTS・深層学習推論・全キャラクターセリフ完全収録（ゲームロジック完全保護）
  */
@@ -7,8 +7,25 @@
 /* ====================================================================
  * ROYAL DAIFUGO - バージョン管理マスター（JavaScript一元管理）
  * ==================================================================== */
-const APP_VERSION = "v2.5.5";
+const APP_VERSION = "v2.5.6";
 const VERSION_HISTORY = [
+  {
+    ver: "v2.5.6",
+    date: "2026-09-12",
+    title: "王宮完全調和・外枠撤廃＆下部金枠コンソール版",
+    changes: [
+      "勝利予想メーターの「%」見切れをスマホ幅（360px〜）でも完全根絶",
+      "ゲーム全体の金外枠をキャラ選択画面と同様に完全削除",
+      "下部操作バーからフッター・バージョン表示までを一つの金枠コンソールで一体化",
+      "タイトルを添付の王冠・唐草タイトルロゴ画像（title_logo.png）に刷新",
+      "キャラ選択画面の右下にもバージョン表示バッジを追加",
+      "パス回数表示の幅を文字ギリギリまで狭小化",
+      "左右CPU（CPU1, 3）の残り枚数・パス表示の横はみ出しを完全解消",
+      "スマホ時のCPU1, 3カード束全体の幅が約0.8倍になるよう重なりを深化",
+      "王MCTS、PyTorch深層学習推論、ルール判定、全13キャラセリフ辞書を完全保持"
+    ],
+    files: ["index.html", "style.css", "app.js"]
+  },
   {
     ver: "v2.5.5",
     date: "2026-09-12",
@@ -19,9 +36,7 @@ const VERSION_HISTORY = [
       "対戦画面のキャラ名と役職バッジの大きさを縦横同一に統一",
       "プレイヤー肖像画をCPUと同一の大きさに統一",
       "AI自己対戦モーダル内のボタン文字色を視認性の高い白・ゴールドに改善",
-      "中央祭壇のステータス表示（平時・革命中・11 Back!）を1.12倍に拡大",
-      "スマホ時のCPU1・CPU3カード重なりを少し深く調整（サイドはみ出し解消）",
-      "王MCTS、PyTorch深層学習推論、ルール判定、全13キャラセリフ辞書を完全保持"
+      "中央祭壇のステータス表示（平時・革命中・11 Back!）を1.12倍に拡大"
     ],
     files: ["index.html", "style.css", "app.js"]
   },
@@ -31,10 +46,8 @@ const VERSION_HISTORY = [
     title: "プレイヤートランプ全部乗せ ＆ 端末別完全最適化版",
     changes: [
       "プレイヤートランプを羊皮紙・細密金枠・中央透かし彫り・Cinzel数字・王冠・浮遊オーラの全部乗せに刷新",
-      "勝利予想メーター100%時のトラック長さを4人全員で完全同一（34px）に固定",
-      "プレイヤーおよび全CPUのパス枠の長さを完全統一（54px）",
-      "タブレット時：CPU肖像画をキャラ名同幅（76px）に拡大、CPUトランプ拡大、セリフ1行横長表示",
-      "スマホ時：CPU1右移動・CPU3左移動、CPU1/3カード束を枚数+パス幅（約96px）に収束"
+      "勝利予想メーター100%時のトラック長さを4人全員で完全同一に固定",
+      "タブレット時：CPU肖像画をキャラ名同幅（76px）に拡大、CPUトランプ拡大、セリフ1行横長表示"
     ],
     files: ["index.html", "style.css", "app.js"]
   },
@@ -47,7 +60,6 @@ const VERSION_HISTORY = [
       "CPU1のセリフ枠を改行なし1行フィットへ改良、枠はみ出しを解消",
       "CPU絵柄拡大を上にはみ出さず下方向へひと回り大きく（1.5倍）拡大表示",
       "革命・11バック・8切り演出バナーを中央祭壇枠内収容サイズに最適化",
-      "全ボタンフォントをCinzel＋Noto Serif JPの宮廷明朝体に統一",
       "操作ボタン名称を「📊 戦績表示」「🔄 キャラ抽選」に更新、自動ONを左詰め・キャラ抽選を右詰め配置"
     ],
     files: ["index.html", "style.css", "app.js"]
@@ -82,17 +94,6 @@ const VERSION_HISTORY = [
       "リセットボタン連打による倍速加速バグを完全解消（全タイマー破棄機構 GameTimer 導入）",
       "キャラ選択画面のタイトル・説明文を完全センタリングし、宮廷調シャンパンゴールドへ刷新",
       "キャラ紹介モーダルの肖像画サイズを端正なコンパクト金枠（44px×66px）に完全適正化"
-    ],
-    files: ["index.html", "style.css", "app.js"]
-  },
-  {
-    ver: "v2.4.2",
-    date: "2026-09-12",
-    title: "勝利予想ミニグラフ・閉じる右下・リセット右端・CPUカード紋章完全対応版",
-    changes: [
-      "上部勝利予想パネルの各座席に勝率%に応じた伸縮ミニプログレスバーを搭載",
-      "全モーダルの「閉じる」ボタンをフッター右下に統一配置",
-      "CPUカード裏面に百合の紋章（⚜️）を適用"
     ],
     files: ["index.html", "style.css", "app.js"]
   }
@@ -1905,7 +1906,7 @@ function updateStatusUI() {
   updateEvalMeterUI();
 }
 
-/* 勝利予想パネル動的描画（100%時の長さ完全統一） */
+/* 勝利予想パネル動的描画（%見切れ完全根絶版） */
 function updateEvalMeterUI() {
   const { rates, topPlayer, diffFromSecond, isFinished } = calculateRealtimeWinRates();
   const gridEl = document.getElementById('eval-rates-grid');
@@ -2220,7 +2221,7 @@ function render(isFullRedraw = false) {
 
   ['cpu1', 'cpu2', 'cpu3'].forEach(c => renderCpuStack(c, hands[c].length));
 
-  // 各席の「残り ○枚」＆「パス: ○」完全統一更新
+  // 各席の「残り ○枚」＆「パス: ○」更新
   PLAYERS.forEach(p => {
     const countBadge = document.getElementById(`${p}-card-count`);
     if (countBadge) {
@@ -2286,7 +2287,7 @@ function render(isFullRedraw = false) {
       }
     }
 
-    // 役職バッジ（大富豪・富豪・貧民・大貧民）の更新
+    // 役職バッジ（大富豪・富豪・貧民・大貧民）の更新（未確定時は空にしてCSSで非表示化）
     const rankEl = document.getElementById(`${p}-rank`);
     if (rankEl) {
       if (playerStatusMap[p]) rankEl.textContent = playerStatusMap[p];
@@ -3705,6 +3706,7 @@ function initEvents() {
   const nextGameModal = document.getElementById('next-game-modal');
   const versionModal = document.getElementById('version-modal');
   const versionBadge = document.getElementById('version-badge');
+  const charSelectVerBadge = document.getElementById('char-select-version-badge');
   const logViewerModal = document.getElementById('log-viewer-modal');
   const debugLogModal = document.getElementById('debug-log-modal');
 
@@ -3732,14 +3734,20 @@ function initEvents() {
     };
   }
 
-  // バージョンバッジを一元管理から同期
+  // 対戦画面フッター＆キャラ選択画面右下のバージョンバッジを一元管理から同期
+  const showVersionModal = () => {
+    soundMgr.playSelect();
+    renderVersionHistoryModal();
+    versionModal.classList.add('active');
+  };
+
   if (versionBadge && typeof APP_VERSION !== 'undefined') {
     versionBadge.textContent = `👑 Ver. ${APP_VERSION.replace('v', '')}`;
-    versionBadge.onclick = () => {
-      soundMgr.playSelect();
-      renderVersionHistoryModal();
-      versionModal.classList.add('active');
-    };
+    versionBadge.onclick = showVersionModal;
+  }
+  if (charSelectVerBadge && typeof APP_VERSION !== 'undefined') {
+    charSelectVerBadge.textContent = `👑 Ver. ${APP_VERSION.replace('v', '')}`;
+    charSelectVerBadge.onclick = showVersionModal;
   }
 
   if (logViewerModal) {
@@ -3941,7 +3949,7 @@ function startApp() {
     initEvents();
     bgmMgr.setCharSelectPhase(true);
     AIStatusUI.pingServer();
-    console.log('[SYSTEM] アプリ初期化完了（v2.5.5 正式版）');
+    console.log('[SYSTEM] アプリ初期化完了（v2.5.6 正式版）');
   } catch (err) {
     console.error('[CRITICAL] 起動初期化エラー:', err);
   }
@@ -3952,5 +3960,6 @@ if (document.readyState === 'loading') {
 } else {
   startApp();
 }
+
 
 
