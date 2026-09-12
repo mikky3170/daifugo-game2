@@ -1,5 +1,5 @@
 
-/* [JS Version: v2.5.2] 王宮エレガント・レスポンシブ完全調和版 - 前半（1/2）
+/* [JS Version: v2.5.3] 王宮エレガント・バランス微調整版 - 前半（1/2）
  * バージョンJS一元管理・最大10件表示・リセット時多重タイマー完全破棄
  * 王MCTS・深層学習推論・全キャラクターセリフ完全収録（ゲームロジック完全保護）
  */
@@ -7,8 +7,26 @@
 /* ====================================================================
  * ROYAL DAIFUGO - バージョン管理マスター（JavaScript一元管理）
  * ==================================================================== */
-const APP_VERSION = "v2.5.2";
+const APP_VERSION = "v2.5.3";
 const VERSION_HISTORY = [
+  {
+    ver: "v2.5.3",
+    date: "2026-09-12",
+    title: "王宮エレガント・バランス微調整版",
+    changes: [
+      "CPU1〜3の役職（大富豪等）バッジの幅をキャラ名と完全一致＆下段配置に統一",
+      "CPU1のセリフ枠を改行なし1行フィットへ改良、枠はみ出しを解消",
+      "CPU絵柄拡大を上にはみ出さず下方向へひと回り大きく（1.5倍）拡大表示",
+      "革命・11バック・8切り演出バナーを中央祭壇枠内収容サイズに最適化",
+      "バージョン履歴モーダルの各バージョンを美麗な金枠カード化",
+      "全ボタンフォントをCinzel＋Noto Serif JPの宮廷明朝体に統一",
+      "WINNER表示の役職文字サイズを1.5倍に拡大",
+      "勝利予想の「AI稼働中」枠サイズを完全固定（文字変化による揺れ防止）",
+      "操作ボタン名称を「📊 戦績表示」「🔄 キャラ抽選」に更新、自動ONを左詰め・キャラ抽選を右詰め配置",
+      "スマホ時の中央祭壇幅＆トランプカードサイズを縮小、左右CPUカード重なりを深く調整"
+    ],
+    files: ["index.html", "style.css", "app.js"]
+  },
   {
     ver: "v2.5.2",
     date: "2026-09-12",
@@ -18,8 +36,7 @@ const VERSION_HISTORY = [
       "プレイヤー手番バッジ（あなたの順番です）をキャラ名の上段スロットへ端正に配置",
       "全座席（CPU1〜3・プレイヤー）のパス枠サイズ（min-width: 50px）を完全統一",
       "CPU1〜3のセリフ吹き出し枠を文字数に応じた自然伸縮（fit-content）へ改良、枠はみ出しを完全根絶",
-      "左右CPU（CPU1, 3）のカード裏面束の重なり幅を広げ、百合の紋章と束感を美しく展開",
-      "王MCTS、PyTorch深層学習推論、ルール判定、全13キャラセリフ辞書を完全保持"
+      "左右CPU（CPU1, 3）のカード裏面束の重なり幅を広げ、百合の紋章と束感を美しく展開"
     ],
     files: ["index.html", "style.css", "app.js"]
   },
@@ -45,8 +62,7 @@ const VERSION_HISTORY = [
       "キャラ紹介およびルール解説の背景・文字色・枠線を高級宮廷カード調に刷新",
       "上部勝利予想のキャラクター名（上級AI・革命家等）の文字欠け・重なりを完全根絶",
       "対戦画面の「⚜️ 平時 ⚜️」「👑 革命中 ⚔️」「⚡ 11 Back! ⚡」を大文字・格式高い宮廷プレートへ刷新",
-      "CPUカード裏面に参考画像を忠実に再現した「深いネイビー＋金枠＋百合の紋章（⚜️）」を描画",
-      "王MCTS、PyTorch深層学習推論、ルール判定、全13キャラセリフ辞書を完全保持"
+      "CPUカード裏面に参考画像を忠実に再現した「深いネイビー＋金枠＋百合の紋章（⚜️）」を描画"
     ],
     files: ["index.html", "style.css", "app.js"]
   },
@@ -81,17 +97,6 @@ const VERSION_HISTORY = [
       "革命返し成立時の中央「⚡ 革命返し！ ⚡」黄金閃光演出を追加",
       "11バック成立時の中央「⚡ 11 BACK ⚡」蒼炎演出を追加",
       "8切り成立時の「⚔️ 8切り ⚔️」シックな白銀斬撃演出を追加"
-    ],
-    files: ["index.html", "style.css", "app.js"]
-  },
-  {
-    ver: "v2.3.7",
-    date: "2026-09-12",
-    title: "AI通信ステータス復元・勝利予想1位ハイライト・終了ボタン横並び完全版",
-    changes: [
-      "AI通信ステータスランプ（緑・黄・赤・シアン）の表示ロジックを完全復元",
-      "リアルタイム勝利予想の1位プレイヤーに王冠＆ゴールドグロー点滅ハイライトを付与",
-      "ゲーム終了画面の「同じメンバーで続行」「メンバーを再抽選」ボタンを左右50%均等の美しい横並びに固定"
     ],
     files: ["index.html", "style.css", "app.js"]
   }
@@ -1809,6 +1814,10 @@ function decideCpuMove(cpu) {
   return chosen;
 }
 
+/* ====================================================================
+ * ★★★【app.js 前半（1/2）ここまで】★★★
+ * 続けて、次のメッセージでお出しする【app.js 後半（2/2）】をこの直下に結合してください
+ * ==================================================================== */
 
 /* ====================================================================
  * ★★★【app.js 後半（2/2）ここから結合】★★★
@@ -1945,7 +1954,7 @@ function showCharacterDialogue(player, text) {
   const box = document.getElementById(player);
   if (!box) return;
 
-  const targetAnchor = box.querySelector('.cpu2-layout-plate') || box.querySelector('.char-row') || box;
+  const targetAnchor = box.querySelector('.cpu2-layout-plate') || box.querySelector('.player-layout-plate') || box.querySelector('.char-row') || box;
   const portrait = document.getElementById(`${player}-portrait`);
   if (!portrait) return;
 
@@ -2281,10 +2290,11 @@ function render(isFullRedraw = false) {
       }
     }
 
+    // 役職バッジ（大富豪・富豪・貧民・大貧民）の更新
     const rankEl = document.getElementById(`${p}-rank`);
     if (rankEl) {
       if (playerStatusMap[p]) rankEl.textContent = playerStatusMap[p];
-      else if (previousRanks[p]) rankEl.textContent = `[${previousRanks[p]}]`;
+      else if (previousRanks[p]) rankEl.textContent = previousRanks[p];
       else rankEl.textContent = '';
     }
   });
@@ -3104,7 +3114,7 @@ function updateLogViewerUI() {
   tableWrap.innerHTML = thtml;
 }
 
-/* バージョン履歴モーダル（最新10件制限） */
+/* ★ バージョン履歴モーダル（各バージョン枠付きカード・最大10件制限） */
 function renderVersionHistoryModal() {
   const body = document.getElementById('version-modal-body');
   if (!body) return;
@@ -3215,7 +3225,7 @@ function renderFinalRanking() {
   }).join('');
 }
 
-/* 戦況分析（横棒グラフ長さに連動＋一番右にパーセント表示） */
+/* 戦況分析モーダル */
 function showEvalModal() {
   const { rates, topPlayer, topPct, diffFromSecond } = calculateRealtimeWinRates();
   const body = document.getElementById('eval-modal-body');
@@ -3897,7 +3907,7 @@ function initEvents() {
     PLAYERS.filter(p => p !== 'player').forEach(p => checkAndTriggerDialogue(p, 'NEXT_GAME'));
   };
 
-  /* リセットボタン */
+  /* キャラ抽選（旧リセット）ボタン */
   document.getElementById('reset-btn').onclick = () => {
     soundMgr.playSelect();
     rulesPanel.classList.remove('open');
@@ -3935,7 +3945,7 @@ function startApp() {
     initEvents();
     bgmMgr.setCharSelectPhase(true);
     AIStatusUI.pingServer();
-    console.log('[SYSTEM] アプリ初期化完了（v2.5.2 正式版）');
+    console.log('[SYSTEM] アプリ初期化完了（v2.5.3 正式版）');
   } catch (err) {
     console.error('[CRITICAL] 起動初期化エラー:', err);
   }
@@ -3946,5 +3956,6 @@ if (document.readyState === 'loading') {
 } else {
   startApp();
 }
+
 
 
