@@ -1,114 +1,93 @@
 
-/* [JS Version: v2.2.3] 最終更新: 王打倒モデル(daifugou_ai_hi2.pth)完成・新4パターンシミュレータ＆Render完全対応版 */
+/* [JS Version: v2.5.0] STEP 8: 最終UI調整・高級西洋ファンタジー王宮カードゲーム正式版 - 前半（1/2）
+ * バージョンJS一元管理・最大10件表示・リセット時多重タイマー完全破棄
+ * 王MCTS・深層学習推論・全キャラクターセリフ完全収録（ゲームロジック完全保護）
+ */
 
 /* ====================================================================
- * ROYAL DAIFUGO - バージョン管理マスター（最新10件キープ運用）
+ * ROYAL DAIFUGO - バージョン管理マスター（JavaScript一元管理）
  * ==================================================================== */
-const APP_VERSION = "v2.2.3";
+const APP_VERSION = "v2.5.0";
 const VERSION_HISTORY = [
   {
-    ver: "v2.2.3",
+    ver: "v2.5.0",
+    date: "2026-09-12",
+    title: "STEP 8: 最終UI調整・高級西洋ファンタジー王宮カードゲーム正式版",
+    changes: [
+      "バージョン情報をJavaScriptで一元管理化（過去最大10件の自動トリミング表示仕様）",
+      "リセットボタン連打による倍速加速バグを完全解消（全タイマー破棄機構 GameTimer 導入）",
+      "キャラ選択画面のタイトル・説明文を完全センタリングし、宮廷調シャンパンゴールドへ刷新",
+      "キャラ紹介モーダルの肖像画サイズを端正なコンパクト金枠（44px×66px）に完全適正化",
+      "キャラ紹介およびルール解説の背景・文字色・枠線を高級宮廷カード調に刷新",
+      "上部勝利予想のキャラクター名（上級AI・革命家等）の文字欠け・重なりを完全根絶",
+      "対戦画面の「⚜️ 平時 ⚜️」「👑 革命中 ⚔️」「⚡ 11 Back! ⚡」を大文字・格式高い宮廷プレートへ刷新",
+      "CPUカード裏面に参考画像を忠実に再現した「深いネイビー＋金枠＋百合の紋章（⚜️）」を描画",
+      "王MCTS、PyTorch深層学習推論、ルール判定、全13キャラセリフ辞書を完全保持"
+    ],
+    files: ["index.html", "style.css", "app.js"]
+  },
+  {
+    ver: "v2.4.2",
+    date: "2026-09-12",
+    title: "勝利予想ミニグラフ・閉じる右下・リセット右端・CPUカード紋章完全対応版",
+    changes: [
+      "上部勝利予想パネルの各座席に勝率%に応じた伸縮ミニプログレスバーを搭載",
+      "全モーダルの「閉じる」ボタンをフッター右下に統一配置",
+      "CPUカード裏面に百合の紋章（⚜️）を適用"
+    ],
+    files: ["index.html", "style.css", "app.js"]
+  },
+  {
+    ver: "v2.4.1",
+    date: "2026-09-12",
+    title: "UI枠サイズ完全固定・パス回数横並び・プレイヤー位置ブレ解消版",
+    changes: [
+      "カードの捨てる場（中央祭壇）の外枠サイズを完全固定（上下揺れを遮断）",
+      "パス回数表示を全座席で「残り枚数」のすぐ右側へスマートに横並び配置",
+      "プレイヤー手番バッジの出現・非出現による肖像画の左右位置ブレを完全解消"
+    ],
+    files: ["index.html", "style.css", "app.js"]
+  },
+  {
+    ver: "v2.4.0",
+    date: "2026-09-12",
+    title: "ゲームイベント演出（革命・革命返し・11バック・8切り）完全対応版",
+    changes: [
+      "革命成立時の中央「⚡ REVOLUTION ⚡」迫力アニメーション演出を追加",
+      "革命返し成立時の中央「⚡ 革命返し！ ⚡」黄金閃光演出を追加",
+      "11バック成立時の中央「⚡ 11 BACK ⚡」蒼炎演出を追加",
+      "8切り成立時の「⚔️ 8切り ⚔️」シックな白銀斬撃演出を追加"
+    ],
+    files: ["index.html", "style.css", "app.js"]
+  },
+  {
+    ver: "v2.3.7",
+    date: "2026-09-12",
+    title: "AI通信ステータス復元・勝利予想1位ハイライト・終了ボタン横並び完全版",
+    changes: [
+      "AI通信ステータスランプ（緑・黄・赤・シアン）の表示ロジックを完全復元",
+      "リアルタイム勝利予想の1位プレイヤーに王冠＆ゴールドグロー点滅ハイライトを付与",
+      "ゲーム終了画面の「同じメンバーで続行」「メンバーを再抽選」ボタンを左右50%均等の美しい横並びに固定"
+    ],
+    files: ["index.html", "style.css", "app.js"]
+  },
+  {
+    ver: "v2.3.6",
+    date: "2026-09-12",
+    title: "勝利予想・戦況UI改修（4人勝率グリッド・残り枚数・危険度表示）版",
+    changes: [
+      "画面上部に4人全員の勝率（%）とテーマカラーを2列×2行でリアルタイム表示",
+      "各プレイヤーの枠に「残り ○枚」バッジを新設し、3枚以下で危険度ハイライトを付与"
+    ],
+    files: ["index.html", "style.css", "app.js"]
+  },
+  {
+    ver: "v2.3.5",
     date: "2026-09-11",
-    title: "王打倒モデル(daifugou_ai_hi2.pth)完成・新4パターンシミュレータ＆Render完全対応",
+    title: "高速シミュレーター（新4パターン・座席シャッフル検証）版",
     changes: [
-      "パターンA(1500戦)で王の平均順位2.51位を上回る【2.49位】を記録、上位進出率50.5%を達成し王を撃破",
-      "上級AI(110次元)を完全圧倒（大富豪率19.8% vs 18.4% / 平均順位2.56位 vs 2.70位）",
-      "富豪(2位)獲得率は全キャラ中最多の284回を記録し、最下位(大貧民)への転落を王より少なく抑え込む鉄壁の安定性を獲得",
-      "高速シミュレーター新4パターン(A:1500, B:1000, C:500, D:500均等)のUI・ロジック完全同期",
-      "Renderクラウドサーバー（動的PORT・静的Web直接配信・外部端末通信最適化）の完全稼働"
-    ],
-    files: ["server.py", "app.js", "index.html", "daifugou_ai_hi2.pth"]
-  },
-  {
-    ver: "v2.2.2",
-    date: "2026-09-11",
-    title: "高速シミュレーター残り時間(ETA)リアルタイム表示・ログ直通ボタン・Renderクラウド完全対応",
-    changes: [
-      "シミュレーター進捗に「経過時間」および「残り時間(ETA)」をリアルタイムで分・秒表示",
-      "シミュレーター画面内に「📜 通信ログ確認」ボタンを新設（モーダルを閉じずにログ確認可能）",
-      "シミュレーター実行時に実際に使用されているモデル（163次元/110次元）の自動ログ記録＆UIバッジ表示",
-      "対王ガードレール（2のペナルティ解除・テンポ重視）の反映",
-      "Renderクラウドサーバー（動的PORT・静的Web直接配信・外部端末通信最適化）完全対応"
-    ],
-    files: ["server.py", "app.js", "index.html"]
-  },
-  {
-    ver: "v2.2.1",
-    date: "2026-09-11",
-    title: "超級AI 163次元完全体表示・超級専用Joker戦術補正・シミュレーターUI更新",
-    changes: [
-      "シミュレーターUIのパターンD等の表示を163次元へ完全統一",
-      "超級AIの診断テストで発覚したJoker小札浪費バグを解消する超級専用戦術温存補正を適用",
-      "キャラクター解説・セリフ・ログの次元数表記を163次元へ整合",
-      "HTML/JS/Python全ファイルのバージョン同期（v2.2.1）"
-    ],
-    files: ["server.py", "index.html", "app.js"]
-  },
-  {
-    ver: "v2.1.0",
-    date: "2026-09-10",
-    title: "高速シミュレーター超級AI主軸体制 実装",
-    changes: [
-      "シミュレーターの全パターンを超級AI主軸へ再編",
-      "最難関ベンチマークの構築"
-    ],
-    files: ["server.py", "app.js"]
-  },
-  {
-    ver: "v2.0.0",
-    date: "2026-09-09",
-    title: "超級AIモデル(159次元・流れたカードカウンティング推論) 実装",
-    changes: [
-      "中級AIを最上位『超級AI』（daifugo_ai_hi2.pth）へ完全リプレイス",
-      "流れたカード完全記憶推論基盤の構築"
-    ],
-    files: ["index.html", "style.css", "app.js", "server.py"]
-  },
-  {
-    ver: "v1.9.1",
-    date: "2026-09-08",
-    title: "Render.com クラウドAPI連携 ＆ ローカル/クラウド自動判別",
-    changes: [
-      "Render.comバックエンドサーバー連携に対応",
-      "アクセス元に応じたAPI接続先の自動切り替えロジック実装"
-    ],
-    files: ["app.js", "server.py", "requirements.txt", "Procfile"]
-  },
-  {
-    ver: "v1.9.0",
-    date: "2026-09-07",
-    title: "AI稼働ステータス可視化・画面内ログ ＆ カウンティング学習データ対応",
-    changes: [
-      "AI通信ステータス・オーブ新設",
-      "画面内デバッグコンソール搭載"
-    ],
-    files: ["index.html", "style.css", "app.js", "server.py"]
-  },
-  {
-    ver: "v1.8.5",
-    date: "2026-09-06",
-    title: "ニューラルネット推論 ＆ クラウド連携対応",
-    changes: [
-      "PyTorch深層学習モデルとのリアルタイム通信",
-      "座席シャッフル高速シミュレーション搭載"
-    ],
-    files: ["server.py", "app.js"]
-  },
-  {
-    ver: "v1.6.0",
-    date: "2026-09-05",
-    title: "PyTorch深層学習モデル連携基盤の新設",
-    changes: [
-      "Pythonサーバー（server.py）およびPyTorch学習済みモデルと完全連携"
-    ],
-    files: ["server.py", "app.js"]
-  },
-  {
-    ver: "v1.5.5",
-    date: "2026-09-04",
-    title: "自己対戦 ＆ 1試合ごとの学習データ詳細ビューア新設",
-    changes: [
-      "試合ごとの手番データをカラーで閲覧できる専用モーダルを新設"
+      "パターンA〜Dによる高精度自己対戦機能の統合",
+      "MCTS探索深度とPyTorch推論の連携強化"
     ],
     files: ["index.html", "style.css", "app.js"]
   }
@@ -189,6 +168,35 @@ const InAppLogger = {
 InAppLogger.init();
 
 /* ----------------------------------------------------
+ * ★ 進行タイマー管理（リセット時の加速・多重ターン防止マネージャー）
+ * ---------------------------------------------------- */
+const GameTimer = {
+  activeTimerIds: new Set(),
+
+  set(fn, delay) {
+    const id = setTimeout(() => {
+      this.activeTimerIds.delete(id);
+      fn();
+    }, delay);
+    this.activeTimerIds.add(id);
+    return id;
+  },
+
+  clear(id) {
+    if (id) {
+      clearTimeout(id);
+      this.activeTimerIds.delete(id);
+    }
+  },
+
+  clearAll() {
+    this.activeTimerIds.forEach(id => clearTimeout(id));
+    this.activeTimerIds.clear();
+    console.log('[TIMER] 進行中の全タイマーを完全破棄しました。');
+  }
+};
+
+/* ----------------------------------------------------
  * 1. 設定・定数・キャラクター定義
  * ---------------------------------------------------- */
 const RENDER_BACKEND_URL = 'https://daifugo-game2.onrender.com';
@@ -215,9 +223,9 @@ const CONFIG = {
   PYTHON_DOWNLOAD_JSONL_URL: `${AI_SERVER_BASE_URL}/download_jsonl`,
   PYTHON_DATA_URL: `${AI_SERVER_BASE_URL}/latest_simulation_data`,
   COLORS: {
-    player: '#d4af37',
+    player: '#2196f3',
     cpu1: '#4caf50',
-    cpu2: '#2196f3',
+    cpu2: '#d4af37',
     cpu3: '#e91e63'
   }
 };
@@ -660,32 +668,32 @@ class BgmManager {
 const soundMgr = new SoundManager();
 const bgmMgr = new BgmManager();
 
-/* ----------------------------------------------------
- * 2.5 AIステータスランプ ＆ Python AI推論サーバー連携
- * ---------------------------------------------------- */
+/* 2. AI通信ステータスランプ ＆ Python AI推論サーバー連携 */
 const AIStatusUI = {
   set(state, text = null) {
     const dot = document.getElementById('ai-orb-dot');
     const label = document.getElementById('ai-orb-label');
     const summary = document.getElementById('debug-status-summary');
-    if (!dot || !label) return;
+    if (!label) return;
 
-    dot.classList.remove('status-online', 'status-waking', 'status-offline', 'status-thinking');
+    if (dot) {
+      dot.classList.remove('status-online', 'status-waking', 'status-offline', 'status-thinking');
+    }
 
     if (state === 'online') {
-      dot.classList.add('status-online');
-      label.textContent = text || 'AI: ONLINE';
+      if (dot) dot.classList.add('status-online');
+      label.textContent = text || 'AI: 稼働中';
       if (summary) summary.textContent = `🟢 接続中: ${AI_SERVER_BASE_URL}`;
     } else if (state === 'waking') {
-      dot.classList.add('status-waking');
+      if (dot) dot.classList.add('status-waking');
       label.textContent = text || 'AI: 起動中...';
       if (summary) summary.textContent = `🟡 待機/起動中: ${AI_SERVER_BASE_URL}`;
     } else if (state === 'thinking') {
-      dot.classList.add('status-thinking');
+      if (dot) dot.classList.add('status-thinking');
       label.textContent = text || 'AI: 推論中...';
     } else {
-      dot.classList.add('status-offline');
-      label.textContent = text || 'AI: OFFLINE';
+      if (dot) dot.classList.add('status-offline');
+      label.textContent = text || 'AI: 待機中';
       if (summary) summary.textContent = `🔴 未接続: ${AI_SERVER_BASE_URL}`;
     }
   },
@@ -713,10 +721,30 @@ const AIStatusUI = {
       }
     } catch (err) {
       console.warn(`⚠️ [ヘルスチェック未到達] サーバー未起動またはオフライン: ${err.message}`);
-      this.set('offline', 'AI: オフライン');
+      this.set('offline', 'AI: 待機中');
     }
   }
 };
+
+/* ゲームイベント演出バナー（おしゃれな宮廷シネマティック枠）トリガー関数 */
+let eventBannerTimer = null;
+function triggerEventBanner(text, bannerClass) {
+  const banner = document.getElementById('event-banner');
+  const bannerText = document.getElementById('event-banner-text');
+  if (!banner || !bannerText) return;
+
+  if (eventBannerTimer) clearTimeout(eventBannerTimer);
+
+  banner.className = 'event-banner';
+  bannerText.textContent = text;
+  void banner.offsetWidth;
+
+  banner.classList.add(bannerClass);
+
+  eventBannerTimer = setTimeout(() => {
+    banner.className = 'event-banner';
+  }, 1450);
+}
 
 function matchReturnedMoveWithHand(hand, returnedCards) {
   if (!returnedCards || returnedCards.length === 0) return null;
@@ -744,7 +772,7 @@ function matchReturnedMoveWithHand(hand, returnedCards) {
 }
 
 async function askPythonAI(hand, currentField, validMoves, modelType = 'hi', playerKey = 'cpu2') {
-  AIStatusUI.set('thinking', 'AI: 推論中');
+  AIStatusUI.set('thinking', 'AI: 推論中...');
 
   try {
     const controller = new AbortController();
@@ -789,15 +817,13 @@ async function askPythonAI(hand, currentField, validMoves, modelType = 'hi', pla
     }
   } catch (err) {
     console.warn(`⚠️ Python AI通信エラー (${err.message})。通常思考にフォールバックします。`);
-    AIStatusUI.set('offline', 'AI: フォールバック');
+    AIStatusUI.set('offline', 'AI: 待機中');
   }
 
   return validMoves.length > 0 ? validMoves[0] : null;
 }
 
-/* ----------------------------------------------------
- * 3. AIデータロガー (AIDataLogger)
- * ---------------------------------------------------- */
+/* 3. AIデータロガー (AIDataLogger) */
 const AIDataLogger = {
   activeGameId: null,
   activePattern: null,
@@ -824,8 +850,7 @@ const AIDataLogger = {
   },
 
   serializeCards(cards) {
-    if (!cards) return [];
-    return cards.map(c => this.serializeCard(c));
+    return cards ? cards.map(c => this.serializeCard(c)) : [];
   },
 
   recordTurnAction(seatNum, action, cards, isCleared = false) {
@@ -944,9 +969,7 @@ const AIDataLogger = {
   }
 };
 
-/* ----------------------------------------------------
- * 4. 新・戦績＆データ管理 (LocalStorage)
- * ---------------------------------------------------- */
+/* 4. 戦績＆データ管理 (LocalStorage) */
 const StorageManager = {
   VERSION_KEY: 'royalStatsSchemaVersion',
   CURRENT_SCHEMA_VER: 'v1.5.0',
@@ -1084,9 +1107,7 @@ const StorageManager = {
   }
 };
 
-/* ----------------------------------------------------
- * 5. 基本ルール・カードヘルパー
- * ---------------------------------------------------- */
+/* 5. 基本ルール・カードヘルパー（完全保護） */
 function getCardKey(card) {
   return card.isJoker ? 'JOKER' : card.display;
 }
@@ -1329,9 +1350,7 @@ function getUnrevealedCards(myHand, playedHistory = playedCardsHistory, currentF
   }));
 }
 
-/* ----------------------------------------------------
- * 6. 王(KING)専用 MCTSエンジン
- * ---------------------------------------------------- */
+/* 6. 王(KING)専用 MCTSエンジン（完全保護） */
 class SimGame {
   constructor(hands, fieldCards, isRevolution, isElevenBack, lastPlayedPlayer, consecutivePasses, finishedPlayers, playerKeys = PLAYERS) {
     this.playerKeys = playerKeys;
@@ -1619,9 +1638,7 @@ function kingDecideMoveUniversal(cpuKey, hand, currentField, rev, allHands, allF
   return bestChild ? bestChild.move : candidateMoves[0];
 }
 
-/* ----------------------------------------------------
- * 7. CPU思考ロジック
- * ---------------------------------------------------- */
+/* 7. CPU思考ロジック（完全保護） */
 function evaluateMoveDefault(move) {
   const count = move.length;
   const val = getCardValue(move[0]);
@@ -1787,8 +1804,15 @@ function decideCpuMove(cpu) {
   return chosen;
 }
 
+/* ================= ここまで前半 / 続けて後半を結合してください ================= */
+
+/* [JS Version: v2.5.0] STEP 8: 最終UI調整・高級西洋ファンタジー王宮カードゲーム正式版 - 後半（2/2）
+ * バージョンJS一元管理・最大10件表示・リセット時多重タイマー完全破棄
+ * 王MCTS・深層学習推論・全キャラクターセリフ完全収録（ゲームロジック完全保護）
+ */
+
 /* ----------------------------------------------------
- * 8. 戦況評価・勝率メーターエンジン
+ * 8. 戦況評価・勝率メーターエンジン（完全保護）
  * ---------------------------------------------------- */
 function calculateRealtimeWinRates() {
   const active = PLAYERS.filter(p => !finishedPlayers.includes(p));
@@ -1868,36 +1892,48 @@ function setMessage(msg) {
 }
 
 function updateStatusUI() {
-  document.getElementById('revolution-status').classList.toggle('active', isRevolution);
-  document.getElementById('eleven-back-status').classList.toggle('active', isElevenBack);
+  const revEl = document.getElementById('revolution-status');
+  const ebEl = document.getElementById('eleven-back-status');
+  const normEl = document.getElementById('normal-status');
+  const orderEl = document.getElementById('field-strength-order');
+
+  if (revEl) revEl.classList.toggle('active', !!isRevolution);
+  if (ebEl) ebEl.classList.toggle('active', !!isElevenBack);
+  if (normEl) normEl.style.display = (!isRevolution && !isElevenBack) ? 'inline-block' : 'none';
+  if (orderEl) orderEl.textContent = effectiveReverse() ? '🃏 < 2 < A < ... < 4 < 3' : '3 < 4 < 5 ... < 2 < 🃏';
+
   updateEvalMeterUI();
 }
 
+/* 勝利予想パネル（横離し・キャラ名欠け防止・伸縮ミニプログレスバー動的描画） */
 function updateEvalMeterUI() {
-  const { rates, topPlayer, topPct, diffFromSecond, isFinished } = calculateRealtimeWinRates();
-  const summaryText = document.getElementById('eval-summary-text');
-  const summaryPct = document.getElementById('eval-summary-pct');
-  const miniBar = document.getElementById('eval-mini-bar');
-  if (!summaryText || !miniBar) return;
+  const { rates, topPlayer, diffFromSecond, isFinished } = calculateRealtimeWinRates();
+  const gridEl = document.getElementById('eval-rates-grid');
+  if (!gridEl) return;
 
-  const charDef = assignedCharacters[topPlayer];
-  const name = topPlayer === 'player' ? 'あなた' : (charDef ? charDef.name : topPlayer);
-  const icon = charDef ? charDef.icon : '👑';
+  let gridHtml = '';
+  PLAYERS.forEach(p => {
+    const charDef = assignedCharacters[p];
+    const name = (p === 'player') ? 'あなた' : (charDef ? charDef.name : p);
+    const color = CONFIG.COLORS[p] || '#d4af37';
+    const pct = rates[p] !== undefined ? rates[p] : 25;
 
-  if (isFinished) {
-    summaryText.textContent = `勝者: ${name}`;
-    summaryPct.textContent = '100%';
-  } else if (diffFromSecond >= 5) {
-    summaryText.textContent = `${icon} ${name}`;
-    summaryPct.textContent = `${topPct}%`;
-  } else {
-    summaryText.textContent = '互角';
-    summaryPct.textContent = `${topPct}%`;
-  }
+    const isTop = (p === topPlayer) && (diffFromSecond >= 3 || isFinished);
+    const topClass = isTop ? ' is-top-rank' : '';
+    const crownPrefix = isTop ? '👑 ' : '';
 
-  miniBar.innerHTML = PLAYERS.map(p =>
-    `<div class="eval-meter-bar-fill" style="background:${CONFIG.COLORS[p]}; width:${rates[p]}%;"></div>`
-  ).join('');
+    gridHtml += `
+      <div class="eval-rate-item${topClass}">
+        <span class="eval-color-dot" style="background:${color};"></span>
+        <span class="eval-name" title="${name}">${crownPrefix}${name}</span>
+        <div class="eval-mini-track">
+          <div class="eval-mini-fill" style="width:${pct}%; background:${color};"></div>
+        </div>
+        <span class="eval-pct">${pct}%</span>
+      </div>
+    `;
+  });
+  gridEl.innerHTML = gridHtml;
 }
 
 function showCharacterDialogue(player, text) {
@@ -1916,8 +1952,8 @@ function showCharacterDialogue(player, text) {
     charRow.appendChild(bubble);
   }
 
-  if (bubble.timeoutId) clearTimeout(bubble.timeoutId);
-  if (portrait.timeoutId) clearTimeout(portrait.timeoutId);
+  if (bubble.timeoutId) GameTimer.clear(bubble.timeoutId);
+  if (portrait.timeoutId) GameTimer.clear(portrait.timeoutId);
 
   bubble.textContent = `「${text}」`;
   bubble.classList.add('show');
@@ -1929,7 +1965,7 @@ function showCharacterDialogue(player, text) {
     portrait.classList.remove('portrait-talk');
   };
 
-  bubble.timeoutId = setTimeout(cleanup, dur);
+  bubble.timeoutId = GameTimer.set(cleanup, dur);
   portrait.timeoutId = bubble.timeoutId;
 }
 
@@ -2024,7 +2060,7 @@ function updateHandOverlap() {
   const paddingX = parseFloat(cs.paddingLeft || 0) + parseFloat(cs.paddingRight || 0);
   const containerW = handEl.clientWidth - paddingX;
 
-  const standardOverlap = cardWidth * -0.35;
+  const standardOverlap = cardWidth * -0.34;
   const totalWidthWithStandard = cardWidth + (n - 1) * (cardWidth + standardOverlap);
 
   if (totalWidthWithStandard <= containerW) {
@@ -2050,15 +2086,15 @@ function updateFieldOverlap() {
 
   const cardWidth = cards[0].offsetWidth || 45;
   const availableW = container.clientWidth - 12;
-  const normalTotal = n * cardWidth + (n - 1) * 3;
+  const normalTotal = n * cardWidth + (n - 1) * 4;
 
   if (normalTotal <= availableW) {
-    fieldEl.style.setProperty('--field-overlap', '3px');
+    fieldEl.style.setProperty('--field-overlap', '4px');
     return;
   }
 
   const overlapMargin = (availableW - cardWidth) / (n - 1) - cardWidth;
-  fieldEl.style.setProperty('--field-overlap', `${Math.min(3, overlapMargin)}px`);
+  fieldEl.style.setProperty('--field-overlap', `${Math.min(4, overlapMargin)}px`);
 }
 
 function syncPlayerHandAfterPlay(playedIndices) {
@@ -2115,7 +2151,7 @@ function animateCardMovement(player, indices, cardsToPlay, callback) {
     return clone;
   });
 
-  setTimeout(() => {
+  GameTimer.set(() => {
     const w = clones[0].offsetWidth || 45;
     const totalW = clones.length * w + (clones.length - 1) * 4;
     const startX = targetRect.left + (targetRect.width - totalW) / 2;
@@ -2125,11 +2161,11 @@ function animateCardMovement(player, indices, cardsToPlay, callback) {
     });
   }, 20);
 
-  setTimeout(() => {
+  GameTimer.set(() => {
     clones.forEach(c => c.remove());
     isProcessing = false;
     callback();
-  }, 350 / speed);
+  }, 320 / speed);
 }
 
 function showVictoryPopup(player) {
@@ -2148,13 +2184,13 @@ function showVictoryPopup(player) {
   const popup = document.getElementById('victory-popup');
   if (!portrait || !name || !popup) return;
 
-  setTimeout(() => {
+  GameTimer.set(() => {
     portrait.src = CHAR_IMAGES[def.id] || '';
     name.textContent = player === 'player' ? `${def.name}（あなた）` : def.name;
     popup.classList.add('active');
 
-    if (popup.timeoutId) clearTimeout(popup.timeoutId);
-    popup.timeoutId = setTimeout(() => popup.classList.remove('active'), 2600);
+    if (popup.timeoutId) GameTimer.clear(popup.timeoutId);
+    popup.timeoutId = GameTimer.set(() => popup.classList.remove('active'), 2600);
   }, 120);
 }
 
@@ -2175,7 +2211,15 @@ function render(isFullRedraw = false) {
 
   ['cpu1', 'cpu2', 'cpu3'].forEach(c => renderCpuStack(c, hands[c].length));
 
+  // 各席の「残り ○枚」＆「パス: ○」横並び更新
   PLAYERS.forEach(p => {
+    const countBadge = document.getElementById(`${p}-card-count`);
+    if (countBadge) {
+      const count = hands[p] ? hands[p].length : 0;
+      countBadge.textContent = `残り ${count}枚`;
+      countBadge.classList.toggle('danger-few', count > 0 && count <= 3 && !finishedPlayers.includes(p));
+    }
+
     const passEl = document.getElementById(`${p}-pass`);
     if (passEl) {
       passEl.textContent = CONFIG.ALLOW_LIMIT_PASS ? `${playerPassCounts[p]}/${CONFIG.MAX_PASS_LIMIT - 1}` : playerPassCounts[p];
@@ -2183,6 +2227,9 @@ function render(isFullRedraw = false) {
   });
 
   const fieldEl = document.getElementById('field-cards');
+  const emptyPlaceholder = document.getElementById('field-empty-placeholder');
+  const comboBadge = document.getElementById('field-combo-badge');
+
   fieldEl.innerHTML = '';
   fieldCards.forEach((c, i) => {
     const cel = createCardElement(c);
@@ -2190,6 +2237,23 @@ function render(isFullRedraw = false) {
     fieldEl.appendChild(cel);
   });
   updateFieldOverlap();
+
+  if (emptyPlaceholder) {
+    emptyPlaceholder.style.display = (fieldCards.length === 0) ? 'block' : 'none';
+  }
+  if (comboBadge) {
+    if (fieldCards.length > 0) {
+      comboBadge.style.display = 'inline-block';
+      let comboName = '単体';
+      if (fieldCards.length === 1 && fieldCards[0].isJoker) comboName = '🃏 ジョーカー単騎';
+      else if (fieldCards.length === 2) comboName = 'ペア';
+      else if (fieldCards.length === 3) comboName = '3カード';
+      else if (fieldCards.length >= 4) comboName = '革命 (4枚出し)';
+      comboBadge.textContent = comboName;
+    } else {
+      comboBadge.style.display = 'none';
+    }
+  }
 
   updateControlsOnly();
   updateEvalMeterUI();
@@ -2285,17 +2349,26 @@ function effectiveReverse() {
 
 function getSpeedMultiplier() {
   let base = currentSpeed;
-  if (finishedPlayers.includes('player') && base < 2) base = 2;
-  return base;
+  if (base === 2) return 2.2;
+  if (base === 3) return 3.8;
+  if (finishedPlayers.includes('player') && base < 2) return 2.2;
+  return 1.0;
 }
 
+/* リセット：進行中の全タイマーを完全に破棄して安全に再始動 */
 function resetGame(reshuffle = false, keepRanks = false) {
+  GameTimer.clearAll();
+  isProcessing = false;
+
   if (!keepRanks || reshuffle) previousRanks = {};
   if (reshuffle || !assignedCharacters.cpu1) pickRandomCPUCharacters();
   startNewGame();
 }
 
 function startNewGame() {
+  GameTimer.clearAll();
+  isProcessing = false;
+
   const patternName = isAutoPlayMode ? 'OBSERVE_AUTO' : 'MANUAL_GAME';
   AIDataLogger.startNewGame(patternName);
 
@@ -2319,7 +2392,6 @@ function startNewGame() {
   currentTurnIndex = 0;
   consecutivePasses = 0;
   selectedIndices = [];
-  isProcessing = false;
   finishedPlayers = [];
   gameEnded = false;
   playerStatusMap = {};
@@ -2333,7 +2405,7 @@ function startNewGame() {
     setMessage('カードが配布されました。「カード交換へ」ボタンを押してください。');
     render(true);
     if (isAutoPlayMode) {
-      setTimeout(() => { if (isPreExchangePhase) proceedToExchange(); }, 1500 / getSpeedMultiplier());
+      GameTimer.set(() => { if (isPreExchangePhase) proceedToExchange(); }, 1200 / getSpeedMultiplier());
     }
   } else {
     isPreExchangePhase = false;
@@ -2437,10 +2509,10 @@ function autoSelectExchangeCards(player, count) {
   const cards = selectExchangeCardsSmart(hands[player], count);
   selectedIndices = cards.map(c => hands[player].indexOf(c));
   render(true);
-  setTimeout(() => {
+  GameTimer.set(() => {
     isProcessing = false;
     confirmExchange();
-  }, 1000 / getSpeedMultiplier());
+  }, 800 / getSpeedMultiplier());
 }
 
 function confirmExchange() {
@@ -2511,7 +2583,10 @@ function playerPlayCard() {
   }
 
   const validMoves = getAllValidMoves(hands.player, fieldCards, rev);
-  AIDataLogger.recordStep('player', 1, assignedCharacters.player, hands.player, fieldCards, isRevolution, isElevenBack, consecutivePasses, hasPassedInRound, validMoves, cards);
+  AIDataLogger.recordStep(
+    'player', 1, assignedCharacters.player, hands.player, fieldCards, isRevolution, isElevenBack,
+    consecutivePasses, hasPassedInRound, validMoves, cards
+  );
 
   const playedIndices = [...selectedIndices];
   animateCardMovement('player', playedIndices, cards, () => {
@@ -2522,10 +2597,12 @@ function playerPlayCard() {
 
 function playerPass() {
   if (isProcessing || PLAYERS[currentTurnIndex] !== 'player') return;
-  
   const rev = effectiveReverse();
   const validMoves = getAllValidMoves(hands.player, fieldCards, rev);
-  AIDataLogger.recordStep('player', 1, assignedCharacters.player, hands.player, fieldCards, isRevolution, isElevenBack, consecutivePasses, hasPassedInRound, validMoves, null);
+  AIDataLogger.recordStep(
+    'player', 1, assignedCharacters.player, hands.player, fieldCards, isRevolution, isElevenBack,
+    consecutivePasses, hasPassedInRound, validMoves, null
+  );
 
   selectedIndices = [];
   const handEl = document.getElementById('player-hand');
@@ -2539,6 +2616,7 @@ function playerPass() {
   processPass('player');
 }
 
+/* イベント演出（革命・革命返し・11バック・8切り）フック連動 */
 function playCardSuccess(player, cards, needFullRedraw = false, playedIndices = []) {
   const wasLoneJoker = fieldCards.length === 1 && fieldCards[0].isJoker;
   fieldCards = cards;
@@ -2566,24 +2644,36 @@ function playCardSuccess(player, cards, needFullRedraw = false, playedIndices = 
     soundMgr.playJoker();
   }
 
+  /* ⚡ 【革命】 ＆ 【革命返し】 判定 ＆ アニメーション演出 */
   if (cards.length >= 4) {
+    const wasRev = isRevolution;
     isRevolution = !isRevolution;
-    actionText += ' 革命発生！';
+    if (wasRev) {
+      actionText += ' 革命返し成立！秩序が戻った！';
+      triggerEventBanner('⚡ 革命返し！ ⚡', 'banner-revolution-reverse');
+    } else {
+      actionText += ' 革命発生！強弱が逆転！';
+      triggerEventBanner('⚡ REVOLUTION ⚡', 'banner-revolution');
+    }
     PLAYERS.forEach(p => sortHand(hands[p]));
     needFullRedraw = true; hasSpecial = true; specialType = 'REVOLUTION';
   }
 
+  /* ⚡ 【11バック】 判定 ＆ アニメーション演出 */
   if (cards[0].display === 'J') {
     isElevenBack = true;
     actionText += ' 11バック発動！';
+    triggerEventBanner('⚡ 11 BACK ⚡', 'banner-eleven-back');
     PLAYERS.forEach(p => sortHand(hands[p]));
     needFullRedraw = true; hasSpecial = true;
     if (!specialType) specialType = 'ELEVEN_BACK';
   }
 
+  /* ⚔️ 【8切り】 判定 ＆ アニメーション演出 */
   const isEight = cards[0].display === '8';
   if (isEight) {
     actionText += ' 8切り発動！';
+    triggerEventBanner('⚔️ 8切り ⚔️', 'banner-eight-cut');
     hasSpecial = true;
     if (!specialType) specialType = 'EIGHT_CUT';
   }
@@ -2612,7 +2702,7 @@ function playCardSuccess(player, cards, needFullRedraw = false, playedIndices = 
     if (needFullRedraw) render(true);
     else syncPlayerHandAfterPlay(playedIndices);
     render(false);
-    setTimeout(() => clearField(player), 1200 / speed);
+    GameTimer.set(() => clearField(player), 1000 / speed);
   } else {
     if (needFullRedraw) render(true);
     else if (player === 'player') { syncPlayerHandAfterPlay(playedIndices); render(false); }
@@ -2662,6 +2752,13 @@ function nextTurn() {
     previousRanks = { ...playerStatusMap };
     StorageManager.recordGameEnd();
 
+    PLAYERS.forEach(p => {
+      const pt = document.getElementById(`${p}-portrait`);
+      if (pt) pt.classList.remove('portrait-talk');
+      const bubble = document.querySelector(`#${p} .dialogue-bubble`);
+      if (bubble) bubble.classList.remove('show');
+    });
+
     const rankValues = { '大富豪': 1, '富豪': 2, '貧民': 3, '大貧民': 4 };
     const seatResults = PLAYERS.map((p, idx) => ({
       seat: idx + 1,
@@ -2680,8 +2777,8 @@ function nextTurn() {
     document.getElementById('next-game-modal').classList.add('active');
 
     if (isAutoPlayMode) {
-      const waitTime = Math.max(3000, 4500 / getSpeedMultiplier());
-      setTimeout(() => {
+      const waitTime = Math.max(2200, 3800 / getSpeedMultiplier());
+      GameTimer.set(() => {
         const modal = document.getElementById('next-game-modal');
         if (modal && modal.classList.contains('active')) {
           document.getElementById('btn-keep-char').click();
@@ -2695,7 +2792,7 @@ function nextTurn() {
   if (lastPlayedPlayer && (consecutivePasses >= active.length - 1 || consecutivePasses >= 3)) {
     isProcessing = true;
     render(false);
-    setTimeout(() => clearField(), 1200 / speed);
+    GameTimer.set(() => clearField(), 1000 / speed);
     return;
   }
 
@@ -2707,13 +2804,14 @@ function nextTurn() {
 }
 
 function clearField(nextPlayer = null) {
+  const speed = getSpeedMultiplier();
   const fieldEl = document.getElementById('field-cards');
   fieldEl.classList.add('clear-animation');
 
   clearedCardsHistory.push(...currentRoundCards);
   currentRoundCards = [];
 
-  setTimeout(() => {
+  GameTimer.set(() => {
     fieldCards = [];
     consecutivePasses = 0;
     fieldEl.classList.remove('clear-animation');
@@ -2741,7 +2839,7 @@ function clearField(nextPlayer = null) {
     isProcessing = false;
     if (redraw) render(true);
     checkTurn();
-  }, 400);
+  }, 350 / speed);
 }
 
 function checkTurn() {
@@ -2754,7 +2852,7 @@ function checkTurn() {
   } else {
     isProcessing = true;
     render(false);
-    setTimeout(() => cpuPlayTurn(curr), 1000 / getSpeedMultiplier());
+    GameTimer.set(() => cpuPlayTurn(curr), 850 / getSpeedMultiplier());
   }
 }
 
@@ -2793,7 +2891,7 @@ async function cpuPlayTurn(cpu) {
     if (cpu === 'player') {
       selectedIndices = indices;
       render(true);
-      setTimeout(() => {
+      GameTimer.set(() => {
         animateCardMovement(cpu, indices, move, () => {
           move.forEach(c => {
             const idx = hands[cpu].indexOf(c);
@@ -2801,7 +2899,7 @@ async function cpuPlayTurn(cpu) {
           });
           playCardSuccess(cpu, move, false, indices);
         });
-      }, 600 / getSpeedMultiplier());
+      }, 500 / getSpeedMultiplier());
     } else {
       move.forEach(c => {
         const idx = hands[cpu].indexOf(c);
@@ -2820,7 +2918,7 @@ async function cpuPlayTurn(cpu) {
 }
 
 /* ----------------------------------------------------
- * 11. 高速自己対戦エンジン (新4パターン対応)
+ * 11. 高速自己対戦エンジン（完全保護）
  * ---------------------------------------------------- */
 const SelfPlayRunner = {
   isRunning: false,
@@ -2879,7 +2977,7 @@ const SelfPlayRunner = {
 
     } catch (err) {
       console.error("⚠️ Pythonシミュレーションエラー:", err);
-      alert(`Pythonサーバーとの通信に失敗しました。\nサーバーが起動しているか確認してください。\n(${err.message})`);
+      alert(`Pythonサーバー通信エラー (${err.message})`);
       this.isRunning = false;
       const pWrap = document.getElementById('selfplay-progress-wrap');
       if (pWrap) pWrap.style.display = 'none';
@@ -3003,11 +3101,15 @@ function updateLogViewerUI() {
   tableWrap.innerHTML = thtml;
 }
 
+/* ★ バージョン履歴モーダル（常に最新10件のみ表示・それ以上は自動除外） */
 function renderVersionHistoryModal() {
   const body = document.getElementById('version-modal-body');
   if (!body) return;
 
-  const list = (typeof VERSION_HISTORY !== 'undefined') ? VERSION_HISTORY : [];
+  const rawList = (typeof VERSION_HISTORY !== 'undefined') ? VERSION_HISTORY : [];
+  // 過去最大10件に制限
+  const list = rawList.slice(0, 10);
+
   if (list.length === 0) {
     body.innerHTML = '<p style="color:#8c9ba5;">更新履歴はありません。</p>';
     return;
@@ -3083,7 +3185,7 @@ function selectPlayerCharacter(id) {
 
   const autoBtn = document.getElementById('auto-play-btn');
   if (autoBtn) {
-    autoBtn.textContent = isAutoPlayMode ? '自動プレイ: ON' : '自動プレイ: OFF';
+    autoBtn.textContent = isAutoPlayMode ? '自動: ON' : '自動: OFF';
     autoBtn.classList.toggle('btn-gold', isAutoPlayMode);
   }
   document.getElementById('speed-controls').style.display = isAutoPlayMode ? 'flex' : 'none';
@@ -3111,27 +3213,27 @@ function renderFinalRanking() {
   }).join('');
 }
 
+/* 戦況分析（横棒グラフ長さに連動＋一番右にパーセント表示） */
 function showEvalModal() {
   const { rates, topPlayer, topPct, diffFromSecond } = calculateRealtimeWinRates();
   const body = document.getElementById('eval-modal-body');
   if (!body) return;
 
   let html = `
-    <div class="eval-graph-card">
-      <div class="rule-item-title" style="margin-bottom: 8px;">📈 現在の1位（大富豪）予想確率</div>
+    <div style="background: rgba(10, 16, 26, 0.85); border: 1.5px solid var(--color-border-gold); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+      <div class="rule-item-title" style="margin-bottom: 10px;">📈 各プレイヤーのリアルタイム勝率分析</div>
   `;
 
   PLAYERS.forEach(p => {
     const rate = rates[p] || 0;
-    const fin = finishedPlayers.includes(p) ? `(${playerStatusMap[p]}確定)` : `(残${hands[p].length}枚)`;
+    const color = CONFIG.COLORS[p] || '#d4af37';
     html += `
       <div class="eval-player-row">
         <div class="eval-player-name">${getPlayerDisplayName(p, true)}</div>
         <div class="eval-bar-track">
-          <div class="eval-bar-fill-p" style="width: ${rate}%; background: ${CONFIG.COLORS[p]};"></div>
+          <div class="eval-bar-fill-p" style="width: ${rate}%; background: ${color};"></div>
         </div>
         <div class="eval-player-pct">${rate}%</div>
-        <div style="font-size: 10px; color: #8c9ba5; width: 68px; text-align: right;">${fin}</div>
       </div>
     `;
   });
@@ -3154,9 +3256,9 @@ function showEvalModal() {
   }
 
   html += `
-    <div style="background: rgba(0,0,0,0.25); padding: 10px; border-radius: 6px; border-left: 3px solid #d4af37;">
+    <div style="background: rgba(0,0,0,0.3); padding: 10px 12px; border-radius: 6px; border-left: 3px solid #d4af37;">
       <div style="font-size: 11px; color: #d4af37; font-weight: bold; margin-bottom: 2px;">🤖 宮廷AI戦況レポート</div>
-      <div style="font-size: 12px; color: #e0e6ed; line-height: 1.4;">${comment}</div>
+      <div style="font-size: 12px; color: #e0e6ed; line-height: 1.45;">${comment}</div>
     </div>
   `;
 
@@ -3164,9 +3266,6 @@ function showEvalModal() {
   document.getElementById('eval-modal').classList.add('active');
 }
 
-/* ============================================================
- * ランキング・戦績・自己対戦コントロールパネル (v2.2.3対応)
- * ============================================================ */
 function formatSecondsToDisplay(sec) {
   if (sec <= 0 || isNaN(sec)) return '計算中...';
   const m = Math.floor(sec / 60);
@@ -3174,6 +3273,7 @@ function formatSecondsToDisplay(sec) {
   return m > 0 ? `${m}分${s}秒` : `${s}秒`;
 }
 
+/* 個人戦績モーダル（3大金枠カードレイアウト） */
 function renderRankingModalContent() {
   const body = document.getElementById('stats-body');
   if (!body) return;
@@ -3218,9 +3318,9 @@ function renderRankingModalContent() {
     list.sort((a, b) => b.winRate !== a.winRate ? b.winRate - a.winRate : b.games - a.games);
 
     let html = `
-      <div style="margin-bottom: 8px; font-size: 12px; color: #b0bec5; line-height: 1.45;">
+      <div style="margin-bottom: 8px; font-size: 11.5px; color: #b0bec5; line-height: 1.45;">
         宮廷総合格付け（全13名・大富豪率 順）<br>
-        <span style="font-size:10.5px; color:#8c9ba5;">※AIは自動観戦プレイ時、あなたは手動プレイ時のみ集計されます。</span>
+        <span style="font-size:10px; color:#8c9ba5;">※AIは自動観戦プレイ時、あなたは手動プレイ時のみ集計されます。</span>
       </div>
       <div class="ranking-table-container">
         <table class="ranking-table">
@@ -3241,14 +3341,14 @@ function renderRankingModalContent() {
       const rankBadge = idx < 3 ? `<span class="rank-num-badge rank-num-${idx + 1}">${idx + 1}</span>` : `${idx + 1}`;
       const rowClass = c.isPlayer ? ' class="ranking-row-player"' : '';
       const avatarEl = c.isPlayer
-        ? `<div style="width: 22px; aspect-ratio: 2/3; border-radius: 3px; border: 1px solid rgba(212,175,55,0.8); background: #1a2332; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0;">👤</div>`
-        : `<img src="${CHAR_IMAGES[c.id]}" style="width: 22px; aspect-ratio: 2/3; border-radius: 3px; border: 1px solid rgba(212,175,55,0.4); flex-shrink: 0;" alt="">`;
+        ? `<div style="width: 20px; aspect-ratio: 2/3; border-radius: 3px; border: 1px solid rgba(212,175,55,0.8); background: #1a2332; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0;">👤</div>`
+        : `<img src="${CHAR_IMAGES[c.id]}" style="width: 20px; aspect-ratio: 2/3; border-radius: 3px; border: 1px solid rgba(212,175,55,0.4); flex-shrink: 0;" alt="">`;
 
       html += `
         <tr${rowClass}>
           <td style="text-align: center;">${rankBadge}</td>
           <td>
-            <div style="display: flex; align-items: center; gap: 5px;">
+            <div style="display: flex; align-items: center; gap: 4px;">
               ${avatarEl}
               <span style="font-weight: bold; color: ${c.isPlayer ? '#fff3a8' : '#e0e6ed'};">${c.icon} ${c.name}</span>
             </div>
@@ -3269,15 +3369,14 @@ function renderRankingModalContent() {
     html += `</tbody></table></div>`;
 
     html += `
-      <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(212,175,55,0.25); display: flex; gap: 8px; justify-content: flex-end;">
-        <button class="btn-selfplay" id="btn-view-observe-log" style="padding: 8px 14px; font-size: 11.5px;">
+      <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(212,175,55,0.25); display: flex; justify-content: flex-end;">
+        <button class="btn-selfplay" id="btn-view-observe-log" style="padding: 6px 12px; font-size: 11px;">
           <span>🔍 直近の対戦・観戦ステップログを閲覧</span>
         </button>
       </div>
     `;
 
     body.innerHTML = html;
-
     const vBtn = document.getElementById('btn-view-observe-log');
     if (vBtn) vBtn.onclick = openUnifiedLogViewer;
 
@@ -3306,8 +3405,8 @@ function renderRankingModalContent() {
     }
 
     body.innerHTML = `
-      <div style="margin-bottom: 12px;">
-        <div class="rule-item-title">📊 プレイヤー通算戦績（手動対局のみ）</div>
+      <div class="stats-category-card">
+        <div class="stats-category-title">📊 プレイヤー通算戦績（手動対局）</div>
         <div class="stats-grid">
           <div>総対局数: <strong style="color:#fff3a8">${total}</strong> 試合</div>
           <div>平均順位: <strong style="color:#fff3a8">${avg}</strong> 位</div>
@@ -3317,22 +3416,22 @@ function renderRankingModalContent() {
           <div>大貧民: ${stats.rankCounts['大貧民']}回 (${pct(stats.rankCounts['大貧民'])}%)</div>
         </div>
       </div>
-      <div style="margin-bottom: 12px;">
-        <div class="rule-item-title">🔥 大富豪 連荘記録 ＆ 役職移動</div>
+
+      <div class="stats-category-card">
+        <div class="stats-category-title">🔥 大富豪 連荘記録 ＆ 役職移動</div>
         <div class="stats-grid">
-          <div>大富豪 最高連荘: <strong style="color:#d4af37; font-size: 13px;">${maxStreak}</strong> 連続</div>
-          <div>大富豪 現在連荘: <strong style="color:#fff3a8; font-size: 13px;">${currentStreak}</strong> 連続</div>
+          <div>大富豪 最高連荘: <strong style="color:#d4af37;">${maxStreak}</strong> 連続</div>
+          <div>大富豪 現在連荘: <strong style="color:#fff3a8;">${currentStreak}</strong> 連続</div>
           <div>総上納: <strong style="color:#ff6b6b">${stats.givenCards}</strong> 枚</div>
           <div>総搾取: <strong style="color:#4caf50">${stats.takenCards}</strong> 枚</div>
           <div style="grid-column: span 2;">下克上成功 (大貧民→大富豪): <strong style="color:#d4af37">${stats.gekokujo}</strong> 回</div>
         </div>
       </div>
-      <div>
-        <div class="rule-item-title">⚔️ あなたの天敵AIとその根拠</div>
-        <div style="background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 6px; border-left: 3px solid #ff6b6b;">
-          <div style="margin-bottom: 3px;">最も敗北を誇った相手: <strong style="color:#ff6b6b; font-size: 14px;">${nemesis}</strong></div>
-          <div style="font-size: 11.5px; color: #b0bec5; line-height: 1.4;">根拠: ${nemesisReason}</div>
-        </div>
+
+      <div class="stats-category-card">
+        <div class="stats-category-title">⚔️ あなたの天敵AIとその根拠</div>
+        <div style="margin-bottom: 4px; font-size: 12px;">最も敗北を喫した相手: <strong style="color:#ff6b6b; font-size: 13.5px;">${nemesis}</strong></div>
+        <div style="font-size: 11px; color: #b0bec5; line-height: 1.4;">根拠: ${nemesisReason}</div>
       </div>
     `;
   } else if (currentStatsTab === 'selfplay') {
@@ -3346,10 +3445,10 @@ function renderRankingModalContent() {
           ※超級AI（163次元完全体）を中心に据え、毎試合座席を完全シャッフルして純粋な実力を検証・データ収集します。
         </div>
 
-        <div class="selfplay-btn-row" style="display:flex; flex-direction:column; gap:8px;">
+        <div class="selfplay-btn-row" style="display:flex; flex-direction:column; gap:6px;">
           <button class="btn-selfplay" id="btn-selfplay-a">
             <span>🅰️ パターンA（最重要・対強敵：1,500試合）</span>
-            <span style="font-size:10.5px; color:#d4af37; font-weight:bold;">超級AI × 2人 🆚「王」 × 2人</span>
+            <span style="font-size:10.5px; color:#ffd700; font-weight:bold;">超級AI × 2人 🆚「王」 × 2人</span>
             <span style="font-size:9.5px; color:#b0bec5;">(王打倒に特化した直接対決の神データ収集)</span>
           </button>
           
@@ -3359,29 +3458,27 @@ function renderRankingModalContent() {
             <span style="font-size:9.5px; color:#b0bec5;">(商人によるペア重視戦術と4者4様の駆け引き)</span>
           </button>
 
-          <div style="display:flex; gap:8px;">
+          <div style="display:flex; gap:6px;">
             <button class="btn-selfplay" id="btn-selfplay-c" style="flex:1;">
               <span>🅲 パターンC（汎用戦：500試合）</span>
-              <span style="font-size:10px; color:#2196f3; font-weight:bold;">超級AI × 2人 🆚 4大貴族(公爵/侯爵/伯爵/騎士)</span>
-              <span style="font-size:9px; color:#b0bec5;">(正統派キャラからランダム2名・基礎体力向上)</span>
+              <span style="font-size:10px; color:#2196f3; font-weight:bold;">超級AI × 2人 🆚 4大貴族</span>
             </button>
             <button class="btn-selfplay" id="btn-selfplay-d" style="flex:1;">
               <span>🅳 パターンD（練習試合：500試合）</span>
-              <span style="font-size:10px; color:#9c27b0; font-weight:bold;">全12キャラクター完全均等選出</span>
-              <span style="font-size:9px; color:#b0bec5;">(全キャラの対戦数が完全同数・総合リーグ戦)</span>
+              <span style="font-size:10px; color:#ba68c8; font-weight:bold;">全12キャラクター完全均等</span>
             </button>
           </div>
         </div>
 
-        <div class="selfplay-progress-wrap" id="selfplay-progress-wrap" style="display:none; flex-direction:column; gap:6px;">
-          <div class="selfplay-progress-text" style="display:flex; justify-content:space-between; font-size:11.5px; color:#e0e6ed; flex-wrap:wrap; gap:4px;">
+        <div class="selfplay-progress-wrap" id="selfplay-progress-wrap" style="display:none; flex-direction:column; gap:5px;">
+          <div class="selfplay-progress-text" style="display:flex; justify-content:space-between; font-size:11px; color:#e0e6ed; flex-wrap:wrap; gap:4px;">
             <span id="selfplay-progress-label">シミュレーション準備中...</span>
             <span id="selfplay-progress-eta" style="color:#4caf50; font-weight:bold;">⏳ 残り時間: 計算中...</span>
           </div>
-          <div class="selfplay-progress-bar-bg" style="background:#101726; height:8px; border-radius:4px; overflow:hidden; border:1px solid rgba(212,175,55,0.2);">
-            <div class="selfplay-progress-bar-fill" id="selfplay-progress-fill" style="width: 0%; height:100%; background:linear-gradient(90deg, #d4af37, #4caf50); transition: width 0.25s ease;"></div>
+          <div class="selfplay-progress-bar-bg">
+            <div class="selfplay-progress-bar-fill" id="selfplay-progress-fill" style="width: 0%;"></div>
           </div>
-          <div style="display:flex; justify-content:space-between; font-size:10.5px; color:#8c9ba5;">
+          <div style="display:flex; justify-content:space-between; font-size:10px; color:#8c9ba5;">
             <span id="selfplay-model-badge">使用モデル: 超級AI (163次元)</span>
             <span id="selfplay-progress-pct" style="color:#d4af37; font-weight:bold;">0.0%</span>
           </div>
@@ -3390,22 +3487,22 @@ function renderRankingModalContent() {
         <div class="selfplay-summary-box">
           <div class="rule-item-title" style="margin-bottom: 6px; display:flex; justify-content:space-between; align-items:center;">
             <span>📊 最新シミュレーション結果サマリー</span>
-            <button class="btn" id="btn-selfplay-quick-log" style="padding: 2px 8px; font-size: 10px; background:rgba(212,175,55,0.15); border:1px solid #d4af37;">📜 通信ログを確認</button>
+            <button class="btn" id="btn-selfplay-quick-log" style="padding: 2px 6px; font-size: 10px; background:rgba(212,175,55,0.15); border:1px solid #d4af37;">📜 通信ログを確認</button>
           </div>
           <div id="selfplay-results-table">
-            <div style="padding: 15px; text-align: center; color: #8c9ba5;">
+            <div style="padding: 12px; text-align: center; color: #8c9ba5; font-size: 11px;">
               上のボタン（A〜D）を押すと、ここにリアルタイムに進捗と対戦成績が出力されます。
             </div>
           </div>
 
-          <div class="selfplay-download-row" style="margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(212,175,55,0.25); display: flex; gap: 8px; flex-wrap: wrap;">
-            <button class="btn-selfplay" id="btn-download-json" style="flex: 1; padding: 9px 8px; font-size: 11px;" ${canDownloadOrView ? '' : 'disabled'}>
+          <div class="selfplay-download-row">
+            <button class="btn-selfplay" id="btn-download-json" ${canDownloadOrView ? '' : 'disabled'}>
               <span>💾 JSON保存 (全体データ)</span>
             </button>
-            <button class="btn-selfplay" id="btn-download-jsonl" style="flex: 1; padding: 9px 8px; font-size: 11px;" ${canDownloadOrView ? '' : 'disabled'}>
+            <button class="btn-selfplay" id="btn-download-jsonl" ${canDownloadOrView ? '' : 'disabled'}>
               <span>📄 JSONL保存 (学習用ステップ)</span>
             </button>
-            <button class="btn-selfplay" id="btn-open-viewer" style="flex: 1; padding: 9px 8px; font-size: 11px;" ${canDownloadOrView ? '' : 'disabled'}>
+            <button class="btn-selfplay" id="btn-open-viewer" ${canDownloadOrView ? '' : 'disabled'}>
               <span>🔍 試合データ詳細ビューア</span>
             </button>
           </div>
@@ -3533,10 +3630,10 @@ function triggerSelfPlay(pattern, total = 500) {
               <span>🏆 対戦結果 (${titleMap[pattern]})</span>
               <span style="color:#4caf50; font-size:11px;">⏱️ 所要時間: ${elapsedSeconds}秒 ${totalSteps ? `(総${totalSteps.toLocaleString()}手)` : ''}</span>
             </div>
-            <div style="font-size:10.5px; color:#8c9ba5; margin-bottom:6px;">
+            <div style="font-size:10px; color:#8c9ba5; margin-bottom:4px;">
               ✅ 稼働確認: 超級AI=${superModel || 'daifugou_ai_hi2.pth (163次元)'}
             </div>
-            <table class="ranking-table" style="font-size:11.5px;">
+            <table class="ranking-table" style="font-size:11px;">
               <thead>
                 <tr>
                   <th>キャラクター</th>
@@ -3565,7 +3662,7 @@ function triggerSelfPlay(pattern, total = 500) {
             <tr>
               <td><strong>${row.displayIcon} ${row.displayName}</strong></td>
               <td style="text-align:right; color:#b0bec5;">${row.item.games}戦</td>
-              <td style="text-align:right; color:#d4af37; font-weight:bold;">${row.winPct}%</td>
+              <td style="text-align:right; color:#ffd700; font-weight:bold;">${row.winPct}%</td>
               <td style="text-align:right; color:#fff3a8;">${row.avg}位</td>
               <td style="text-align:center;">
                 <span class="rank-count-badge rcb-df">${row.item.df}</span>
@@ -3627,8 +3724,9 @@ function initEvents() {
     };
   }
 
+  // ★ バージョンバッジを一元管理から同期
   if (versionBadge && typeof APP_VERSION !== 'undefined') {
-    versionBadge.textContent = APP_VERSION;
+    versionBadge.textContent = `👑 Ver. ${APP_VERSION.replace('v', '')}`;
     versionBadge.onclick = () => {
       soundMgr.playSelect();
       renderVersionHistoryModal();
@@ -3683,7 +3781,7 @@ function initEvents() {
 
   document.getElementById('sound-toggle-btn').onclick = (e) => {
     isSoundMuted = !isSoundMuted;
-    e.target.textContent = isSoundMuted ? '🔇 音声: OFF' : '🔊 音声: ON';
+    e.target.textContent = isSoundMuted ? '🔇 BGM OFF' : '🔊 BGM ON';
     bgmMgr.audio.muted = isSoundMuted;
     if (!isSoundMuted) soundMgr.playSelect();
   };
@@ -3736,37 +3834,47 @@ function initEvents() {
     }
   };
 
+  /* 倍速ボタンの確実なイベント登録＆速度切替 */
   document.querySelectorAll('.btn-speed').forEach(btn => {
-    btn.onclick = (e) => {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
       soundMgr.playSelect();
       document.querySelectorAll('.btn-speed').forEach(b => b.classList.remove('active'));
-      e.target.classList.add('active');
-      currentSpeed = parseInt(e.target.getAttribute('data-speed'));
-    };
+      this.classList.add('active');
+      const spd = parseInt(this.getAttribute('data-speed'), 10);
+      currentSpeed = !isNaN(spd) ? spd : 1;
+      console.log(`[SPEED] 速度切替: ${currentSpeed}x (倍率: ${getSpeedMultiplier()})`);
+    });
   });
 
+  /* 自動プレイボタンの即時キック＆同期 */
   document.getElementById('auto-play-btn').onclick = () => {
     soundMgr.playSelect();
     isAutoPlayMode = !isAutoPlayMode;
     const btn = document.getElementById('auto-play-btn');
-    btn.textContent = isAutoPlayMode ? '自動プレイ: ON' : '自動プレイ: OFF';
+    btn.textContent = isAutoPlayMode ? '自動: ON' : '自動: OFF';
     btn.classList.toggle('btn-gold', isAutoPlayMode);
 
-    document.getElementById('speed-controls').style.display = isAutoPlayMode ? 'flex' : 'none';
+    const speedControls = document.getElementById('speed-controls');
+    if (speedControls) speedControls.style.display = isAutoPlayMode ? 'flex' : 'none';
+
     if (!isAutoPlayMode) {
       currentSpeed = 1;
       document.querySelectorAll('.btn-speed').forEach(b => b.classList.toggle('active', b.getAttribute('data-speed') === '1'));
     }
+
     updateControlsOnly();
 
     if (isAutoPlayMode) {
-      if (PLAYERS[currentTurnIndex] === 'player' && !isProcessing && !isExchangePhase && !isPreExchangePhase && !gameEnded) {
-        checkTurn();
-      } else if (isPreExchangePhase) {
+      if (isPreExchangePhase) {
         proceedToExchange();
       } else if (isExchangePhase && PLAYERS[currentTurnIndex] === 'player') {
         if (previousRanks.player === '大富豪') autoSelectExchangeCards('player', 2);
         else if (previousRanks.player === '富豪') autoSelectExchangeCards('player', 1);
+      } else if (PLAYERS[currentTurnIndex] === 'player' && !gameEnded) {
+        isProcessing = false;
+        render(false);
+        checkTurn();
       }
     }
   };
@@ -3787,6 +3895,7 @@ function initEvents() {
     PLAYERS.filter(p => p !== 'player').forEach(p => checkAndTriggerDialogue(p, 'NEXT_GAME'));
   };
 
+  /* リセットボタン：タイマー完全破棄を伴う安全なリセット */
   document.getElementById('reset-btn').onclick = () => {
     soundMgr.playSelect();
     rulesPanel.classList.remove('open');
@@ -3807,42 +3916,12 @@ function initEvents() {
       ['cpu1', 'cpu2', 'cpu3'].forEach(c => renderCpuStack(c, hands[c].length));
     }, 100);
   });
-  window.addEventListener('orientationchange', () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => {
-      updateHandOverlap();
-      updateFieldOverlap();
-      ['cpu1', 'cpu2', 'cpu3'].forEach(c => renderCpuStack(c, hands[c].length));
-    }, 150);
-  });
 }
 
 function initRuleTexts() {
   const rPass = document.getElementById('rule-list-pass');
-  const rTitle = document.getElementById('rule-item-pass-title');
-  const rDesc = document.getElementById('rule-item-pass-desc');
-  if (!rPass || !rTitle || !rDesc) return;
-
-  if (CONFIG.ALLOW_LIMIT_PASS) {
-    rPass.textContent = `パス${CONFIG.MAX_PASS_LIMIT}回でドボン`;
-    rTitle.textContent = `パス${CONFIG.MAX_PASS_LIMIT}回でドボン (Pass Penalty)`;
-    rDesc.textContent = `1ゲーム中に通算${CONFIG.MAX_PASS_LIMIT}回パスを行うと「ドボン（強制最下位）」となります。`;
-  } else {
-    rPass.textContent = 'パス制限なし';
-    rTitle.textContent = 'パスの制限 (Pass Rules)';
-    rDesc.textContent = 'パスは回数制限がなく、何度でも自由に行うことができます。';
-  }
+  if (rPass) rPass.textContent = 'パス制限なし';
 }
-
-window.RoyalAI = {
-  dataLogger: AIDataLogger,
-  selfPlay: SelfPlayRunner,
-  randomMgr: RandomManager,
-  setLogging: (enabled) => { CONFIG.ENABLE_AI_DATA_LOGGING = !!enabled; },
-  setSeed: (seed) => { RandomManager.setSeed(seed); },
-  exportJSON: () => AIDataLogger.exportJSON(),
-  exportJSONL: () => AIDataLogger.exportJSONL()
-};
 
 function startApp() {
   try {
@@ -3854,7 +3933,7 @@ function startApp() {
     initEvents();
     bgmMgr.setCharSelectPhase(true);
     AIStatusUI.pingServer();
-    console.log('[SYSTEM] アプリ初期化完了（v2.2.3 - 王打倒モデル配備＆新4パターン版）');
+    console.log('[SYSTEM] アプリ初期化完了（v2.5.0 正式版）');
   } catch (err) {
     console.error('[CRITICAL] 起動初期化エラー:', err);
   }
@@ -3865,4 +3944,5 @@ if (document.readyState === 'loading') {
 } else {
   startApp();
 }
+
 

@@ -1,5 +1,5 @@
 
-<!-- [HTML Version: v2.2.3] 最終更新: 王打倒モデル(daifugou_ai_hi2.pth)完成・新4パターンシミュレータ＆バージョン同期版 -->
+<!-- [HTML Version: v2.5.0] STEP 8: 最終UI調整・高級西洋ファンタジー王宮カードゲーム正式版 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -10,15 +10,22 @@
 </head>
 <body>
 
-  <!-- ゲーム表示フレーム -->
+  <!-- ゲーム表示フレーム（王宮謁見の間） -->
   <div id="app-viewport">
 
-    <!-- キャラクター選択画面（ゲーム開始前） -->
+    <!-- ゲームイベント演出バナー（革命・革命返し・11バック・8切り：宮廷シネマティック枠） -->
+    <div id="event-banner" class="event-banner">
+      <div class="event-banner-inner">
+        <span id="event-banner-text"></span>
+      </div>
+    </div>
+
+    <!-- キャラクター選択画面（完全センタリング＆優美なシャンパンゴールド調） -->
     <div class="char-select-overlay active" id="char-select-overlay">
       <div class="char-select-panel">
-        <div class="main-title" style="margin-bottom:6px;">ROYAL CARD GAME</div>
+        <div class="main-title char-select-main-title">ROYAL CARD GAME</div>
         <div class="char-select-title">キャラクターを選択</div>
-        <div class="char-select-sub">あなたの分身となるキャラクターを1人選んでください</div>
+        <div class="char-select-sub">あなたの分身となる宮廷の戦略家を1人選んでください</div>
         
         <div class="mode-select-container">
           <label><input type="radio" name="playMode" value="manual" checked> 自分でプレイ</label>
@@ -29,7 +36,7 @@
       </div>
     </div>
 
-    <!-- 勝利演出ポップアップ -->
+    <!-- 勝利演出ポップアップ（完全中央センタリング配置） -->
     <div class="victory-popup-overlay" id="victory-popup">
       <div class="victory-popup-content">
         <img id="victory-portrait" src="" alt="">
@@ -45,9 +52,9 @@
       <div id="rules-panel">
         <div class="rules-header">
           <div class="rules-header-btns">
-            <button class="btn-rule-help" id="sound-toggle-btn">🔊 音声: ON</button>
-            <button class="btn-rule-help" id="char-help-btn">キャラ紹介</button>
-            <button class="btn-rule-help" id="rule-toggle-btn">ルール解説</button>
+            <button class="btn-rule-help" id="sound-toggle-btn">🔊 BGM ON</button>
+            <button class="btn-rule-help" id="char-help-btn">👥 キャラ紹介</button>
+            <button class="btn-rule-help" id="rule-toggle-btn">📖 ルール解説</button>
           </div>
         </div>
         <div class="rules-list-container">
@@ -62,35 +69,54 @@
           </ul>
         </div>
 
-        <!-- 戦況メーター & AI通信ステータスランプ -->
-        <div class="header-status-row">
-          <div class="eval-meter-container" id="eval-meter-btn" title="クリックで戦況グラフを表示">
-            <div class="eval-meter-wrapper">
-              <div class="eval-meter-label">勝利予想</div>
-              <div class="eval-meter-badge">
-                <span id="eval-summary-icon">📊</span>
-                <span id="eval-summary-text">互角</span>
-                <span class="eval-pct" id="eval-summary-pct"></span>
-                <div class="eval-meter-bar-mini" id="eval-mini-bar">
-                  <div class="eval-meter-bar-fill" style="background:#d4af37; width:25%;"></div>
-                  <div class="eval-meter-bar-fill" style="background:#4caf50; width:25%;"></div>
-                  <div class="eval-meter-bar-fill" style="background:#2196f3; width:25%;"></div>
-                  <div class="eval-meter-bar-fill" style="background:#e91e63; width:25%;"></div>
-                </div>
-              </div>
+        <!-- 勝利予想パネル ＆ AI通信ステータスランプ（横離し・文字欠け防止・ミニグラフ完全対応） -->
+        <div class="header-status-row" id="eval-meter-btn" title="クリックで詳細戦況グラフを表示">
+          <!-- 左：勝利予想タイトル（横幅固定・右側と確実に分離） -->
+          <div class="eval-meter-left">
+            <span class="eval-trophy-icon">🏆</span>
+            <span class="eval-title-text">勝利予想</span>
+            <span class="eval-info-icon">ℹ️</span>
+          </div>
+
+          <!-- 中央：4人のリアルタイム勝率グリッド（カラーチップ＋伸縮ミニバー内蔵） -->
+          <div class="eval-rates-grid" id="eval-rates-grid">
+            <div class="eval-rate-item">
+              <span class="eval-color-dot" style="background:#2196f3;"></span>
+              <span class="eval-name">あなた</span>
+              <div class="eval-mini-track"><div class="eval-mini-fill" style="width:25%; background:#2196f3;"></div></div>
+              <span class="eval-pct">25%</span>
+            </div>
+            <div class="eval-rate-item">
+              <span class="eval-color-dot" style="background:#4caf50;"></span>
+              <span class="eval-name">軍師</span>
+              <div class="eval-mini-track"><div class="eval-mini-fill" style="width:25%; background:#4caf50;"></div></div>
+              <span class="eval-pct">25%</span>
+            </div>
+            <div class="eval-rate-item">
+              <span class="eval-color-dot" style="background:#d4af37;"></span>
+              <span class="eval-name">公爵</span>
+              <div class="eval-mini-track"><div class="eval-mini-fill" style="width:25%; background:#d4af37;"></div></div>
+              <span class="eval-pct">25%</span>
+            </div>
+            <div class="eval-rate-item">
+              <span class="eval-color-dot" style="background:#e91e63;"></span>
+              <span class="eval-name">上級AI</span>
+              <div class="eval-mini-track"><div class="eval-mini-fill" style="width:25%; background:#e91e63;"></div></div>
+              <span class="eval-pct">25%</span>
             </div>
           </div>
 
-          <!-- 🔮 AI通信ステータスオーブ -->
+          <!-- 右：AI通信ステータスランプ（脳アイコン＆思考中オーブ） -->
           <div class="ai-status-orb-btn" id="ai-status-orb" title="クリックでデバッグログを表示">
-            <span class="ai-orb-dot status-offline" id="ai-orb-dot"></span>
+            <span class="ai-brain-icon">🧠</span>
             <span class="ai-orb-label" id="ai-orb-label">AI: 待機中</span>
+            <span class="ai-orb-dot status-offline" id="ai-orb-dot"></span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- キャラクター紹介モーダル -->
+    <!-- キャラクター紹介モーダル（上品な宮廷カード化・肖像画サイズ完全適正化） -->
     <div class="modal-overlay" id="char-modal">
       <div class="modal-content">
         <div class="modal-header">
@@ -99,84 +125,84 @@
         </div>
         <div class="modal-body">
           <div class="char-intro-item">
-            <img class="char-intro-portrait" data-char-img="SUPER_AI" src="" alt="👸 超級AI - PyTorch深層学習モデル (163次元)">
+            <img class="char-intro-portrait" data-char-img="SUPER_AI" src="" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">👸 超級AI - PyTorch深層学習モデル (163次元)</div>
               <div>手札(53)・場(53)・流れた札(53)に加え、『革命・親番等の盤面状況(4)』を完全認識・カウンティング推論する新世代の最上位学習モデル（daifugou_ai_hi2.pth）です。</div>
             </div>
           </div>
           <div class="char-intro-item">
-            <img class="char-intro-portrait" data-char-img="BEGINNER_AI" src="" alt="🤖 上級AI - PyTorch深層学習モデル (110次元)">
+            <img class="char-intro-portrait" data-char-img="BEGINNER_AI" src="" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">🤖 上級AI - PyTorch深層学習モデル (110次元)</div>
               <div>PyTorchで訓練された多層深層学習モデル（daifugou_ai_hi.pth）と連携し、盤面ベクトルから推論した最高スコアのカードを選択して戦う本格AIです。</div>
             </div>
           </div>
           <div class="char-intro-item">
-            <img class="char-intro-portrait" data-char-img="KING" src="" alt="🏰 王 (King) - 完全読み（最強AI）">
+            <img class="char-intro-portrait" data-char-img="KING" src="" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">🏰 王 (King) - 完全読み（最強AI）</div>
               <div>未見のカードや全員の手札状況を完璧に計算し、モンテカルロ木探索（MCTS）で確定勝ちルートを指す最強AIです。</div>
             </div>
           </div>
           <div class="char-intro-item">
-            <img class="char-intro-portrait" data-char-img="DUKE" src="" alt="👑 公爵 (Duke) - 温存型">
+            <img class="char-intro-portrait" data-char-img="DUKE" src="" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">👑 公爵 (Duke) - 温存型</div>
               <div>強力なカード（Aや2）を温存し、手札後半で一気に勝負をかけます。</div>
             </div>
           </div>
           <div class="char-intro-item">
-            <img class="char-intro-portrait" data-char-img="MARQUIS" src="" alt="🍷 侯爵 (Marquis) - スコア重視">
+            <img class="char-intro-portrait" data-char-img="MARQUIS" src="" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">🍷 侯爵 (Marquis) - スコア重視</div>
               <div>一枚ごとの価値と手札の枚数バランスを計算し、最も効果的で無駄のない手を選択します。</div>
             </div>
           </div>
           <div class="char-intro-item">
-            <img class="char-intro-portrait" data-char-img="COUNT" src="" alt="📜 伯爵 (Count) - 変則展開">
+            <img class="char-intro-portrait" data-char-img="COUNT" src="" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">📜 伯爵 (Count) - 変則展開</div>
               <div>序盤は温存し、手札が5枚以下になると強力なカードを積極的に使い始めます。</div>
             </div>
           </div>
           <div class="char-intro-item">
-            <img class="char-intro-portrait" data-char-img="KNIGHT" src="" alt="⚔️ 騎士 (Knight) - 愚直・最弱順">
+            <img class="char-intro-portrait" data-char-img="KNIGHT" src="" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">⚔️ 騎士 (Knight) - 愚直・最弱順</div>
               <div>駆け引きをせず、常に「今出せる中で最も弱いカード」を直直に出していきます。</div>
             </div>
           </div>
           <div class="char-intro-item">
-            <img class="char-intro-portrait" data-char-img="MERCHANT" src="" alt="⚖️ 商人 (Merchant) - ペア重視">
+            <img class="char-intro-portrait" data-char-img="MERCHANT" src="" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">⚖️ 商人 (Merchant) - ペア重視</div>
               <div>ペア（2枚出し）やセットの構築を好み、同じ数字のカードを単発で出すことを嫌います。</div>
             </div>
           </div>
           <div class="char-intro-item">
-            <img class="char-intro-portrait" data-char-img="SCHOLAR" src="" alt="📖 学者 (Scholar) - 慎重・観察">
+            <img class="char-intro-portrait" data-char-img="SCHOLAR" src="" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">📖 学者 (Scholar) - 慎重・観察</div>
               <div>場の流れを分析し、相手が複数出しをしてきた場合に合わせてカウンターを狙います。</div>
             </div>
           </div>
           <div class="char-intro-item">
-            <img class="char-intro-portrait" data-char-img="STRATEGIST" src="" alt="♟️ 軍師 (Strategist) - 妨害・コントロール">
+            <img class="char-intro-portrait" data-char-img="STRATEGIST" src="" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">♟️ 軍師 (Strategist) - 妨害・コントロール</div>
               <div>他プレイヤーの手札が残り少なくなると「8切り」や強カードで親権を奪い、あがりを阻止します。</div>
             </div>
           </div>
           <div class="char-intro-item">
-            <img class="char-intro-portrait" data-char-img="REVOLUTIONARY" src="" alt="🔥 革命家 (Revolutionary) - 革命特化">
+            <img class="char-intro-portrait" data-char-img="REVOLUTIONARY" src="" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">🔥 革命家 (Revolutionary) - 革命特化</div>
               <div>4枚以上のペアがあれば最優先で「革命」を狙い、さらに「8切り」を多用します。</div>
             </div>
           </div>
           <div class="char-intro-item">
-            <img class="char-intro-portrait" data-char-img="JESTER" src="" alt="🤡 道化師 (Jester) - 予測不能">
+            <img class="char-intro-portrait" data-char-img="JESTER" src="" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">🤡 道化師 (Jester) - 予測不能</div>
               <div>気まぐれに強カードを出したりパスしたりと、読めないトリッキーな動きをします。</div>
@@ -189,7 +215,7 @@
       </div>
     </div>
 
-    <!-- ルール解説モーダル -->
+    <!-- ルール解説モーダル（宮廷古書調カードレイアウト） -->
     <div class="modal-overlay" id="rule-modal">
       <div class="modal-content">
         <div class="modal-header">
@@ -284,7 +310,7 @@
       </div>
     </div>
 
-    <!-- 📜 画面内デバッグ・ログコンソールモーダル（タブレット・スマホ対応） -->
+    <!-- 📜 画面内デバッグ・ログコンソールモーダル -->
     <div class="modal-overlay" id="debug-log-modal">
       <div class="modal-content" style="max-width: 720px; width: 96%;">
         <div class="modal-header">
@@ -309,7 +335,7 @@
 
     <!-- 戦況分析（勝率グラフ）モーダル -->
     <div class="modal-overlay" id="eval-modal">
-      <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-content" style="max-width: 520px;">
         <div class="modal-header">
           <div class="modal-title">📊 リアルタイム戦況分析</div>
           <button class="modal-close" id="modal-eval-close-x">&times;</button>
@@ -335,25 +361,25 @@
       </div>
     </div>
 
-    <!-- 次ゲーム準備ダイアログ -->
+    <!-- 次ゲーム準備ダイアログ（スクロールなし1画面固定） -->
     <div class="modal-overlay" id="next-game-modal">
-      <div class="modal-content">
+      <div class="modal-content modal-next-game-compact">
         <div class="modal-header">
           <div class="modal-title">次ゲームの準備</div>
         </div>
-        <div class="modal-body" style="text-align: center; padding: 8px 0;">
-          <p style="font-size: 14px; margin-bottom: 8px; color: #fff3a8;">ゲームが終了しました！</p>
+        <div class="modal-body" style="text-align: center; padding: 4px 0; overflow: hidden;">
+          <p style="font-size: 13px; margin-bottom: 6px; color: #fff3a8;">ゲームが終了しました！</p>
           <div class="final-ranking-list" id="final-ranking-list"></div>
-          <p style="font-size: 13px;">対戦相手のキャラクター（CPU）をどうしますか？</p>
+          <p style="font-size: 12px; margin-top: 4px;">対戦相手のキャラクター（CPU）をどうしますか？</p>
         </div>
-        <div class="modal-footer" style="justify-content: center; gap: 10px;">
-          <button class="btn btn-gold" id="btn-keep-char">同じメンバーで続行<br><span style="font-size: 10px;">(カード交換あり)</span></button>
-          <button class="btn" id="btn-change-char">メンバーを再抽選<br><span style="font-size: 10px;">(カード交換なし)</span></button>
+        <div class="modal-footer next-game-footer">
+          <button class="btn btn-gold" id="btn-keep-char">👑 同じメンバーで続行<br><span style="font-size: 10px;">(カード交換あり)</span></button>
+          <button class="btn" id="btn-change-char">🎲 メンバーを再抽選<br><span style="font-size: 10px;">(カード交換なし)</span></button>
         </div>
       </div>
     </div>
 
-    <!-- ゲーム盤面 -->
+    <!-- ゲーム盤面（参考画像配置） -->
     <div id="game-board">
       <!-- CPU 2 (対面) -->
       <div class="player-box" id="cpu2">
@@ -367,9 +393,13 @@
             <div class="char-badge" id="cpu2-char-title">---</div>
             <div class="rank-badge" id="cpu2-rank"></div>
           </div>
+          <!-- 残り枚数 ＆ パス回数（横並び固定） -->
+          <div class="char-stats-row">
+            <span class="card-count-badge" id="cpu2-card-count">残り -枚</span>
+            <span class="pass-count-badge"><span id="cpu2-pass-label">パス: </span><span id="cpu2-pass">0</span></span>
+          </div>
         </div>
         <div class="cpu-card-stack" id="cpu2-stack"></div>
-        <div class="pass-count"><span id="cpu2-pass-label">パス: </span><span id="cpu2-pass">0</span></div>
       </div>
 
       <!-- CPU 1 (左) -->
@@ -383,24 +413,47 @@
             <span class="ai-brain-dot" id="cpu1-brain-dot" title="AI推論中"></span>
             <div class="char-badge" id="cpu1-char-title">---</div>
           </div>
+          <!-- 残り枚数 ＆ パス回数（横並び固定） -->
+          <div class="char-stats-row">
+            <span class="card-count-badge" id="cpu1-card-count">残り -枚</span>
+            <span class="pass-count-badge"><span id="cpu1-pass-label">パス: </span><span id="cpu1-pass">0</span></span>
+          </div>
         </div>
         <div class="cpu-card-stack" id="cpu1-stack"></div>
-        <div class="pass-count"><span id="cpu1-pass-label">パス: </span><span id="cpu1-pass">0</span></div>
         <div class="rank-badge" id="cpu1-rank"></div>
       </div>
 
-      <!-- 中央：場 -->
+      <!-- 中央：場（宮廷の祭壇・参考画像完全再現枠） -->
       <div id="field-area">
-        <div id="status-area">
-          <div id="revolution-status" class="status-badge">Revolution!</div>
-          <div id="eleven-back-status" class="status-badge">11 Back!</div>
-        </div>
+        <div class="field-altar">
+          <!-- 上部ステータス（👑 革命中 ⚔️ / ⚜️ 平時 ⚜️ / ⚡ 11 Back! ⚡） -->
+          <div id="status-area">
+            <div id="normal-status" class="status-badge status-normal">⚜️ 平時 ⚜️</div>
+            <div id="revolution-status" class="status-badge">👑 革命中 ⚔️</div>
+            <div id="eleven-back-status" class="status-badge">⚡ 11 Back! ⚡</div>
+          </div>
 
-        <div class="field-container" id="field-container-el">
-          <div id="field-cards"></div>
-        </div>
+          <!-- 場に出たカードの配置コンテナ（高さ完全固定） -->
+          <div class="field-container" id="field-container-el">
+            <div id="field-cards"></div>
+            <div class="field-empty-placeholder" id="field-empty-placeholder">(場にカードがありません)</div>
+          </div>
 
-        <div id="message-text">ゲーム開始！</div>
+          <!-- 出された役の種類バッジ（ペア・単体等） -->
+          <div class="field-combo-container">
+            <div class="field-combo-badge" id="field-combo-badge" style="display:none;"></div>
+          </div>
+
+          <!-- カードの強さガイド（通常時 / 革命時） -->
+          <div class="field-strength-guide" id="field-strength-guide">
+            <span class="guide-label">カードの強さ</span>
+            <span class="guide-order" id="field-strength-order">3 &lt; 4 &lt; 5 ... &lt; 2 &lt; 🃏</span>
+            <span class="eval-info-icon" style="opacity:0.8;">ℹ️</span>
+          </div>
+
+          <!-- ゲーム進行アクションメッセージバー（吹き出し風） -->
+          <div id="message-text">💬 ゲーム開始！あなたのターンです。</div>
+        </div>
       </div>
 
       <!-- CPU 3 (右) -->
@@ -414,57 +467,86 @@
             <span class="ai-brain-dot" id="cpu3-brain-dot" title="AI推論中"></span>
             <div class="char-badge" id="cpu3-char-title">---</div>
           </div>
+          <!-- 残り枚数 ＆ パス回数（横並び固定） -->
+          <div class="char-stats-row">
+            <span class="card-count-badge" id="cpu3-card-count">残り -枚</span>
+            <span class="pass-count-badge"><span id="cpu3-pass-label">パス: </span><span id="cpu3-pass">0</span></span>
+          </div>
         </div>
         <div class="cpu-card-stack" id="cpu3-stack"></div>
-        <div class="pass-count"><span id="cpu3-pass-label">パス: </span><span id="cpu3-pass">0</span></div>
         <div class="rank-badge" id="cpu3-rank"></div>
       </div>
 
-      <!-- プレイヤー (自分) -->
+      <!-- プレイヤー (自分：中央位置完全固定構造) -->
       <div class="player-box" id="player-area">
-        <div class="turn-badge-container">
-          <div class="your-turn-badge" id="player-badge">あなたの順番です</div>
-        </div>
+        <div class="player-status-banner">
+          <!-- 左右ブレ防止用スペーサー（左） -->
+          <div class="player-side-spacer"></div>
 
-        <div class="char-row">
-          <img class="char-portrait" id="player-portrait" src="" alt="">
-          <div class="player-name-row">
-            <span class="ai-brain-dot" id="player-brain-dot" title="AI推論中"></span>
-            <div class="char-badge" id="player-char-title">---</div>
-            <div class="rank-badge" id="player-rank"></div>
+          <!-- 中央：肖像画＆ステータス（位置完全固定） -->
+          <div class="char-row player-char-row">
+            <img class="char-portrait" id="player-portrait" src="" alt="">
+            <div class="player-name-row">
+              <span class="ai-brain-dot" id="player-brain-dot" title="AI推論中"></span>
+              <div class="char-badge" id="player-char-title">---</div>
+              <div class="rank-badge" id="player-rank"></div>
+            </div>
+            <!-- 残り枚数 ＆ パス回数（横並び固定） -->
+            <div class="char-stats-row">
+              <span class="card-count-badge" id="player-card-count">残り -枚</span>
+              <span class="pass-count-badge"><span id="player-pass-label">パス: </span><span id="player-pass">0</span></span>
+            </div>
+          </div>
+
+          <!-- 右側固定スロット：手番バッジ（「あなたの順番です」ゴールドプレート） -->
+          <div class="turn-badge-container player-turn-slot">
+            <div class="your-turn-badge" id="player-badge">あなたの順番です</div>
           </div>
         </div>
 
         <div id="player-hand"></div>
-        <div class="pass-count"><span id="player-pass-label">パス: </span><span id="player-pass">0</span></div>
       </div>
     </div>
 
     <!-- 下部操作バー -->
     <div id="bottom-bar">
-      <div class="action-group left-actions">
-        <button class="btn" id="auto-play-btn">自動プレイ: OFF</button>
-        <div class="speed-controls" id="speed-controls" style="display: none;">
-          <button class="btn-speed active" data-speed="1">1x</button>
-          <button class="btn-speed" data-speed="2">2x</button>
-          <button class="btn-speed" data-speed="3">3x</button>
+      <!-- メインアクション群（カードを出す / パス / 交換） -->
+      <div class="action-group main-actions">
+        <div class="card-select-hint-box" id="card-select-hint">カードを選択してください</div>
+        <button class="btn btn-gold btn-play-main" id="play-btn">
+          <span class="btn-icon">🃏</span>
+          <span class="btn-text">カードを出す</span>
+        </button>
+        <button class="btn btn-pass-sub" id="pass-btn">
+          <span class="btn-icon">⏭️</span>
+          <span class="btn-text">パス</span>
+        </button>
+        <button class="btn btn-gold btn-exchange-main" id="go-exchange-btn" style="display: none;">カード交換へ</button>
+        <button class="btn btn-gold btn-exchange-main" id="exchange-btn" style="display: none;">交換決定</button>
+      </div>
+
+      <!-- サブアクション群（リセットボタンを右端へ独立配置） -->
+      <div class="action-group sub-actions">
+        <div class="auto-play-wrapper">
+          <button class="btn btn-sub" id="auto-play-btn">自動: OFF</button>
+          <div class="speed-controls" id="speed-controls" style="display: none;">
+            <button class="btn-speed active" data-speed="1">1x</button>
+            <button class="btn-speed" data-speed="2">2x</button>
+            <button class="btn-speed" data-speed="3">3x</button>
+          </div>
         </div>
-      </div>
-      <div class="action-group center-actions">
-        <button class="btn" id="play-btn">カードを出す</button>
-        <button class="btn" id="pass-btn">パス</button>
-        <button class="btn btn-gold" id="go-exchange-btn" style="display: none;">カード交換へ</button>
-        <button class="btn btn-gold" id="exchange-btn" style="display: none;">交換決定</button>
-      </div>
-      <div class="action-group right-actions">
-        <button class="btn" id="stats-btn">戦績</button>
-        <button class="btn" id="reset-btn">リセット</button>
-        <button class="btn" id="debug-log-btn" title="デバッグログを開く">ログ</button>
+        <button class="btn btn-sub" id="stats-btn" title="戦績・ランキング">📊 戦績</button>
+        <button class="btn btn-sub" id="debug-log-btn" title="デバッグログ">📜 ログ</button>
+        <!-- 誤操作防止：右端へ独立したリセットボタン -->
+        <button class="btn btn-sub btn-reset-safe" id="reset-btn" title="ゲームリセット">🔄 リセット</button>
       </div>
     </div>
 
-    <!-- ゲーム枠内の右下に常駐配置されたバージョンバッジ -->
-    <div id="version-badge" title="クリックで更新履歴を表示">v2.2.3</div>
+    <!-- 最下部ブランド＆バージョンフッター（参考画像完全再現） -->
+    <div id="app-footer-bar">
+      <span class="footer-brand">👑 ROYAL CARD GAME</span>
+      <span id="version-badge" title="クリックで更新履歴を表示">👑 Ver. 2.5.0</span>
+    </div>
 
   </div> <!-- /#app-viewport -->
 
