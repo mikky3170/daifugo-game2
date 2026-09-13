@@ -615,13 +615,16 @@ class BgmManager {
       }
     });
 
-    const triggerBgm = () => {
-      if (this.currentTrack && !isSoundMuted) this.audio.play().catch(() => {});
-      window.removeEventListener('click', triggerBgm);
-      window.removeEventListener('touchstart', triggerBgm);
+  const triggerBgm = () => {
+      if (!isSoundMuted && this.audio.paused) {
+        this.audio.play().then(() => {
+          window.removeEventListener('click', triggerBgm);
+          window.removeEventListener('touchend', triggerBgm);
+        }).catch(() => {});
+      }
     };
-    window.addEventListener('click', triggerBgm);
-    window.addEventListener('touchstart', triggerBgm);
+    window.addEventListener('click', triggerBgm, { passive: true });
+    window.addEventListener('touchend', triggerBgm, { passive: true });
   }
 
   play(trackName) {
@@ -4617,7 +4620,13 @@ function initEvents() {
     if (mainBtn) mainBtn.textContent = label;
     if (charBtn) charBtn.textContent = label;
     bgmMgr.audio.muted = isSoundMuted;
-    if (!isSoundMuted) soundMgr.playSelect();
+    if (!isSoundMuted) {
+      soundMgr.playSelect();
+      // ★ ブロックされている再生をボタンタップで直接解除・開始
+      if (bgmMgr.audio.paused) {
+        bgmMgr.audio.play().catch(() => {});
+      }
+    }
   };
 
   document.getElementById('sound-toggle-btn').onclick = toggleSound;
