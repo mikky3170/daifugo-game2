@@ -1,6 +1,6 @@
 
 <!-- [HTML Version: v2.6.1] 王宮完全調和・CPUカード束収束・ウィナー肖像＆戦績ボタン版
- * メニューボタン新設・戦績リセットタブ連動・手動対戦ログ保存・個人戦績前面化対応
+ * キャラ選択画面ヘルパーボタン新設・対戦画面3ボタン復元・AutoSavedをプレイヤー枠下へ移設対応
  -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -29,6 +29,14 @@
         <div class="title-logo-wrap char-select-main-title pulse-title-glow">
           <img src="title_logo.png" alt="ROYAL CARD GAME" class="title-logo-img">
         </div>
+
+        <!-- ★ キャラ選択画面専用の宮廷ヘルパーボタングループ（BGM・キャラ紹介・ルール解説） -->
+        <div class="char-select-helper-btns">
+          <button class="btn-rule-help" id="char-select-sound-btn">🔊 BGM ON</button>
+          <button class="btn-rule-help" id="char-select-char-btn">👥 キャラ紹介</button>
+          <button class="btn-rule-help" id="char-select-rule-btn">📖 ルール解説</button>
+        </div>
+
         <div class="char-select-title pulse-title-text">キャラクターを選択</div>
         <div class="char-select-sub pulse-prompt">あなたの分身となる宮廷の戦略家を1人選んでください</div>
         
@@ -41,7 +49,7 @@
         <div class="load-game-container">
           <button class="btn btn-gold btn-load-game" id="btn-load-game" disabled>
             <span class="btn-icon">📂</span>
-            <span class="btn-text">前回の続きから再開 (ロード)</span>
+            <span class="btn-text" id="btn-load-game-text">前回の続きから再開 (ロード)</span>
           </button>
         </div>
 
@@ -68,6 +76,7 @@
       </div>
 
       <div id="rules-panel">
+        <!-- ★ 対戦画面の3ボタン（元の美しい均等バランスに完全復元） -->
         <div class="rules-header">
           <div class="rules-header-btns">
             <button class="btn-rule-help" id="sound-toggle-btn">🔊 BGM ON</button>
@@ -509,6 +518,10 @@
               <span class="card-count-badge" id="player-card-count">残り -枚</span>
               <span class="pass-count-badge"><span id="player-pass-label">パス: </span><span id="player-pass">0</span></span>
             </div>
+            <!-- ★ 残り枚数・パス回数の直下に配置された Auto Saved 表示スロット -->
+            <div class="player-auto-save-slot">
+              <span class="auto-save-badge player-auto-save" id="auto-save-badge">● Auto Saved</span>
+            </div>
           </div>
         </div>
 
@@ -545,7 +558,6 @@
               <button class="btn-speed" data-speed="3">3x</button>
             </div>
           </div>
-          <button class="btn btn-sub" id="save-btn" title="現在のゲーム状態を保存">💾 セーブ</button>
           <button class="btn btn-sub" id="stats-btn" title="戦績・ランキング">📊 戦績表示</button>
           <button class="btn btn-sub" id="debug-log-btn" title="デバッグログ">📜 ログ</button>
           

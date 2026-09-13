@@ -1,5 +1,6 @@
+
 /* [JS Version: v2.6.1] 王宮完全調和・CPUカード束収束・ウィナー肖像＆戦績ボタン版 - 前半（1/2）
- * （isManual手動フラグ・対戦ログ永続化・メニューボタン・戦績リセット個別化対応）
+ * （プレイヤー枠下AutoSaved・キャラ選択ヘルパーボタン・isManual手動フラグ・対戦ログ永続化・MCTS・深層学習推論）
  * ※このファイルの末尾に後半（2/2）との連結目印が記載されています。
  */
 
@@ -11,17 +12,18 @@ const VERSION_HISTORY = [
   {
     ver: "v2.6.1",
     date: "2026-09-13",
-    title: "個人戦績ログ永続化・メニューボタン新設・スマホ配置最適化版",
+    title: "手番時自動セーブ・レジューム選択・個人ログ永続化版",
     changes: [
-      "対戦ログに人間が打った手を100%見極める『isManual: true/false』フラグを正式実装",
-      "「あなたの個人戦績」画面に専用の『📄 あなたの対戦手順ログを保存 (JSONL)』ボタンを新設",
-      "手動対戦ログをLocalStorageに安全蓄積し、ブラウザをリロードしても消えない永続化に対応",
+      "オートセーブバッジ（● Auto Saved）をプレイヤーの『残り枚数・パス回数』の直下へ移設し自然な視線誘導を実現",
+      "キャラ選択画面に『BGM ON/OFF』『キャラ紹介』『ルール解説』の宮廷ヘルパーボタンを新設",
+      "自動セーブを『あなたの手番が回ってきた瞬間』に実行するよう劇的改善（再開時に100%あなたの手番から即プレイ開始）",
+      "起動時の強制ジャンプを撤廃し、キャラ選択画面の『前回の続きから再開 (第〇ターン・あなたの手番)』ボタンで自由選択可能に",
+      "対戦画面の3ボタン（BGM・キャラ紹介・ルール解説）を元の美しい中央均等配置へ完全復元",
+      "対戦画面右下に『🚪 メニュー』ボタンを新設し、確認後にキャラ選択画面へ安全復帰可能に",
+      "手動対戦ログに『isManual: true/false』を完全記録し、個人戦績画面からJSONL形式で即座に手元保存可能に",
       "戦績リセットボタンをタブ連動化（個人戦績タブ＝個人記録のみ、ランキングタブ＝格付けのみ初期化）",
-      "対戦画面右下に『🚪 メニュー』ボタンを新設し、確認ダイアログ付きでキャラ選択画面へ復帰可能に",
       "詳細ビューア（#log-viewer-modal）のz-indexを3300に引き上げ、戦績画面の真裏に隠れる問題を解消",
-      "スマホ専用（<=600px）のCPU1・CPU3寄せ幅を18pxに最適化し、中央祭壇との間に綺麗な余白を確保",
-      "キャラ選択画面のタイトル上下余白およびロードボタン下余白を文字1行分空け、呼吸感のある配置に調整",
-      "キャラ紹介モーダルで伯爵(COUNT)と学者(SCHOLAR)の絵柄が表示されない属性タイポを修正"
+      "スマホ専用（<=600px）のCPU1・CPU3寄せ幅を18pxに最適化し、中央祭壇との間に綺麗な余白を確保"
     ],
     files: ["index.html", "style.css", "app.js"]
   },
@@ -615,7 +617,7 @@ const soundMgr = new SoundManager();
 const bgmMgr = new BgmManager();
 
 /* ============================================================
- * AI通信ステータスランプ管理（「AI: 思考中...」に集約）
+ * AI通信ステータスランプ管理
  * ============================================================ */
 const AIStatusUI = {
   isServerOnline: false,
@@ -688,20 +690,41 @@ const AIStatusUI = {
 
 /* ============================================================
  * セーブ ＆ ロードマネージャー (SaveLoadManager)
+ * ★手番時セーブ・プレイヤー枠下AutoSaved・詳細再開ボタン
  * ============================================================ */
 const SaveLoadManager = {
   SAVE_KEY: 'royalDaifugoSaveData_v1',
+  autoSaveTimer: null,
 
-  saveGameState() {
-    if (gameEnded) {
-      setMessage('ゲーム終了状態のためセーブできません。次ゲーム開始後に保存してください。');
+  /* ★ プレイヤー枠内のオートセーブお知らせ演出 */
+  showAutoSaveNotification() {
+    const badge = document.getElementById('auto-save-badge');
+    if (!badge) return;
+    if (this.autoSaveTimer) clearTimeout(this.autoSaveTimer);
+
+    badge.classList.add('show');
+    this.autoSaveTimer = setTimeout(() => {
+      badge.classList.remove('show');
+    }, 1100);
+  },
+
+  /* ★ あなたの手番が回ってきた瞬間に自動セーブ実行 */
+  saveGameState(isAutoTrigger = false, triggerAgent = 'player') {
+    if (gameEnded) return false;
+
+    if (isAutoPlayMode && isAutoTrigger && triggerAgent === 'player') {
       return false;
     }
+
+    const currentTurnCount = AIDataLogger ? AIDataLogger.currentTurnCount : 1;
 
     const saveData = {
       version: APP_VERSION,
       timestamp: Date.now(),
       isAutoPlayMode: isAutoPlayMode,
+      is_auto_mode: isAutoPlayMode,
+      agent: triggerAgent,
+      turnCount: currentTurnCount,
       currentSpeed: currentSpeed,
       hands: hands,
       playerPassCounts: playerPassCounts,
@@ -727,14 +750,15 @@ const SaveLoadManager = {
 
     try {
       localStorage.setItem(this.SAVE_KEY, JSON.stringify(saveData));
-      console.log('✅ [SAVE] 対局状態を正常に保存しました。');
-      soundMgr.playSpecial();
-      setMessage('💾 対局状態を保存しました。次回キャラ選択画面から再開できます。');
+      console.log(`💾 [SAVE] あなたの手番で対局状態を保存 (Agent: ${triggerAgent}, Turn: ${currentTurnCount})`);
+
+      if (isAutoTrigger) {
+        this.showAutoSaveNotification();
+      }
       this.updateLoadButtonState();
       return true;
     } catch (e) {
       console.error('⚠️ [SAVE FAILED]', e);
-      alert('セーブデータの保存に失敗しました。容量制限等をご確認ください。');
       return false;
     }
   },
@@ -748,18 +772,37 @@ const SaveLoadManager = {
     }
   },
 
-  loadGameState() {
+  getSaveDataSummary() {
+    try {
+      const raw = localStorage.getItem(this.SAVE_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      const turn = data.turnCount || (data.playedCardsHistory ? Math.floor(data.playedCardsHistory.length / 2) + 1 : 1);
+      return { turn };
+    } catch {
+      return null;
+    }
+  },
+
+  clearSaveData() {
+    localStorage.removeItem(this.SAVE_KEY);
+    this.updateLoadButtonState();
+    console.log('🗑️ [SaveLoadManager] セーブデータを安全に消去しました。');
+  },
+
+  /* ★ ロード ＆ 復帰演出 */
+  loadGameState(isAutoResume = false) {
     try {
       const raw = localStorage.getItem(this.SAVE_KEY);
       if (!raw) {
-        alert('セーブデータが見つかりません。');
+        if (!isAutoResume) alert('セーブデータが見つかりません。');
         return false;
       }
       const data = JSON.parse(raw);
       GameTimer.clearAll();
       isProcessing = false;
 
-      isAutoPlayMode = !!data.isAutoPlayMode;
+      isAutoPlayMode = (data.is_auto_mode !== undefined) ? !!data.is_auto_mode : !!data.isAutoPlayMode;
       currentSpeed = data.currentSpeed || 1;
       hands = data.hands || { player: [], cpu1: [], cpu2: [], cpu3: [] };
       playerPassCounts = data.playerPassCounts || { player: 0, cpu1: 0, cpu2: 0, cpu3: 0 };
@@ -784,6 +827,14 @@ const SaveLoadManager = {
       selectedIndices = [];
       gameEnded = false;
 
+      // 安全ガード：もし場に「8」が残っていたら場を流す
+      if (fieldCards.length > 0 && fieldCards.some(c => c.display === '8')) {
+        console.log('🛡️ [SAFETY] 場に8切り未完了のカードを検知。場を自動クリアします。');
+        clearedCardsHistory.push(...fieldCards);
+        fieldCards = [];
+        consecutivePasses = 0;
+      }
+
       const autoBtn = document.getElementById('auto-play-btn');
       if (autoBtn) {
         autoBtn.textContent = isAutoPlayMode ? '自動: ON' : '自動: OFF';
@@ -807,36 +858,59 @@ const SaveLoadManager = {
       document.getElementById('char-select-overlay').classList.remove('active');
       render(true);
 
-      soundMgr.playWin();
-      setMessage('📂 保存データをロードしました！対局を再開します。');
-      console.log('✅ [LOAD] 対局状態を正常に復元しました。');
-
-      if (isPreExchangePhase) {
-        if (isAutoPlayMode) GameTimer.set(() => proceedToExchange(), 1000 / getSpeedMultiplier());
-      } else if (isExchangePhase) {
-        if (isAutoPlayMode && PLAYERS[currentTurnIndex] === 'player') {
-          if (previousRanks.player === '大富豪') autoSelectExchangeCards('player', 2);
-          else if (previousRanks.player === '富豪') autoSelectExchangeCards('player', 1);
-        }
-      } else {
-        checkTurn();
+      // 復帰時演出：3.2秒間ゴールド発光で告知後、通常手番テキストへ
+      const resumeTurn = data.turnCount || (data.playedCardsHistory ? Math.floor(data.playedCardsHistory.length / 2) + 1 : 1);
+      const msgBox = document.getElementById('message-text');
+      if (msgBox) {
+        msgBox.innerHTML = `● 第${resumeTurn}ターン（あなたの手番）から再開しました`;
+        msgBox.classList.add('message-resume-active');
       }
+
+      soundMgr.playWin();
+      console.log(`📂 [LOAD] レジューム復元完了: 第${resumeTurn}ターン (あなたの手番)`);
+
+      GameTimer.set(() => {
+        if (msgBox) msgBox.classList.remove('message-resume-active');
+        if (isPreExchangePhase) {
+          setMessage('カードが配布されました。「カード交換へ」ボタンを押してください。');
+          if (isAutoPlayMode) GameTimer.set(() => proceedToExchange(), 1000 / getSpeedMultiplier());
+        } else if (isExchangePhase) {
+          if (PLAYERS[currentTurnIndex] === 'player') {
+            setMessage('【カード交換】手札から渡すカードを選んで交換決定を押してください。');
+            if (isAutoPlayMode) {
+              if (previousRanks.player === '大富豪') autoSelectExchangeCards('player', 2);
+              else if (previousRanks.player === '富豪') autoSelectExchangeCards('player', 1);
+            }
+          }
+        } else {
+          setMessage('あなたの順番です。出すカードを選んでください。');
+          checkTurn();
+        }
+      }, 3200);
+
       return true;
     } catch (e) {
       console.error('⚠️ [LOAD FAILED]', e);
-      alert('セーブデータの読み込みに失敗しました。');
+      if (!isAutoResume) alert('セーブデータの読み込みに失敗しました。');
       return false;
     }
   },
 
+  /* ★ セーブデータがある時は詳細テキストを表示 */
   updateLoadButtonState() {
     const loadBtn = document.getElementById('btn-load-game');
+    const loadBtnText = document.getElementById('btn-load-game-text');
     if (!loadBtn) return;
     const hasData = this.hasSaveData();
     loadBtn.disabled = !hasData;
+
     if (hasData) {
+      const summary = this.getSaveDataSummary();
+      const turnInfo = summary ? ` (第${summary.turn}ターン・あなたの手番)` : '';
+      if (loadBtnText) loadBtnText.textContent = `前回の続きから再開${turnInfo}`;
       loadBtn.title = '前回のセーブデータをロードして再開';
     } else {
+      if (loadBtnText) loadBtnText.textContent = '前回の続きから再開 (ロード)';
       loadBtn.title = 'セーブデータがありません';
     }
   }
@@ -940,7 +1014,7 @@ async function askPythonAI(hand, currentField, validMoves, modelType = 'hi', pla
 }
 
 /* ============================================================
- * 3. AIデータロガー (AIDataLogger) ★isManual＆永続化完全対応
+ * 3. AIデータロガー (AIDataLogger) ★isManual＆手動ログ永続化
  * ============================================================ */
 const AIDataLogger = {
   activeGameId: null,
@@ -962,7 +1036,6 @@ const AIDataLogger = {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) {
           console.log(`📂 [AIDataLogger] 蓄積された手動対戦ログを復元: ${parsed.length}ステップ`);
-          // 既存のステップログとマージ（重複回避）
           parsed.forEach(pStep => {
             if (!this.stepLogs.some(s => s.gameId === pStep.gameId && s.turnNumber === pStep.turnNumber && s.seat === pStep.seat)) {
               this.stepLogs.push(pStep);
@@ -977,7 +1050,6 @@ const AIDataLogger = {
 
   saveManualLogsToStorage() {
     try {
-      // isManual === true または手動試合のステップを抽出して最大15,000ステップ（約100試合分）保持
       const manualSteps = this.stepLogs.filter(s => s.pattern === 'MANUAL_GAME' || s.isManual === true);
       const toSave = manualSteps.slice(-15000);
       localStorage.setItem(this.SAVE_KEY_MANUAL_LOGS, JSON.stringify(toSave));
@@ -1024,7 +1096,6 @@ const AIDataLogger = {
     });
   },
 
-  /* ★ isManual（手動フラグ）を正式記録 */
   recordStep(player, seatNum, charDef, hand, fieldCards, isRev, isEb, consecutivePasses, passMap, validMoves, chosenMove, evalScore = null, isManual = false) {
     if (!CONFIG.ENABLE_AI_DATA_LOGGING) return;
     this.currentTurnCount++;
@@ -1043,7 +1114,7 @@ const AIDataLogger = {
       player: player,
       playerChar: charDef?.id || player,
       playerCharName: charDef?.name || (player === 'player' ? 'あなた' : player),
-      isManual: !!isManual, // ★ 手動フラグ（人間が打った手=true, AI/代打=false）
+      isManual: !!isManual,
       hand: this.serializeCards(hand),
       fieldCards: this.serializeCards(fieldCards),
       clearedCards: this.serializeCards(clearedCardsHistory),
@@ -1065,7 +1136,6 @@ const AIDataLogger = {
     this.stepLogs.push(step);
     if (this.stepLogs.length > 120000) this.stepLogs.shift();
 
-    // 手動プレイの時はローカル保存領域にも逐次同期
     if (isManual) {
       this.saveManualLogsToStorage();
     }
@@ -1104,7 +1174,6 @@ const AIDataLogger = {
     this.episodeLogs.push(ep);
     if (this.episodeLogs.length > 5000) this.episodeLogs.shift();
 
-    // エピソード完了時に手動ログを確実に永続化
     this.saveManualLogsToStorage();
   },
 
@@ -1120,9 +1189,7 @@ const AIDataLogger = {
     return this.stepLogs.map(s => JSON.stringify(s)).join('\n');
   },
 
-  /* ★ あなたの手動対戦ログ専用のJSONL出力 */
   exportManualJSONL() {
-    // patternがMANUAL_GAME、またはisManualがtrueのステップをすべて抽出
     const manualSteps = this.stepLogs.filter(s => s.pattern === 'MANUAL_GAME' || s.isManual === true);
     if (manualSteps.length === 0) return null;
     return manualSteps.map(s => JSON.stringify(s)).join('\n');
@@ -1278,14 +1345,12 @@ const StorageManager = {
     this.savePlayerStats(pStats);
   },
 
-  /* ★ 個人戦績のみ初期化 */
   clearPlayerOnly() {
     localStorage.removeItem(this.PLAYER_STATS_KEY);
     AIDataLogger.clearManualLogs();
     console.log('👤 [StorageManager] 個人戦績および手動対戦ログを初期化しました。');
   },
 
-  /* ★ 宮廷格付けランキングのみ初期化 */
   clearRankingOnly() {
     localStorage.removeItem(this.ALL_CHAR_KEY);
     localStorage.removeItem('royalCardGameStats');
@@ -2254,7 +2319,6 @@ function createCardElement(card) {
   return el;
 }
 
-/* ★ CPUカード束の動的重なり圧縮 */
 function renderCpuStack(cpuId, count) {
   const stack = document.getElementById(`${cpuId}-stack`);
   if (!stack) return;
@@ -2644,6 +2708,10 @@ function startNewGame() {
   bgmMgr.update(isRevolution, isElevenBack);
   AIStatusUI.restoreIdleState();
 
+  if (isAutoPlayMode) {
+    SaveLoadManager.saveGameState(true, 'auto');
+  }
+
   if (Object.keys(previousRanks).length > 0) {
     isPreExchangePhase = true;
     isExchangePhase = false;
@@ -2816,7 +2884,6 @@ function toggleSelectCard(index) {
   updateControlsOnly();
 }
 
-/* ★ あなたが手動でカードを出した手（isManual: true） */
 function playerPlayCard() {
   if (isProcessing || PLAYERS[currentTurnIndex] !== 'player') return;
   if (selectedIndices.length === 0) { setMessage('出したいカードを選択してください。'); return; }
@@ -2829,7 +2896,6 @@ function playerPlayCard() {
   }
 
   const validMoves = getAllValidMoves(hands.player, fieldCards, rev);
-  // ★ isManual: true を付与して記録
   AIDataLogger.recordStep(
     'player', 1, assignedCharacters.player, hands.player, fieldCards, isRevolution, isElevenBack,
     consecutivePasses, hasPassedInRound, validMoves, cards, null, true
@@ -2842,12 +2908,10 @@ function playerPlayCard() {
   });
 }
 
-/* ★ あなたが手動でパスした手（isManual: true） */
 function playerPass() {
   if (isProcessing || PLAYERS[currentTurnIndex] !== 'player') return;
   const rev = effectiveReverse();
   const validMoves = getAllValidMoves(hands.player, fieldCards, rev);
-  // ★ isManual: true を付与して記録
   AIDataLogger.recordStep(
     'player', 1, assignedCharacters.player, hands.player, fieldCards, isRevolution, isElevenBack,
     consecutivePasses, hasPassedInRound, validMoves, null, null, true
@@ -2997,6 +3061,9 @@ function nextTurn() {
     previousRanks = { ...playerStatusMap };
     StorageManager.recordGameEnd();
 
+    // ★ 試合終了時：セーブデータを消去
+    SaveLoadManager.clearSaveData();
+
     PLAYERS.forEach(p => {
       const pt = document.getElementById(`${p}-portrait`);
       if (pt) pt.classList.remove('portrait-talk');
@@ -3088,6 +3155,7 @@ function clearField(nextPlayer = null) {
   }, 350 / speed);
 }
 
+/* ★ あなたの手番が回ってきた瞬間に自動セーブを実行！ */
 function checkTurn() {
   const curr = PLAYERS[currentTurnIndex];
   hasPassedInRound[curr] = false;
@@ -3096,6 +3164,9 @@ function checkTurn() {
     isProcessing = false;
     AIStatusUI.restoreIdleState();
     render(false);
+
+    // ★ あなたの順番です！となった瞬間に自動セーブ実行！
+    SaveLoadManager.saveGameState(true, 'player');
   } else {
     isProcessing = true;
     AIStatusUI.set('thinking', 'AI: 思考中...');
@@ -3104,7 +3175,6 @@ function checkTurn() {
   }
 }
 
-/* ★ CPU・自動代打の手（isManual: false） */
 async function cpuPlayTurn(cpu) {
   const charDef = assignedCharacters[cpu];
   const rev = effectiveReverse();
@@ -3121,7 +3191,6 @@ async function cpuPlayTurn(cpu) {
   }
 
   const seatNum = PLAYERS.indexOf(cpu) + 1;
-  // ★ AI・代打の手は isManual: false として記録
   AIDataLogger.recordStep(
     cpu,
     seatNum,
@@ -3552,12 +3621,10 @@ function formatSecondsToDisplay(sec) {
   return m > 0 ? `${m}分${s}秒` : `${s}秒`;
 }
 
-/* ★ 戦績モーダルの描画（個人戦績・格付け・AI自己対戦 ＆ ダウンロードボタン） */
 function renderRankingModalContent() {
   const body = document.getElementById('stats-body');
   if (!body) return;
 
-  // タブに応じたリセットボタンの表示・テキスト制御
   updateResetButtonUI();
 
   if (currentStatsTab === 'all') {
@@ -3724,7 +3791,6 @@ function renderRankingModalContent() {
       </div>
     `;
 
-    // ダウンロード処理のバインド
     const myLogBtn = document.getElementById('btn-download-my-jsonl');
     if (myLogBtn) {
       myLogBtn.onclick = () => {
@@ -3852,7 +3918,7 @@ function renderRankingModalContent() {
   }
 }
 
-/* ★ タブ連動リセットボタンの表示制御 */
+/* タブ連動リセットボタンの表示制御 */
 function updateResetButtonUI() {
   const clearBtn = document.getElementById('modal-stats-clear-btn');
   if (!clearBtn) return;
@@ -3864,7 +3930,6 @@ function updateResetButtonUI() {
     clearBtn.style.display = 'inline-block';
     clearBtn.textContent = '👑 格付けランキングのみリセット';
   } else {
-    // AI自己対戦タブでは非表示
     clearBtn.style.display = 'none';
   }
 }
@@ -4027,13 +4092,6 @@ function initEvents() {
   if (aiOrbBtn) aiOrbBtn.onclick = openDebugLogModal;
   if (debugBtn) debugBtn.onclick = openDebugLogModal;
 
-  const saveBtn = document.getElementById('save-btn');
-  if (saveBtn) {
-    saveBtn.onclick = () => {
-      SaveLoadManager.saveGameState();
-    };
-  }
-
   const loadBtn = document.getElementById('btn-load-game');
   if (loadBtn) {
     loadBtn.onclick = () => {
@@ -4042,7 +4100,7 @@ function initEvents() {
     };
   }
 
-  // ★ ゲーム終了ダイアログ内の「あなたの個人戦績を確認」ボタン（即座に最前面へ個人戦績を開く）
+  // ゲーム終了ダイアログ内の「あなたの個人戦績を確認」ボタン
   const nextGameStatsBtn = document.getElementById('btn-next-game-stats');
   if (nextGameStatsBtn) {
     nextGameStatsBtn.onclick = () => {
@@ -4135,12 +4193,38 @@ function initEvents() {
     }
   };
 
-  document.getElementById('sound-toggle-btn').onclick = (e) => {
+  /* ★ BGM切替ボタン（対戦画面とキャラ選択画面の同期連動） */
+  const toggleSound = () => {
     isSoundMuted = !isSoundMuted;
-    e.target.textContent = isSoundMuted ? '🔇 BGM OFF' : '🔊 BGM ON';
+    const label = isSoundMuted ? '🔇 BGM OFF' : '🔊 BGM ON';
+    const mainBtn = document.getElementById('sound-toggle-btn');
+    const charBtn = document.getElementById('char-select-sound-btn');
+    if (mainBtn) mainBtn.textContent = label;
+    if (charBtn) charBtn.textContent = label;
     bgmMgr.audio.muted = isSoundMuted;
     if (!isSoundMuted) soundMgr.playSelect();
   };
+
+  document.getElementById('sound-toggle-btn').onclick = toggleSound;
+
+  /* ★ キャラ選択画面専用ヘルパーボタンのバインド */
+  const csSoundBtn = document.getElementById('char-select-sound-btn');
+  const csCharBtn = document.getElementById('char-select-char-btn');
+  const csRuleBtn = document.getElementById('char-select-rule-btn');
+
+  if (csSoundBtn) csSoundBtn.onclick = toggleSound;
+  if (csCharBtn) {
+    csCharBtn.onclick = () => {
+      soundMgr.playSelect();
+      charModal.classList.add('active');
+    };
+  }
+  if (csRuleBtn) {
+    csRuleBtn.onclick = () => {
+      soundMgr.playSelect();
+      ruleModal.classList.add('active');
+    };
+  }
 
   document.getElementById('modal-close-btn').onclick = () => { soundMgr.playDeselect(); ruleModal.classList.remove('active'); };
   document.getElementById('modal-close-x').onclick = () => { soundMgr.playDeselect(); ruleModal.classList.remove('active'); };
@@ -4182,7 +4266,7 @@ function initEvents() {
     renderRankingModalContent();
   };
 
-  /* ★ タブ連動型の戦績リセット処理 */
+  /* タブ連動型の戦績リセット処理 */
   document.getElementById('modal-stats-clear-btn').onclick = () => {
     if (currentStatsTab === 'my') {
       if (confirm('あなたの通算対戦成績、および蓄積された手動対戦手順ログ（JSONL）を初期化しますか？\n（※宮廷総合格付けランキングは保持されます）')) {
@@ -4263,14 +4347,15 @@ function initEvents() {
     PLAYERS.filter(p => p !== 'player').forEach(p => checkAndTriggerDialogue(p, 'NEXT_GAME'));
   };
 
-  /* キャラ再抽選ボタン */
+  /* キャラ再抽選ボタン（古いセーブデータを消去して安全に再開） */
   document.getElementById('reset-btn').onclick = () => {
     soundMgr.playSelect();
+    SaveLoadManager.clearSaveData();
     rulesPanel.classList.remove('open');
     resetGame(true, false);
   };
 
-  /* ★ メニューボタン（確認ダイアログ付きでキャラ選択画面へ復帰） */
+  /* メニューボタン（セーブデータを消去し、次回もキャラ選択画面から開始可能に） */
   const menuBtn = document.getElementById('menu-btn');
   if (menuBtn) {
     menuBtn.onclick = () => {
@@ -4279,6 +4364,7 @@ function initEvents() {
         GameTimer.clearAll();
         isProcessing = false;
         gameEnded = false;
+        SaveLoadManager.clearSaveData();
         bgmMgr.setCharSelectPhase(true);
         SaveLoadManager.updateLoadButtonState();
         document.getElementById('char-select-overlay').classList.add('active');
@@ -4307,6 +4393,7 @@ function initRuleTexts() {
   if (rPass) rPass.textContent = 'パス制限なし';
 }
 
+/* ★ アプリ起動（静かにキャラ選択画面を起動・セーブがあればボタン待機） */
 function startApp() {
   try {
     document.querySelectorAll('#char-modal img[data-char-img]').forEach(img => {
@@ -4316,9 +4403,9 @@ function startApp() {
     buildCharSelectGrid();
     initEvents();
     SaveLoadManager.updateLoadButtonState();
-    bgmMgr.setCharSelectPhase(true);
     AIStatusUI.pingServer();
-    
+    bgmMgr.setCharSelectPhase(true);
+
     const versionBadge = document.getElementById('version-badge');
     const charSelectVerBadge = document.getElementById('char-select-version-badge');
     if (versionBadge) versionBadge.textContent = `👑 Ver. ${APP_VERSION.replace('v', '')}`;
@@ -4335,4 +4422,5 @@ if (document.readyState === 'loading') {
 } else {
   startApp();
 }
+
 
