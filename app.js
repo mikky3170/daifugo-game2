@@ -585,7 +585,7 @@ class BgmManager {
     this.audio.volume = 0.3;
     this.currentTrack = null;
     this.tracks = {
-      charSelect: '宮廷の戦略_キャラ選択.mp3',
+      charSelect: 'bgm_select.mp3',
       normal: 'bgm_normal.mp3',
       revolution: 'bgm_kakumei.mp3',
       elevenBack: 'bgm_11back.mp3'
