@@ -1,6 +1,5 @@
-
-/* [CSS Version: v2.6.1] 王宮完全調和・CPUカード束収束・ウィナー肖像＆戦績ボタン版
- * （キャラ選択画面ヘルパーボタン・対戦3ボタン復元・プレイヤー枠下AutoSaved対応）
+/* [CSS Version: v2.7.0] 練習試合モード（手動対戦・相手3人選択・座席シャッフル・カード交換なし・JSONL出力）追加版
+ * （王宮完全調和・CPUカード束収束・ウィナー肖像＆戦績ボタン・練習試合UI完全対応）
  */
 
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap');
@@ -181,7 +180,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 }
 
 /* ============================================================
- * 4. ヘッダーエリア ＆ タイトルロゴ
+ * 4. ヘッダーエリア ＆ タイトルロゴ ＆ 練習試合進行バッジ
  * ============================================================ */
 #header-area {
   text-align: center;
@@ -263,6 +262,35 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   background: linear-gradient(180deg, #324a70 0%, #19273d 100%);
   border-color: #fff3a8;
   box-shadow: 0 0 12px rgba(212, 175, 55, 0.5);
+}
+
+/* ★ 練習試合進行中カウンターバッジ */
+.practice-progress-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  background: linear-gradient(90deg, rgba(88, 28, 135, 0.85) 0%, rgba(126, 34, 206, 0.95) 50%, rgba(88, 28, 135, 0.85) 100%);
+  border: 1px solid #d8b4fe;
+  border-radius: 5px;
+  padding: 2px 8px;
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #faf5ff;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+  letter-spacing: 0.5px;
+  animation: pulsePractice 2s infinite alternate;
+}
+
+@keyframes pulsePractice {
+  0% { box-shadow: 0 0 8px rgba(168, 85, 247, 0.4); }
+  100% { box-shadow: 0 0 16px rgba(192, 132, 252, 0.8); }
+}
+
+.practice-icon {
+  font-size: 13px;
 }
 
 .rules-list-container {
@@ -736,7 +764,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   gap: 2px;
 }
 
-/* 左右CPU (CPU 1 & CPU 3) ★ベース設定（タブレット等で美しく維持） */
+/* 左右CPU (CPU 1 & CPU 3) */
 #cpu1, #cpu3 {
   z-index: 100;
   margin-top: 2px;
@@ -747,14 +775,12 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   padding-top: 2px;
 }
 
-/* CPU1（左）：右へ34px、下へ14px移動 */
 #cpu1 {
   grid-row: 2;
   grid-column: 1;
   transform: translate(34px, 14px);
 }
 
-/* CPU3（右）：左へ34px、下へ14px移動 */
 #cpu3 {
   grid-row: 2;
   grid-column: 3;
@@ -833,7 +859,6 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   gap: 3px;
 }
 
-/* ★ プレイヤーの残り枚数・パス回数の直下に配置される Auto Saved スロット */
 .player-auto-save-slot {
   height: 16px;
   min-height: 16px;
@@ -1193,7 +1218,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 .field-strength-guide.guide-eleven-back .guide-label { color: #7dd3fc; font-weight: 900; }
 .field-strength-guide.guide-eleven-back .guide-order { color: #f0f9ff; text-shadow: 0 0 6px rgba(56, 189, 248, 0.8); font-weight: 800; }
 
-/* メッセージ枠（★復帰演出ゴールド強調） */
+/* メッセージ枠 */
 #message-text {
   font-size: clamp(10px, 1.3vh, 11.5px);
   color: var(--color-gold-light);
@@ -1703,6 +1728,11 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   z-index: 3200;
 }
 
+/* 練習試合終了モーダル（戦績のさらに前面） */
+#practice-finish-modal {
+  z-index: 3250;
+}
+
 /* 詳細ビューア画面：最前面 */
 #log-viewer-modal {
   z-index: 3300;
@@ -1789,6 +1819,174 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   font-weight: 700;
 }
 .btn-modal-danger:hover { background: #ad2d2d; color: #fff; }
+
+/* ============================================================
+ * 12.1 練習試合（スパーリング・ログ収集）専用スタイル
+ * ============================================================ */
+.practice-panel-box {
+  background: rgba(10, 16, 26, 0.9);
+  border: 1.5px solid var(--color-border-gold);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.practice-section-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #ffd700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.25);
+  padding-bottom: 4px;
+  margin-bottom: 6px;
+}
+
+.practice-section-title .count-badge {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #1e293b;
+  color: #38bdf8;
+  border: 1px solid #0284c7;
+}
+
+.practice-section-title .count-badge.is-ready {
+  background: #064e3b;
+  color: #6ee7b7;
+  border-color: #059669;
+}
+
+.practice-char-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.practice-char-pick-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(20, 32, 50, 0.7);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 5px;
+  padding: 4px 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.practice-char-pick-item:hover {
+  background: rgba(30, 48, 75, 0.9);
+  border-color: #fff3a8;
+}
+
+.practice-char-pick-item.is-selected {
+  background: linear-gradient(135deg, rgba(88, 28, 135, 0.7) 0%, rgba(126, 34, 206, 0.7) 100%);
+  border-color: #d8b4fe;
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.6);
+}
+
+.practice-char-pick-item.is-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.practice-char-pick-item img {
+  width: 22px;
+  height: 33px;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: 3px;
+  border: 1px solid #d4af37;
+  flex-shrink: 0;
+}
+
+.practice-char-pick-item .pick-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fffadb;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.practice-games-select-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 4px 2px;
+}
+
+.practice-radio-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #e2e8f0;
+  cursor: pointer;
+  background: rgba(20, 32, 50, 0.7);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 4px;
+  padding: 4px 10px;
+  transition: all 0.15s ease;
+}
+
+.practice-radio-label:hover {
+  border-color: #fff3a8;
+  background: rgba(30, 48, 75, 0.9);
+}
+
+.practice-radio-label input[type="radio"]:checked + span {
+  color: #ffd700;
+  font-weight: 800;
+}
+
+.practice-start-btn-wrap {
+  text-align: center;
+  margin-top: 6px;
+}
+
+.btn-practice-start {
+  width: 100%;
+  max-width: 320px;
+  height: 40px;
+  font-size: 13.5px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  background: linear-gradient(180deg, #fff5b3 0%, #d4af37 50%, #9e7d1e 100%);
+  color: #0b1017;
+  border: 1.5px solid #fffadb;
+  border-radius: 7px;
+  box-shadow: 0 0 16px rgba(255, 215, 0, 0.8), 0 3px 8px rgba(0, 0, 0, 0.7);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-practice-start:hover:not(:disabled) {
+  background: linear-gradient(180deg, #ffffff 0%, #ffe066 50%, #b8860b 100%);
+  box-shadow: 0 0 24px rgba(255, 215, 0, 1);
+  transform: translateY(-1px);
+}
+
+.btn-practice-start:disabled {
+  background: #1e293b;
+  color: #64748b;
+  border-color: #334155;
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
 
 /* バージョン履歴カード */
 .version-card {
@@ -2255,7 +2453,6 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   justify-content: center;
 }
 
-/* ★ キャラ選択画面専用ヘルパーボタングループ */
 .char-select-helper-btns {
   display: flex;
   gap: 6px;
@@ -2491,8 +2688,8 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   color: #ffffff;
 }
 
-.modal-tabs { display: flex; gap: 6px; margin-bottom: 8px; border-bottom: 1.5px solid var(--color-border-gold); padding-bottom: 4px; }
-.modal-tab-btn { background: rgba(15, 24, 38, 0.8); border: 1px solid rgba(212, 175, 55, 0.35); color: #9cb0c6; font-size: 11.5px; font-weight: 700; cursor: pointer; padding: 4px 8px; border-radius: 4px; }
+.modal-tabs { display: flex; gap: 6px; margin-bottom: 8px; border-bottom: 1.5px solid var(--color-border-gold); padding-bottom: 4px; overflow-x: auto; }
+.modal-tab-btn { background: rgba(15, 24, 38, 0.8); border: 1px solid rgba(212, 175, 55, 0.35); color: #9cb0c6; font-size: 11.5px; font-weight: 700; cursor: pointer; padding: 4px 8px; border-radius: 4px; white-space: nowrap; }
 .modal-tab-btn.active { background: rgba(212, 175, 55, 0.25); color: #fff3a8; border: 1px solid #d4af37; }
 
 .ranking-table-container { width: 100%; overflow-x: auto; }
@@ -2594,7 +2791,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 /* ============================================================
  * 13. メディアクエリ（レスポンシブ対応）
  * ============================================================ */
-/* タブレット特化スタイル（幅 > 600px）★及第点バランス維持 */
+/* タブレット特化スタイル（幅 > 600px） */
 @media (min-width: 601px) {
   #player-area .char-portrait,
   #cpu1 .char-portrait,
@@ -2620,7 +2817,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   }
 }
 
-/* スマホ特化スタイル（幅 <= 600px）★CPU寄せ幅18px最適化 */
+/* スマホ特化スタイル（幅 <= 600px） */
 @media (max-width: 600px) {
   #game-board {
     grid-template-columns: 76px 1fr 76px;
@@ -2645,6 +2842,10 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   #field-cards .card {
     width: calc(var(--card-width) * 0.86);
     height: calc(var(--card-height) * 0.86);
+  }
+
+  .practice-char-picker-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 

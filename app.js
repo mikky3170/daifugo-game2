@@ -1,12 +1,28 @@
-/* [JS Version: v2.6.2] 王宮完全調和・CPUカード束収束・ウィナー肖像＆戦績ボタン版
- * （手番時自動セーブ・キャラ選択画面拡張・個人ログ永続化・MCTS・深層学習推論）
+
+/* [JS Version: v2.7.0] 練習試合モード（手動対戦・相手3人選択・座席シャッフル・カード交換なし・JSONL出力）追加版 (Part 1/2)
+ * （王専用MCTS・163次元深層学習推論・自動セーブ復帰・手動打牌ログ永続化・練習試合基盤）
  */
 
 /* ====================================================================
  * ROYAL DAIFUGO - バージョン管理マスター（JavaScript一元管理）
  * ==================================================================== */
-const APP_VERSION = "v2.6.2";
+const APP_VERSION = "v2.7.0";
 const VERSION_HISTORY = [
+  {
+    ver: "v2.7.0",
+    date: "2026-09-13",
+    title: "練習試合モード（手動対戦・相手3人選択・座席シャッフル・交換なし・JSONL保存）版",
+    changes: [
+      "戦績モーダル内に『⚔️ 練習試合 (手動・ログ収集)』タブを新設",
+      "プレイヤーの分身キャラ選択 ＋ 10人のCPUから対戦相手を3人自由にチェック選択可能に",
+      "試合数を1試合 / 5試合 / 10試合 / 20試合 / 50試合から選択して連続スパーリング可能に",
+      "練習試合は完全手動プレイ徹底（自動プレイ禁止）、毎試合座席ランダムシャッフル、カード交換は完全スキップ",
+      "対戦画面ヘッダーに練習試合進行カウンターバッジ（例: 第 1 / 10 試合）を表示",
+      "全試合終了時に専用の総合決着ダイアログを表示し、4人の最終格付けランキング表を提示",
+      "練習試合終了ダイアログから、手動打牌（isManual: true）を含む全対戦手順をJSONL形式で即座にダウンロード可能に"
+    ],
+    files: ["index.html", "style.css", "app.js"]
+  },
   {
     ver: "v2.6.2",
     date: "2026-09-13",
@@ -706,13 +722,11 @@ const AIStatusUI = {
 
 /* ============================================================
  * セーブ ＆ ロードマネージャー (SaveLoadManager)
- * ★手番時セーブ・プレイヤー枠下AutoSaved・詳細再開ボタン
  * ============================================================ */
 const SaveLoadManager = {
   SAVE_KEY: 'royalDaifugoSaveData_v1',
   autoSaveTimer: null,
 
-  /* ★ プレイヤー枠内のオートセーブお知らせ演出 */
   showAutoSaveNotification() {
     const badge = document.getElementById('auto-save-badge');
     if (!badge) return;
@@ -724,9 +738,10 @@ const SaveLoadManager = {
     }, 1100);
   },
 
-  /* ★ あなたの手番が回ってきた瞬間に自動セーブ実行 */
   saveGameState(isAutoTrigger = false, triggerAgent = 'player') {
     if (gameEnded) return false;
+    // 練習試合中はセーブをスキップ
+    if (PracticeMatchManager && PracticeMatchManager.isActive) return false;
 
     if (isAutoPlayMode && isAutoTrigger && triggerAgent === 'player') {
       return false;
@@ -806,7 +821,6 @@ const SaveLoadManager = {
     console.log('🗑️ [SaveLoadManager] セーブデータを安全に消去しました。');
   },
 
-  /* ★ ロード ＆ 復帰演出 */
   loadGameState(isAutoResume = false) {
     try {
       const raw = localStorage.getItem(this.SAVE_KEY);
@@ -843,7 +857,6 @@ const SaveLoadManager = {
       selectedIndices = [];
       gameEnded = false;
 
-      // 安全ガード：もし場に「8」が残っていたら場を流す
       if (fieldCards.length > 0 && fieldCards.some(c => c.display === '8')) {
         console.log('🛡️ [SAFETY] 場に8切り未完了のカードを検知。場を自動クリアします。');
         clearedCardsHistory.push(...fieldCards);
@@ -874,7 +887,6 @@ const SaveLoadManager = {
       document.getElementById('char-select-overlay').classList.remove('active');
       render(true);
 
-      // 復帰時演出：3.2秒間ゴールド発光で告知後、通常手番テキストへ
       const resumeTurn = data.turnCount || (data.playedCardsHistory ? Math.floor(data.playedCardsHistory.length / 2) + 1 : 1);
       const msgBox = document.getElementById('message-text');
       if (msgBox) {
@@ -912,7 +924,6 @@ const SaveLoadManager = {
     }
   },
 
-  /* ★ セーブデータがある時は詳細テキストを表示 */
   updateLoadButtonState() {
     const loadBtn = document.getElementById('btn-load-game');
     const loadBtnText = document.getElementById('btn-load-game-text');
@@ -1030,7 +1041,7 @@ async function askPythonAI(hand, currentField, validMoves, modelType = 'hi', pla
 }
 
 /* ============================================================
- * 3. AIデータロガー (AIDataLogger) ★isManual＆手動ログ永続化
+ * 3. AIデータロガー (AIDataLogger)
  * ============================================================ */
 const AIDataLogger = {
   activeGameId: null,
@@ -1155,6 +1166,11 @@ const AIDataLogger = {
     if (isManual) {
       this.saveManualLogsToStorage();
     }
+
+    // 練習試合中の全手順を専用バッファへ蓄積
+    if (typeof PracticeMatchManager !== 'undefined' && PracticeMatchManager.isActive) {
+      PracticeMatchManager.recordStepLog(step);
+    }
   },
 
   recordEpisodeEnd(seatResults, remainingCardsMap) {
@@ -1231,7 +1247,9 @@ const AIDataLogger = {
 };
 AIDataLogger.init();
 
-/* 4. 戦績＆データ管理 (LocalStorage) */
+/* ----------------------------------------------------
+ * 4. 戦績＆データ管理 (LocalStorage)
+ * ---------------------------------------------------- */
 const StorageManager = {
   VERSION_KEY: 'royalStatsSchemaVersion',
   CURRENT_SCHEMA_VER: 'v1.5.0',
@@ -1380,7 +1398,9 @@ const StorageManager = {
   }
 };
 
-/* 5. 基本ルール・カードヘルパー */
+/* ----------------------------------------------------
+ * 5. 基本ルール・カードヘルパー
+ * ---------------------------------------------------- */
 function getCardKey(card) {
   return card.isJoker ? 'JOKER' : card.display;
 }
@@ -1623,7 +1643,9 @@ function getUnrevealedCards(myHand, playedHistory = playedCardsHistory, currentF
   }));
 }
 
-/* 6. 王(KING)専用 MCTSエンジン */
+/* ----------------------------------------------------
+ * 6. 王(KING)専用 MCTSエンジン
+ * ---------------------------------------------------- */
 class SimGame {
   constructor(hands, fieldCards, isRevolution, isElevenBack, lastPlayedPlayer, consecutivePasses, finishedPlayers, playerKeys = PLAYERS) {
     this.playerKeys = playerKeys;
@@ -1911,7 +1933,9 @@ function kingDecideMoveUniversal(cpuKey, hand, currentField, rev, allHands, allF
   return bestChild ? bestChild.move : candidateMoves[0];
 }
 
-/* 7. CPU思考ロジック */
+/* ----------------------------------------------------
+ * 7. CPU思考ロジック
+ * ---------------------------------------------------- */
 function evaluateMoveDefault(move) {
   const count = move.length;
   const val = getCardValue(move[0]);
@@ -2077,7 +2101,6 @@ function decideCpuMove(cpu) {
   return chosen;
 }
 
-
 /* ----------------------------------------------------
  * 8. 戦況評価・勝率メーターエンジン
  * ---------------------------------------------------- */
@@ -2158,7 +2181,6 @@ function setMessage(msg) {
   document.getElementById('message-text').innerHTML = formatted.endsWith('<br>') ? formatted.slice(0, -4) : formatted;
 }
 
-/* カードの強さガイドの反転時ビジュアル化＆ステータス更新 */
 function updateStatusUI() {
   const revEl = document.getElementById('revolution-status');
   const ebEl = document.getElementById('eleven-back-status');
@@ -2693,7 +2715,10 @@ function startNewGame() {
   GameTimer.clearAll();
   isProcessing = false;
 
-  const patternName = isAutoPlayMode ? 'OBSERVE_AUTO' : 'MANUAL_GAME';
+  const patternName = (PracticeMatchManager && PracticeMatchManager.isActive)
+    ? 'PRACTICE_MATCH'
+    : (isAutoPlayMode ? 'OBSERVE_AUTO' : 'MANUAL_GAME');
+
   AIDataLogger.startNewGame(patternName);
 
   const deck = shuffle(createDeck());
@@ -2724,11 +2749,14 @@ function startNewGame() {
   bgmMgr.update(isRevolution, isElevenBack);
   AIStatusUI.restoreIdleState();
 
-  if (isAutoPlayMode) {
+  if (isAutoPlayMode && (!PracticeMatchManager || !PracticeMatchManager.isActive)) {
     SaveLoadManager.saveGameState(true, 'auto');
   }
 
-  if (Object.keys(previousRanks).length > 0) {
+  // ★ 練習試合モード中はカード交換を完全にバイパス（スキップ）
+  const canExchange = (Object.keys(previousRanks).length > 0) && (!PracticeMatchManager || !PracticeMatchManager.isActive);
+
+  if (canExchange) {
     isPreExchangePhase = true;
     isExchangePhase = false;
     setMessage('カードが配布されました。「カード交換へ」ボタンを押してください。');
@@ -3077,7 +3105,6 @@ function nextTurn() {
     previousRanks = { ...playerStatusMap };
     StorageManager.recordGameEnd();
 
-    // ★ 試合終了時：セーブデータを消去
     SaveLoadManager.clearSaveData();
 
     PLAYERS.forEach(p => {
@@ -3102,6 +3129,30 @@ function nextTurn() {
     render(false);
     setMessage('ゲームセット！全員の順位が確定しました。');
     renderFinalRanking();
+
+    // ★ 練習試合モード終了判定
+    if (PracticeMatchManager && PracticeMatchManager.isActive) {
+      PracticeMatchManager.recordGameResult(playerStatusMap);
+
+      if (PracticeMatchManager.currentGame >= PracticeMatchManager.totalGames) {
+        // 全試合終了！総合結果ダイアログを表示
+        PracticeMatchManager.showFinishModal();
+        return;
+      } else {
+        // まだ試合が残っている場合：専用アクションボタンを表示
+        document.getElementById('normal-next-game-actions').classList.add('is-hidden');
+        document.getElementById('practice-next-game-actions').classList.remove('is-hidden');
+        document.getElementById('next-game-prompt-text').textContent =
+          `練習試合: 第 ${PracticeMatchManager.currentGame} / ${PracticeMatchManager.totalGames} 試合が終了しました。`;
+        document.getElementById('next-game-modal').classList.add('active');
+        return;
+      }
+    }
+
+    // 通常対戦のリザルト表示
+    document.getElementById('normal-next-game-actions').classList.remove('is-hidden');
+    document.getElementById('practice-next-game-actions').classList.add('is-hidden');
+    document.getElementById('next-game-prompt-text').textContent = '次の対局設定を選択してください：';
     document.getElementById('next-game-modal').classList.add('active');
 
     if (isAutoPlayMode) {
@@ -3171,7 +3222,6 @@ function clearField(nextPlayer = null) {
   }, 350 / speed);
 }
 
-/* ★ あなたの手番が回ってきた瞬間に自動セーブを実行！ */
 function checkTurn() {
   const curr = PLAYERS[currentTurnIndex];
   hasPassedInRound[curr] = false;
@@ -3181,7 +3231,6 @@ function checkTurn() {
     AIStatusUI.restoreIdleState();
     render(false);
 
-    // ★ あなたの順番です！となった瞬間に自動セーブ実行！
     SaveLoadManager.saveGameState(true, 'player');
   } else {
     isProcessing = true;
@@ -3255,6 +3304,276 @@ async function cpuPlayTurn(cpu) {
     processPass(cpu);
   }
 }
+
+/* ====================================================================
+ * ★ 練習試合マネージャー (PracticeMatchManager)
+ * 手動プレイ徹底・相手3人選択・座席ランダムシャッフル・カード交換なし・JSONL出力
+ * ==================================================================== */
+const PracticeMatchManager = {
+  isActive: false,
+  totalGames: 10,
+  currentGame: 1,
+  playerCharId: 'KING',
+  selectedOpponentIds: [],
+  roster: [], // 4人のキャラクターIDリスト
+  historyStats: {}, // 各キャラの獲得順位集計
+  stepLogs: [], // 練習試合専用の打牌手順ログバッファ
+
+  // 設定パネルの初期化
+  initSetupUI() {
+    this.selectedOpponentIds = [];
+    this.renderOpponentsGrid();
+    this.updateStartButtonState();
+  },
+
+  renderOpponentsGrid() {
+    const grid = document.getElementById('practice-cpu-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    // プレイヤーが選んだキャラ以外の全キャラをリストアップ
+    const available = Object.keys(CHARACTER_DEFS).filter(k => k !== 'MID_AI' && k !== this.playerCharId);
+
+    available.forEach(charId => {
+      const def = CHARACTER_DEFS[charId];
+      const isSelected = this.selectedOpponentIds.includes(charId);
+
+      const item = document.createElement('div');
+      item.className = `practice-char-pick-item${isSelected ? ' is-selected' : ''}`;
+      item.innerHTML = `
+        <img src="${CHAR_IMAGES[def.id] || ''}" alt="">
+        <span class="pick-name">${def.icon} ${def.name}</span>
+      `;
+
+      item.onclick = () => {
+        soundMgr.playSelect();
+        if (this.selectedOpponentIds.includes(charId)) {
+          this.selectedOpponentIds = this.selectedOpponentIds.filter(id => id !== charId);
+        } else {
+          if (this.selectedOpponentIds.length >= 3) {
+            alert('対戦相手のキャラクターはちょうど3人選択してください。');
+            return;
+          }
+          this.selectedOpponentIds.push(charId);
+        }
+        this.renderOpponentsGrid();
+        this.updateStartButtonState();
+      };
+
+      grid.appendChild(item);
+    });
+  },
+
+  updateStartButtonState() {
+    const btn = document.getElementById('btn-start-practice-match');
+    const badge = document.getElementById('practice-cpu-count-badge');
+    const count = this.selectedOpponentIds.length;
+
+    if (badge) {
+      badge.textContent = `${count} / 3人 選択中`;
+      badge.classList.toggle('is-ready', count === 3);
+    }
+    if (btn) {
+      btn.disabled = (count !== 3);
+    }
+  },
+
+  startPractice(playerCharId, opponentIds, totalGames) {
+    this.isActive = true;
+    this.totalGames = totalGames;
+    this.currentGame = 1;
+    this.playerCharId = playerCharId;
+    this.selectedOpponentIds = [...opponentIds];
+    this.roster = [playerCharId, ...opponentIds];
+    this.stepLogs = [];
+    this.historyStats = {};
+
+    this.roster.forEach(cid => {
+      const isPlayer = (cid === this.playerCharId);
+      this.historyStats[cid] = {
+        id: cid,
+        name: isPlayer ? 'あなた' : CHARACTER_DEFS[cid].name,
+        icon: isPlayer ? '👤' : CHARACTER_DEFS[cid].icon,
+        isPlayer: isPlayer,
+        games: 0,
+        df: 0, f: 0, h: 0, dh: 0,
+        rankSum: 0
+      };
+    });
+
+    // 自動プレイは厳格に無効化（手動プレイ徹底）
+    isAutoPlayMode = false;
+    const autoBtn = document.getElementById('auto-play-btn');
+    if (autoBtn) {
+      autoBtn.textContent = '自動: OFF';
+      autoBtn.classList.remove('btn-gold-active');
+      autoBtn.disabled = true; // 練習試合中は自動化禁止
+    }
+
+    // モーダルを閉じる
+    document.getElementById('stats-modal').classList.remove('active');
+    document.getElementById('char-select-overlay').classList.remove('active');
+
+    this.setupNewPracticeRound();
+  },
+
+  // 毎試合のセットアップ（座席ランダムシャッフル ＆ カード交換なし）
+  setupNewPracticeRound() {
+    // 進行中バッジを表示
+    const pBadge = document.getElementById('practice-progress-badge');
+    const pText = document.getElementById('practice-progress-text');
+    if (pBadge && pText) {
+      pBadge.classList.remove('is-hidden');
+      pText.textContent = `練習試合: 第 ${this.currentGame} / ${this.totalGames} 試合（手動対戦中）`;
+    }
+
+    // プレイヤー本人は常に手前(player)スロットで操作性を維持し、相手3人のCPU枠(cpu1〜3)をシャッフル配置
+    assignedCharacters.player = CHARACTER_DEFS[this.playerCharId];
+    const shuffledCpuIds = shuffle([...this.selectedOpponentIds]);
+    assignedCharacters.cpu1 = CHARACTER_DEFS[shuffledCpuIds[0]];
+    assignedCharacters.cpu2 = CHARACTER_DEFS[shuffledCpuIds[1]];
+    assignedCharacters.cpu3 = CHARACTER_DEFS[shuffledCpuIds[2]];
+
+    updateCharacterUI();
+
+    // カード交換は完全なし（階級履歴をリセットして直接配札）
+    previousRanks = {};
+    startNewGame();
+  },
+
+  recordStepLog(step) {
+    if (!this.isActive) return;
+    this.stepLogs.push({
+      practiceGameIndex: this.currentGame,
+      totalGames: this.totalGames,
+      ...step
+    });
+  },
+
+  recordGameResult(statusMap) {
+    const rankValues = { '大富豪': 1, '富豪': 2, '貧民': 3, '大貧民': 4 };
+
+    PLAYERS.forEach(p => {
+      const charDef = assignedCharacters[p];
+      if (!charDef) return;
+      const cid = (p === 'player') ? this.playerCharId : charDef.id;
+      const r = statusMap[p];
+      const s = this.historyStats[cid];
+      if (s) {
+        s.games++;
+        s.rankSum += (rankValues[r] || 4);
+        if (r === '大富豪') s.df++;
+        else if (r === '富豪') s.f++;
+        else if (r === '貧民') s.h++;
+        else if (r === '大貧民') s.dh++;
+      }
+    });
+  },
+
+  nextMatch() {
+    document.getElementById('next-game-modal').classList.remove('active');
+    this.currentGame++;
+    this.setupNewPracticeRound();
+  },
+
+  showFinishModal() {
+    document.getElementById('next-game-modal').classList.remove('active');
+    const tableWrap = document.getElementById('practice-finish-table-wrap');
+    if (!tableWrap) return;
+
+    const list = Object.values(this.historyStats).map(s => {
+      const avg = s.games > 0 ? (s.rankSum / s.games).toFixed(2) : '-';
+      const winRate = s.games > 0 ? ((s.df / s.games) * 100).toFixed(1) : '0.0';
+      return { ...s, avg: avg, winRate: parseFloat(winRate) };
+    });
+
+    // 平均順位が低い（1位に近い）順、同じなら大富豪率順
+    list.sort((a, b) => {
+      const avgA = parseFloat(a.avg) || 99;
+      const avgB = parseFloat(b.avg) || 99;
+      if (avgA !== avgB) return avgA - avgB;
+      return b.winRate - a.winRate;
+    });
+
+    let html = `
+      <table class="ranking-table">
+        <thead>
+          <tr>
+            <th style="width: 32px; text-align: center;">順位</th>
+            <th>参加者</th>
+            <th style="text-align: right;">平均順位</th>
+            <th style="text-align: right;">大富豪率</th>
+            <th style="text-align: center;">大 / 富 / 貧 / 大貧</th>
+            <th style="text-align: right;">試合数</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    list.forEach((item, idx) => {
+      const rankBadge = `<span class="rank-num-badge rank-num-${idx + 1}">${idx + 1}</span>`;
+      const isPlayer = item.isPlayer;
+      const rowStyle = isPlayer ? ' style="background: rgba(212,175,55,0.18); font-weight: bold;"' : '';
+      const avatarEl = `<img src="${CHAR_IMAGES[item.id] || ''}" style="width: 20px; aspect-ratio: 2/3; border-radius: 3px; border: 1px solid rgba(212,175,55,0.4);" alt="">`;
+
+      html += `
+        <tr${rowStyle}>
+          <td style="text-align: center;">${rankBadge}</td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              ${avatarEl}
+              <span style="color: ${isPlayer ? '#fff3a8' : '#e0e6ed'};">${item.icon} ${item.name}</span>
+            </div>
+          </td>
+          <td style="text-align: right; color: #ffd700; font-weight: 800;">${item.avg}位</td>
+          <td style="text-align: right; color: #fff3a8;">${item.winRate}%</td>
+          <td style="text-align: center;">
+            <span class="rank-count-badge rcb-df">${item.df}</span>
+            <span class="rank-count-badge rcb-f">${item.f}</span>
+            <span class="rank-count-badge rcb-h">${item.h}</span>
+            <span class="rank-count-badge rcb-dh">${item.dh}</span>
+          </td>
+          <td style="text-align: right; color: #b0bec5;">${item.games}戦</td>
+        </tr>
+      `;
+    });
+
+    html += `</tbody></table>`;
+    tableWrap.innerHTML = html;
+
+    soundMgr.playWin();
+    document.getElementById('practice-finish-modal').classList.add('active');
+  },
+
+  downloadLogs() {
+    soundMgr.playSelect();
+    if (this.stepLogs.length === 0) {
+      alert('保存可能な練習試合ログがありません。');
+      return;
+    }
+    const jsonl = this.stepLogs.map(s => JSON.stringify(s)).join('\n');
+    const timeStr = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+    AIDataLogger.downloadFile(jsonl, `practice_match_${this.totalGames}games_${timeStr}.jsonl`, 'application/x-ndjson');
+  },
+
+  closeAndEnd() {
+    soundMgr.playDeselect();
+    this.isActive = false;
+    document.getElementById('practice-finish-modal').classList.remove('active');
+
+    // 進行バッジを隠す
+    const pBadge = document.getElementById('practice-progress-badge');
+    if (pBadge) pBadge.classList.add('is-hidden');
+
+    // 自動プレイボタンのロック解除
+    const autoBtn = document.getElementById('auto-play-btn');
+    if (autoBtn) autoBtn.disabled = false;
+
+    // キャラ選択画面へ安全に戻る
+    bgmMgr.setCharSelectPhase(true);
+    document.getElementById('char-select-overlay').classList.add('active');
+  }
+};
 
 /* ----------------------------------------------------
  * 11. 高速自己対戦エンジン
@@ -3376,6 +3695,7 @@ function updateLogViewerUI() {
   const tableWrap = document.getElementById('modal-step-table-wrap');
 
   const getModeLabel = (p) => {
+    if (p === 'PRACTICE_MATCH') return '⚔️ 練習試合';
     if (p === 'MANUAL_GAME') return '👤 手動対戦';
     if (p === 'OBSERVE_AUTO') return '🤖 自動観戦';
     return p || '対戦';
@@ -3795,11 +4115,10 @@ function renderRankingModalContent() {
 
       <div class="stats-category-card">
         <div class="stats-category-title">⚔️ あなたの天敵AIとその根拠</div>
-        <div style="margin-bottom: 4px; font-size: 12px;">最も敗北を喫した相手: <strong style="color:#ff6b6b; font-size: 13.5px;">${nemesis}</strong></div>
+        <div style="margin-bottom: 4px; font-size: 12px;">最も敗北を誇った相手: <strong style="color:#ff6b6b; font-size: 13.5px;">${nemesis}</strong></div>
         <div style="font-size: 11px; color: #b0bec5; line-height: 1.4;">根拠: ${nemesisReason}</div>
       </div>
 
-      <!-- ★ あなたの手動対戦ログ専用ダウンロードボタン -->
       <div class="my-stats-download-wrap">
         <button class="btn-selfplay" id="btn-download-my-jsonl">
           <span>📄 あなたの対戦手順ログを保存 (JSONL)</span>
@@ -3819,6 +4138,66 @@ function renderRankingModalContent() {
         AIDataLogger.downloadFile(jsonlContent, `royal_my_play_steps_${Date.now()}.jsonl`, 'application/x-ndjson');
       };
     }
+
+  } else if (currentStatsTab === 'practice') {
+    // ★ 練習試合設定タブ
+    const myChar = assignedCharacters.player || CHARACTER_DEFS.KING;
+    PracticeMatchManager.playerCharId = myChar.id;
+
+    body.innerHTML = `
+      <div class="practice-panel-box">
+        <div style="font-size: 11.5px; color: #cbd5e1; line-height: 1.45; text-align: center;">
+          指定した試合数を<strong>手動プレイ</strong>で連続対戦し、あなたの打牌ログを収集します。<br>
+          <span style="color: #ffd700;">※自動プレイ禁止・毎試合座席ランダム・カード交換完全なし。全試合終了時にJSONLファイルで保存可能。</span>
+        </div>
+
+        <div>
+          <div class="practice-section-title">
+            <span>① あなたのキャラクター（固定操作席）</span>
+            <span style="color:#fff3a8;">${myChar.icon} ${myChar.name}</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="practice-section-title">
+            <span>② 対戦相手のCPUキャラ（3人を選択）</span>
+            <span class="count-badge" id="practice-cpu-count-badge">0 / 3人 選択中</span>
+          </div>
+          <div class="practice-char-picker-grid" id="practice-cpu-grid"></div>
+        </div>
+
+        <div>
+          <div class="practice-section-title">
+            <span>③ 試合数の設定</span>
+          </div>
+          <div class="practice-games-select-row">
+            <label class="practice-radio-label"><input type="radio" name="practiceMatchGames" value="1"><span>1試合</span></label>
+            <label class="practice-radio-label"><input type="radio" name="practiceMatchGames" value="5"><span>5試合</span></label>
+            <label class="practice-radio-label"><input type="radio" name="practiceMatchGames" value="10" checked><span>10試合</span></label>
+            <label class="practice-radio-label"><input type="radio" name="practiceMatchGames" value="20"><span>20試合</span></label>
+            <label class="practice-radio-label"><input type="radio" name="practiceMatchGames" value="50"><span>50試合</span></label>
+          </div>
+        </div>
+
+        <div class="practice-start-btn-wrap">
+          <button class="btn btn-practice-start" id="btn-start-practice-match" disabled>
+            ⚔️ 練習試合を開始（手動対戦）
+          </button>
+        </div>
+      </div>
+    `;
+
+    PracticeMatchManager.initSetupUI();
+
+    document.getElementById('btn-start-practice-match').onclick = () => {
+      soundMgr.playSelect();
+      const radios = document.getElementsByName('practiceMatchGames');
+      let games = 10;
+      for (let r of radios) {
+        if (r.checked) { games = parseInt(r.value, 10); break; }
+      }
+      PracticeMatchManager.startPractice(myChar.id, PracticeMatchManager.selectedOpponentIds, games);
+    };
 
   } else if (currentStatsTab === 'selfplay') {
     const hasLocalData = AIDataLogger.episodeLogs.length > 0;
@@ -3934,7 +4313,6 @@ function renderRankingModalContent() {
   }
 }
 
-/* タブ連動リセットボタンの表示制御 */
 function updateResetButtonUI() {
   const clearBtn = document.getElementById('modal-stats-clear-btn');
   if (!clearBtn) return;
@@ -4116,7 +4494,6 @@ function initEvents() {
     };
   }
 
-  // ゲーム終了ダイアログ内の「あなたの個人戦績を確認」ボタン
   const nextGameStatsBtn = document.getElementById('btn-next-game-stats');
   if (nextGameStatsBtn) {
     nextGameStatsBtn.onclick = () => {
@@ -4127,6 +4504,29 @@ function initEvents() {
       if (myTabBtn) myTabBtn.classList.add('active');
       renderRankingModalContent();
       statsModal.classList.add('active');
+    };
+  }
+
+  // ★ 練習試合専用ボタンのバインド
+  const practiceNextBtn = document.getElementById('btn-practice-next-match');
+  if (practiceNextBtn) {
+    practiceNextBtn.onclick = () => {
+      soundMgr.playSelect();
+      PracticeMatchManager.nextMatch();
+    };
+  }
+
+  const practiceJsonlBtn = document.getElementById('btn-download-practice-jsonl');
+  if (practiceJsonlBtn) {
+    practiceJsonlBtn.onclick = () => {
+      PracticeMatchManager.downloadLogs();
+    };
+  }
+
+  const practiceCloseBtn = document.getElementById('btn-practice-finish-close');
+  if (practiceCloseBtn) {
+    practiceCloseBtn.onclick = () => {
+      PracticeMatchManager.closeAndEnd();
     };
   }
 
@@ -4209,7 +4609,6 @@ function initEvents() {
     }
   };
 
-  /* ★ BGM切替ボタン（対戦画面とキャラ選択画面の同期連動） */
   const toggleSound = () => {
     isSoundMuted = !isSoundMuted;
     const label = isSoundMuted ? '🔇 BGM OFF' : '🔊 BGM ON';
@@ -4223,7 +4622,6 @@ function initEvents() {
 
   document.getElementById('sound-toggle-btn').onclick = toggleSound;
 
-  /* ★ キャラ選択画面専用ヘルパーボタンのバインド */
   const csSoundBtn = document.getElementById('char-select-sound-btn');
   const csCharBtn = document.getElementById('char-select-char-btn');
   const csRuleBtn = document.getElementById('char-select-rule-btn');
@@ -4260,29 +4658,33 @@ function initEvents() {
   document.getElementById('tab-all-ranking-btn').onclick = () => {
     soundMgr.playSelect();
     currentStatsTab = 'all';
+    document.querySelectorAll('.modal-tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('tab-all-ranking-btn').classList.add('active');
-    document.getElementById('tab-my-stats-btn').classList.remove('active');
-    document.getElementById('tab-self-play-btn').classList.remove('active');
     renderRankingModalContent();
   };
   document.getElementById('tab-my-stats-btn').onclick = () => {
     soundMgr.playSelect();
     currentStatsTab = 'my';
+    document.querySelectorAll('.modal-tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('tab-my-stats-btn').classList.add('active');
-    document.getElementById('tab-all-ranking-btn').classList.remove('active');
-    document.getElementById('tab-self-play-btn').classList.remove('active');
+    renderRankingModalContent();
+  };
+  // ★ 練習試合タブ
+  document.getElementById('tab-practice-btn').onclick = () => {
+    soundMgr.playSelect();
+    currentStatsTab = 'practice';
+    document.querySelectorAll('.modal-tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-practice-btn').classList.add('active');
     renderRankingModalContent();
   };
   document.getElementById('tab-self-play-btn').onclick = () => {
     soundMgr.playSelect();
     currentStatsTab = 'selfplay';
+    document.querySelectorAll('.modal-tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('tab-self-play-btn').classList.add('active');
-    document.getElementById('tab-all-ranking-btn').classList.remove('active');
-    document.getElementById('tab-my-stats-btn').classList.remove('active');
     renderRankingModalContent();
   };
 
-  /* タブ連動型の戦績リセット処理 */
   document.getElementById('modal-stats-clear-btn').onclick = () => {
     if (currentStatsTab === 'my') {
       if (confirm('あなたの通算対戦成績、および蓄積された手動対戦手順ログ（JSONL）を初期化しますか？\n（※宮廷総合格付けランキングは保持されます）')) {
@@ -4299,7 +4701,6 @@ function initEvents() {
     }
   };
 
-  /* 倍速ボタン */
   document.querySelectorAll('.btn-speed').forEach(btn => {
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
@@ -4312,8 +4713,11 @@ function initEvents() {
     });
   });
 
-  /* 自動プレイボタン */
   document.getElementById('auto-play-btn').onclick = () => {
+    if (PracticeMatchManager && PracticeMatchManager.isActive) {
+      alert('練習試合中は手動対戦専用のため、自動プレイは利用できません。');
+      return;
+    }
     soundMgr.playSelect();
     isAutoPlayMode = !isAutoPlayMode;
     const btn = document.getElementById('auto-play-btn');
@@ -4363,7 +4767,6 @@ function initEvents() {
     PLAYERS.filter(p => p !== 'player').forEach(p => checkAndTriggerDialogue(p, 'NEXT_GAME'));
   };
 
-  /* キャラ再抽選ボタン（古いセーブデータを消去して安全に再開） */
   document.getElementById('reset-btn').onclick = () => {
     soundMgr.playSelect();
     SaveLoadManager.clearSaveData();
@@ -4371,15 +4774,25 @@ function initEvents() {
     resetGame(true, false);
   };
 
-  /* メニューボタン（セーブデータを消去し、次回もキャラ選択画面から開始可能に） */
   const menuBtn = document.getElementById('menu-btn');
   if (menuBtn) {
     menuBtn.onclick = () => {
-      if (confirm('キャラクター選択画面に戻りますか？\n（現在の対局は破棄されます）')) {
+      const msg = (PracticeMatchManager && PracticeMatchManager.isActive)
+        ? '練習試合を中止してキャラクター選択画面に戻りますか？\n（現在の練習試合ログは破棄されます）'
+        : 'キャラクター選択画面に戻りますか？\n（現在の対局は破棄されます）';
+
+      if (confirm(msg)) {
         soundMgr.playSelect();
         GameTimer.clearAll();
         isProcessing = false;
         gameEnded = false;
+        if (PracticeMatchManager) {
+          PracticeMatchManager.isActive = false;
+          const pBadge = document.getElementById('practice-progress-badge');
+          if (pBadge) pBadge.classList.add('is-hidden');
+          const autoBtn = document.getElementById('auto-play-btn');
+          if (autoBtn) autoBtn.disabled = false;
+        }
         SaveLoadManager.clearSaveData();
         bgmMgr.setCharSelectPhase(true);
         SaveLoadManager.updateLoadButtonState();
@@ -4409,7 +4822,6 @@ function initRuleTexts() {
   if (rPass) rPass.textContent = 'パス制限なし';
 }
 
-/* ★ アプリ起動（静かにキャラ選択画面を起動・セーブがあればボタン待機） */
 function startApp() {
   try {
     document.querySelectorAll('#char-modal img[data-char-img]').forEach(img => {

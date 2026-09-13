@@ -1,6 +1,5 @@
-
-<!-- [HTML Version: v2.6.1] 王宮完全調和・CPUカード束収束・ウィナー肖像＆戦績ボタン版
- * キャラ選択画面ヘルパーボタン新設・対戦画面3ボタン復元・AutoSavedをプレイヤー枠下へ移設対応
+<!-- [HTML Version: v2.7.0] 練習試合モード（手動対戦・相手3人選択・座席シャッフル・カード交換なし・JSONL出力）追加版
+ * キャラ選択画面ヘルパーボタン・対戦3ボタン・AutoSaved枠・練習試合カウンター＆総合結果ダイアログ完全対応
  -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -84,6 +83,13 @@
             <button class="btn-rule-help" id="rule-toggle-btn">📖 ルール解説</button>
           </div>
         </div>
+
+        <!-- ★ 練習試合進行中カウンターバッジ（練習試合中のみ表示） -->
+        <div class="practice-progress-bar is-hidden" id="practice-progress-badge">
+          <span class="practice-icon">⚔️</span>
+          <span id="practice-progress-text">練習試合: 第 1 / 10 試合（手動対戦中）</span>
+        </div>
+
         <div class="rules-list-container">
           <ul class="rules-list">
             <li>♦3保持者が最初の親</li>
@@ -236,7 +242,7 @@
           </div>
           <div class="rule-item">
             <div class="rule-item-title">カード交換 (Card Exchange)</div>
-            <div>2ゲーム目以降の開始時、前ゲームの階級に応じてカードを交換します。<br>・大富豪 ⇄ 大貧民：大貧民は最も強い2枚を献上、大富豪は任意の2枚を譲渡。<br>・富豪 ⇄ 貧民：貧民は最も強い1枚を献上、富豪は任意の1枚を譲渡。</div>
+            <div>2ゲーム目以降の開始時、前ゲームの階級に応じてカードを交換します。<br>・大富豪 ⇄ 大貧民：大貧民は最も強い2枚を献上、大富豪は任意の2枚を譲渡。<br>・富豪 ⇄ 貧民：貧民は最も強い1枚を献上、富豪は任意の1枚を譲渡。<br>※「練習試合モード」ではカード交換は行われず、常に直接配札から開始されます。</div>
           </div>
           <div class="rule-item">
             <div class="rule-item-title">革命 (Revolution)</div>
@@ -269,7 +275,7 @@
       </div>
     </div>
 
-    <!-- 戦績＆総合ランキングモーダル -->
+    <!-- 戦績＆総合ランキングモーダル（★「⚔️ 練習試合」タブを新設） -->
     <div class="modal-overlay" id="stats-modal">
       <div class="modal-content modal-wide">
         <div class="modal-header">
@@ -279,6 +285,7 @@
         <div class="modal-tabs">
           <button class="modal-tab-btn active" id="tab-all-ranking-btn">👑 宮廷総合ランキング</button>
           <button class="modal-tab-btn" id="tab-my-stats-btn">👤 あなたの個人戦績</button>
+          <button class="modal-tab-btn" id="tab-practice-btn">⚔️ 練習試合 (手動・ログ収集)</button>
           <button class="modal-tab-btn" id="tab-self-play-btn">🤖 AI自己対戦</button>
         </div>
         <div class="modal-body" id="stats-body"></div>
@@ -286,6 +293,34 @@
           <!-- タブ連動で名称・動作が切り替わる個別リセットボタン -->
           <button class="btn-modal-danger btn-left" id="modal-stats-clear-btn">👑 格付けランキングのみリセット</button>
           <button class="btn-modal-close" id="modal-stats-close-btn">閉じる</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ★ 練習試合 最終総合結果モーダル（全試合終了時にポップアップ） -->
+    <div class="modal-overlay" id="practice-finish-modal">
+      <div class="modal-content modal-wide">
+        <div class="modal-header">
+          <div class="modal-title">🏆 練習試合 総合決着 🏆</div>
+        </div>
+        <div class="modal-body">
+          <div style="text-align: center; margin-bottom: 10px; color: #fff3a8; font-size: 13px;">
+            全試合が終了しました！あなたの打牌ログは正常に記録されました。
+          </div>
+          <div class="ranking-table-container" id="practice-finish-table-wrap">
+            <!-- JSで動的に4人のランキングテーブルを注入 -->
+          </div>
+          <div style="margin-top: 14px; text-align: center;">
+            <p style="font-size: 11.5px; color: #b0bec5; margin-bottom: 8px;">
+              今回の練習試合で蓄積されたプレイヤー手動打牌（isManual: true）データをJSONL形式で手元に保存できます。
+            </p>
+            <button class="btn btn-gold" id="btn-download-practice-jsonl" style="padding: 8px 22px; font-size: 13px; font-weight: 800;">
+              📥 練習試合ログを保存 (JSONL)
+            </button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-modal-close" id="btn-practice-finish-close">閉じて戻る</button>
         </div>
       </div>
     </div>
@@ -382,14 +417,18 @@
           </div>
 
           <div class="final-ranking-list" id="final-ranking-list"></div>
-          <p class="next-game-prompt">次の対局設定を選択してください：</p>
+          <p class="next-game-prompt" id="next-game-prompt-text">次の対局設定を選択してください：</p>
         </div>
         <div class="modal-footer next-game-footer">
           <!-- あなたの個人戦績を確認ボタン -->
           <button class="btn btn-sub btn-next-game-stats" id="btn-next-game-stats">👤 あなたの個人戦績を確認</button>
-          <div class="next-game-action-row">
+          <div class="next-game-action-row" id="normal-next-game-actions">
             <button class="btn btn-gold" id="btn-keep-char">👑 同じメンバーで続行<br><span class="text-small">(カード交換あり)</span></button>
             <button class="btn" id="btn-change-char">🎲 メンバーを再抽選<br><span class="text-small">(カード交換なし)</span></button>
+          </div>
+          <!-- 練習試合専用の「次戦へ」アクション -->
+          <div class="next-game-action-row is-hidden" id="practice-next-game-actions">
+            <button class="btn btn-gold" id="btn-practice-next-match" style="width: 100%;">⚔️ 次の練習試合へ (座席シャッフル・交換なし)</button>
           </div>
         </div>
       </div>
@@ -558,7 +597,7 @@
               <button class="btn-speed" data-speed="3">3x</button>
             </div>
           </div>
-          <button class="btn btn-sub" id="stats-btn" title="戦績・ランキング">📊 戦績表示</button>
+          <button class="btn btn-sub" id="stats-btn" title="戦績・ランキング・練習試合">📊 戦績・練習試合</button>
           <button class="btn btn-sub" id="debug-log-btn" title="デバッグログ">📜 ログ</button>
           
           <!-- 右側ボタングループ：キャラ再抽選 ＆ メニュー（キャラ選択復帰） -->
