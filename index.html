@@ -1,6 +1,6 @@
 
-<!-- [HTML Version: v2.6.0] 王宮完全調和・CPUカード束収束・ウィナー肖像＆戦績ボタン版
- * 個人戦績ボタン化・WINNER横並び構造・キャラ再抽選ボタン・タイトルパルス対応
+<!-- [HTML Version: v2.6.1] 王宮完全調和・CPUカード束収束・ウィナー肖像＆戦績ボタン版
+ * メニューボタン新設・戦績リセットタブ連動・手動対戦ログ保存・個人戦績前面化対応
  -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -25,7 +25,7 @@
     <!-- キャラクター選択画面 -->
     <div class="char-select-overlay active" id="char-select-overlay">
       <div class="char-select-panel">
-        <!-- タイトルロゴ（上部配置＆優雅なパルス明滅演出） -->
+        <!-- タイトルロゴ（優雅なパルス明滅演出 ＆ 上下余白適正化） -->
         <div class="title-logo-wrap char-select-main-title pulse-title-glow">
           <img src="title_logo.png" alt="ROYAL CARD GAME" class="title-logo-img">
         </div>
@@ -274,13 +274,14 @@
         </div>
         <div class="modal-body" id="stats-body"></div>
         <div class="modal-footer">
-          <button class="btn-modal-danger btn-left" id="modal-stats-clear-btn">全戦績リセット</button>
+          <!-- タブ連動で名称・動作が切り替わる個別リセットボタン -->
+          <button class="btn-modal-danger btn-left" id="modal-stats-clear-btn">👑 格付けランキングのみリセット</button>
           <button class="btn-modal-close" id="modal-stats-close-btn">閉じる</button>
         </div>
       </div>
     </div>
 
-    <!-- 1試合ごとの学習データ詳細ビューア -->
+    <!-- 1試合ごとの学習データ詳細ビューア（最前面 z-index: 3300） -->
     <div class="modal-overlay" id="log-viewer-modal">
       <div class="modal-content modal-extra-wide">
         <div class="modal-header">
@@ -355,7 +356,7 @@
       </div>
     </div>
 
-    <!-- ★ 次ゲーム準備ダイアログ（ウィナー横並び肖像画 ＆ 個人戦績確認ボタン） -->
+    <!-- ゲーム終了ダイアログ（横並びWINNER肖像画 ＆ 個人戦績確認ボタン） -->
     <div class="modal-overlay" id="next-game-modal">
       <div class="modal-content modal-next-game-compact">
         <div class="modal-header">
@@ -375,7 +376,7 @@
           <p class="next-game-prompt">次の対局設定を選択してください：</p>
         </div>
         <div class="modal-footer next-game-footer">
-          <!-- ★ あなたの個人戦績を確認ボタン -->
+          <!-- あなたの個人戦績を確認ボタン -->
           <button class="btn btn-sub btn-next-game-stats" id="btn-next-game-stats">👤 あなたの個人戦績を確認</button>
           <div class="next-game-action-row">
             <button class="btn btn-gold" id="btn-keep-char">👑 同じメンバーで続行<br><span class="text-small">(カード交換あり)</span></button>
@@ -547,8 +548,10 @@
           <button class="btn btn-sub" id="save-btn" title="現在のゲーム状態を保存">💾 セーブ</button>
           <button class="btn btn-sub" id="stats-btn" title="戦績・ランキング">📊 戦績表示</button>
           <button class="btn btn-sub" id="debug-log-btn" title="デバッグログ">📜 ログ</button>
-          <!-- ★ 右端に配置されるキャラ再抽選ボタン -->
+          
+          <!-- 右側ボタングループ：キャラ再抽選 ＆ メニュー（キャラ選択復帰） -->
           <button class="btn btn-sub btn-reset-safe" id="reset-btn" title="対戦メンバーの再抽選">🔄 キャラ再抽選</button>
+          <button class="btn btn-sub btn-menu" id="menu-btn" title="キャラクター選択画面へ戻る">🚪 メニュー</button>
         </div>
       </div>
 
@@ -565,4 +568,5 @@
   <script src="app.js"></script>
 </body>
 </html>
+
 

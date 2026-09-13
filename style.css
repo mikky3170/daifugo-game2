@@ -1,6 +1,6 @@
 
-/* [CSS Version: v2.6.0] 王宮完全調和・CPUカード束収束・ウィナー肖像＆戦績ボタン版
- * （タイトルパルス発光・CPU1/3位置最適化・WINNER横並び・個人戦績前面化対応）
+/* [CSS Version: v2.6.1] 王宮完全調和・CPUカード束収束・ウィナー肖像＆戦績ボタン版
+ * （メニューボタン右端配置・スマホ専用CPU寄せ幅最適化・タイトル余白・ビューア最前面化対応）
  */
 
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap');
@@ -516,18 +516,18 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   border-color: #fff3a8;
 }
 
-/* CPU2（対面・上部席）：上にはみ出さず下（手前・祭壇側）に向けて拡大 */
+/* CPU2（対面・上部席）：上にはみ出さず下に向けて拡大 */
 .portrait-cpu-top.portrait-talk,
 #cpu2-portrait.portrait-talk {
   transform-origin: top center;
 }
 
-/* CPU1（左席）：左上基準で内側（右・祭壇側）へ拡大 */
+/* CPU1（左席）：左上基準で内側へ拡大 */
 .portrait-cpu-left.portrait-talk {
   transform-origin: top left;
 }
 
-/* CPU3（右席）：右上基準で内側（左・祭壇側）へ拡大 */
+/* CPU3（右席）：右上基準で内側へ拡大 */
 .portrait-cpu-right.portrait-talk {
   transform-origin: top right;
 }
@@ -705,7 +705,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 .player-box.active-turn .turn-badge { visibility: visible; opacity: 1; }
 
 /* ============================================================
- * 7. 各プレイヤー固有レイアウト（★CPU1・CPU3の内側寄せ＆下移動）
+ * 7. 各プレイヤー固有レイアウト（★タブレット基準値：34px寄せ・14px下移動）
  * ============================================================ */
 
 /* CPU 2 (対面・上部) */
@@ -732,7 +732,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   gap: 2px;
 }
 
-/* 左右CPU (CPU 1 & CPU 3) ★文字2つ分さらに内側＆下へ移動 */
+/* 左右CPU (CPU 1 & CPU 3) ★ベース設定（タブレット等で美しく維持） */
 #cpu1, #cpu3 {
   z-index: 100;
   margin-top: 2px;
@@ -743,14 +743,14 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   padding-top: 2px;
 }
 
-/* ★ CPU1（左）：右へ34px、下へ14px移動 */
+/* CPU1（左）：右へ34px、下へ14px移動 */
 #cpu1 {
   grid-row: 2;
   grid-column: 1;
   transform: translate(34px, 14px);
 }
 
-/* ★ CPU3（右）：左へ34px、下へ14px移動 */
+/* CPU3（右）：左へ34px、下へ14px移動 */
 #cpu3 {
   grid-row: 2;
   grid-column: 3;
@@ -1370,7 +1370,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 }
 
 /* ============================================================
- * 11. 下部金枠宮廷コンソール
+ * 11. 下部金枠宮廷コンソール（★メニューボタン右端配置）
  * ============================================================ */
 .bottom-console-frame {
   width: 100%;
@@ -1524,17 +1524,30 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   box-shadow: 0 0 12px rgba(255, 215, 0, 0.85), inset 0 0 4px rgba(255, 255, 255, 0.8);
 }
 
-/* ★ 右端に配置されるキャラ再抽選ボタン */
+/* ★ 右端に配置されるキャラ再抽選 ＆ メニューボタン */
 .btn-reset-safe {
   background: rgba(45, 20, 24, 0.85);
   border: 1px solid rgba(244, 67, 54, 0.4);
   color: #ffcdd2;
-  margin-left: auto; /* 一番右端へピタリと配置 */
+  margin-left: auto; /* 右端へ寄せる */
 }
 .btn-reset-safe:hover:not(:disabled) {
   background: #5a1e24;
   color: #fff;
   border-color: #ef5350;
+}
+
+.btn-menu {
+  background: linear-gradient(180deg, #24354f 0%, #121c2c 100%);
+  color: #fff3a8;
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  font-weight: 700;
+}
+.btn-menu:hover:not(:disabled) {
+  background: linear-gradient(180deg, #324a70 0%, #1a273c 100%);
+  border-color: #ffd700;
+  color: #fff;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
 }
 
 .auto-play-wrapper {
@@ -1613,7 +1626,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 .char-select-version-badge:hover { color: #ffd700; text-shadow: 0 0 6px rgba(255, 215, 0, 0.8); }
 
 /* ============================================================
- * 12. モーダル共通 ＆ 各種ダイアログ（★戦績最前面化）
+ * 12. モーダル共通 ＆ 各種ダイアログ（★重なり順・個人戦績最適化）
  * ============================================================ */
 .modal-overlay {
   display: none;
@@ -1630,9 +1643,14 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 }
 .modal-overlay.active { display: flex; opacity: 1; pointer-events: auto; }
 
-/* ★ 戦績・ランキングモーダル：ゲーム終了画面の上へ最前面化 */
+/* 戦績・ランキングモーダル：ゲーム終了画面の上へ */
 #stats-modal {
   z-index: 3200;
+}
+
+/* ★ 詳細ビューア画面：戦績画面よりさらに上の最前面へ！ */
+#log-viewer-modal {
+  z-index: 3300;
 }
 
 .modal-content {
@@ -1714,6 +1732,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   cursor: pointer;
   font-size: 12px;
   font-weight: 700;
+  transition: all 0.2s ease;
 }
 .btn-modal-danger:hover { background: #ad2d2d; color: #fff; }
 
@@ -1879,13 +1898,41 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   color: #cbd5e1;
 }
 
-/* ★ 次ゲーム準備画面（横並びWINNER肖像画プレート ＆ 個人戦績ボタン） */
+/* 個人対戦手順ログ保存ボタン */
+.my-stats-download-wrap {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(212, 175, 55, 0.25);
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+
+#btn-download-my-jsonl {
+  padding: 6px 14px;
+  font-size: 11.5px;
+  font-weight: 800;
+  border-radius: 5px;
+  background: linear-gradient(180deg, #fff5b3 0%, #d4af37 60%, #9e7d1e 100%);
+  color: #0b1017;
+  border: 1.5px solid #fffadb;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+#btn-download-my-jsonl:hover {
+  background: linear-gradient(180deg, #ffffff 0%, #ffe066 60%, #b8860b 100%);
+  box-shadow: 0 0 18px rgba(255, 215, 0, 0.95);
+  transform: translateY(-1px);
+}
+
+/* ゲーム終了画面（横並びWINNER肖像画プレート ＆ 個人戦績ボタン） */
 .modal-next-game-compact {
   max-width: 450px;
   padding: 12px;
 }
 
-/* ★ WINNER表示プレート（横並びエレガント設計） */
 .modal-winner-plate {
   display: flex;
   flex-direction: row;
@@ -2119,7 +2166,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 }
 
 /* ============================================================
- * キャラクター選択画面（★上部配置＆タイトルパルス明滅）
+ * キャラクター選択画面（★上部スペース＆タイトル余白適正化）
  * ============================================================ */
 .char-select-overlay {
   display: none;
@@ -2127,10 +2174,10 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   inset: 0;
   z-index: 2000;
   background: radial-gradient(circle at center, #131d2e 0%, #06090f 100%);
-  align-items: flex-start; /* 上部寄り配置 */
+  align-items: flex-start; /* 上部寄り */
   justify-content: center;
   padding: 8px;
-  padding-top: max(8px, env(safe-area-inset-top, 8px));
+  padding-top: max(10px, env(safe-area-inset-top, 10px));
   overflow-y: auto;
 }
 .char-select-overlay.active { display: flex; }
@@ -2145,16 +2192,17 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   justify-content: flex-start;
   text-align: center;
   position: relative;
-  padding-top: 2px;
+  padding-top: 6px;
 }
 
+/* ★ タイトルロゴの上下に文字1行分の余白 */
 .char-select-main-title {
-  margin: 0 auto 4px auto;
+  margin: 10px auto 8px auto;
   text-align: center;
   justify-content: center;
 }
 
-/* ★ タイトルロゴの優雅なパルス明滅（3.4秒周期） */
+/* タイトルロゴの優雅なパルス明滅（3.4秒周期） */
 .pulse-title-glow {
   animation: titleGlowPulse 3.4s ease-in-out infinite;
 }
@@ -2174,17 +2222,17 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   }
 }
 
+/* ★ タイトル文字の上下にも自然なスペース */
 .char-select-title {
   font-family: 'Cinzel', 'Noto Serif JP', serif;
   font-size: clamp(17px, 2.8vh, 22px);
   letter-spacing: 2px;
   color: #ffd700;
-  margin-bottom: 3px;
+  margin-bottom: 8px;
   text-align: center;
   text-shadow: 0 0 10px rgba(212, 175, 55, 0.6);
 }
 
-/* ★ タイトル文字のパルス明滅 */
 .pulse-title-text {
   animation: titleTextPulse 3.4s ease-in-out infinite;
 }
@@ -2250,11 +2298,12 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   font-weight: bold;
 }
 
+/* ★ 「前回の続きから再開」の下に文字1行分の余白（16px） */
 .load-game-container {
   width: 100%;
   display: flex;
   justify-content: center;
-  margin-bottom: 8px;
+  margin-bottom: 16px;
 }
 
 .btn-load-game {
@@ -2422,7 +2471,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 .rcb-h  { background: rgba(33, 150, 243, 0.3); color: #90caf9; border: 1px solid #2196f3; }
 .rcb-dh { background: rgba(244, 67, 54, 0.3); color: #ef9a9a; border: 1px solid #f44336; }
 
-/* ★ 直近の対戦を見るボタン（高視認性ゴールドアンバーグラデーション） */
+/* 直近の対戦を見るボタン（高視認性ゴールドアンバーグラデーション） */
 #btn-view-observe-log {
   background: linear-gradient(180deg, #fff5b3 0%, #d4af37 60%, #9e7d1e 100%);
   color: #0b1017;
@@ -2510,7 +2559,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 /* ============================================================
  * 13. メディアクエリ（レスポンシブ対応）
  * ============================================================ */
-/* タブレット特化スタイル（幅 > 600px） */
+/* タブレット特化スタイル（幅 > 600px）★現行の及第点バランスを100%維持 */
 @media (min-width: 601px) {
   #player-area .char-portrait,
   #cpu1 .char-portrait,
@@ -2536,11 +2585,19 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   }
 }
 
-/* スマホ特化スタイル（幅 <= 600px） */
+/* スマホ特化スタイル（幅 <= 600px）★CPU寄せ幅を18pxに最適化 */
 @media (max-width: 600px) {
   #game-board {
     grid-template-columns: 76px 1fr 76px;
     padding: 1px 2px;
+  }
+
+  /* スマホ専用：中央祭壇と被らない美しい18px寄せ＆10px下移動 */
+  #cpu1 {
+    transform: translate(18px, 10px);
+  }
+  #cpu3 {
+    transform: translate(-18px, 10px);
   }
 
   .field-altar {
@@ -2556,5 +2613,4 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
     height: calc(var(--card-height) * 0.86);
   }
 }
-
 

@@ -1,66 +1,39 @@
-
-/* [JS Version: v2.6.0] 王宮完全調和・CPUカード束収束・ウィナー肖像＆戦績ボタン版 - 前半（1/2）
- * （王MCTS・PyTorch推論・全キャラセリフ辞書・セーブ＆ロード・ルール判定完全収録）
+/* [JS Version: v2.6.1] 王宮完全調和・CPUカード束収束・ウィナー肖像＆戦績ボタン版 - 前半（1/2）
+ * （isManual手動フラグ・対戦ログ永続化・メニューボタン・戦績リセット個別化対応）
  * ※このファイルの末尾に後半（2/2）との連結目印が記載されています。
  */
 
 /* ====================================================================
  * ROYAL DAIFUGO - バージョン管理マスター（JavaScript一元管理）
  * ==================================================================== */
-const APP_VERSION = "v2.6.0";
+const APP_VERSION = "v2.6.1";
 const VERSION_HISTORY = [
+  {
+    ver: "v2.6.1",
+    date: "2026-09-13",
+    title: "個人戦績ログ永続化・メニューボタン新設・スマホ配置最適化版",
+    changes: [
+      "対戦ログに人間が打った手を100%見極める『isManual: true/false』フラグを正式実装",
+      "「あなたの個人戦績」画面に専用の『📄 あなたの対戦手順ログを保存 (JSONL)』ボタンを新設",
+      "手動対戦ログをLocalStorageに安全蓄積し、ブラウザをリロードしても消えない永続化に対応",
+      "戦績リセットボタンをタブ連動化（個人戦績タブ＝個人記録のみ、ランキングタブ＝格付けのみ初期化）",
+      "対戦画面右下に『🚪 メニュー』ボタンを新設し、確認ダイアログ付きでキャラ選択画面へ復帰可能に",
+      "詳細ビューア（#log-viewer-modal）のz-indexを3300に引き上げ、戦績画面の真裏に隠れる問題を解消",
+      "スマホ専用（<=600px）のCPU1・CPU3寄せ幅を18pxに最適化し、中央祭壇との間に綺麗な余白を確保",
+      "キャラ選択画面のタイトル上下余白およびロードボタン下余白を文字1行分空け、呼吸感のある配置に調整",
+      "キャラ紹介モーダルで伯爵(COUNT)と学者(SCHOLAR)の絵柄が表示されない属性タイポを修正"
+    ],
+    files: ["index.html", "style.css", "app.js"]
+  },
   {
     ver: "v2.6.0",
     date: "2026-09-13",
     title: "CPUカード束収束・ウィナー肖像＆戦績ボタン版",
     changes: [
-      "CPUのカード束が横に大暴走して中央祭壇を突き破る問題を完全解消（枚数に応じた動的圧縮でCPU1/3は68px、CPU2は120px枠内に完全収束）",
-      "場が流れた際のDOMクリア不具合を修正し、前ターンの残骸カード（10など）が新しい手と混ざる表示ズレを根絶",
-      "対面（CPU2）の肖像拡大演出を上にはみ出さず、下（手前・祭壇側）に向けて拡大するように制御",
-      "ゲーム終了ダイアログの最上部にウィナー（1位/大富豪）の横並び肖像画プレートを新設",
-      "ゲーム終了ダイアログ内に「👤 あなたの個人戦績を確認」ボタンを新設し即時最前面表示",
-      "カードの強さガイドの反転時ビジュアル化（革命：クリムゾン発光、11バック：シアン発光、2<A...<3<🃏表示）",
-      "「カード交換へ」「交換決定」ボタンのCSS競合（!important）を排除し、対戦時は確実に出す/パスのみ表示",
-      "プレイヤーとCPUの「パス: ○」バッジを全員38px固定幅化、手番「PASS」枠を76px固定幅化し長さを完全一致",
-      "プレイヤーの「残り枚数」「パス回数」の左端開始位置を「キャラ名」「大富豪」枠とピタリと一致",
-      "勝利予想の文字サイズ拡大（11.5px・太字）＆案内アイコン（ℹ️）削除"
-    ],
-    files: ["index.html", "style.css", "app.js"]
-  },
-  {
-    ver: "v2.5.9",
-    date: "2026-09-13",
-    title: "中央祭壇不動化・パス枠完全統一・強さ反転視覚化版",
-    changes: [
-      "カードの強さガイドを革命・11バックの反転時に正確（2<A...<3<🃏）かつクリムゾン/シアン発光で視覚化",
-      "カードの強さガイドおよび勝利予想メーターから紛らわしい案内アイコン（ℹ️）を削除",
-      "勝利予想の文字サイズをひと回り大きく（11.5px・太字）拡大し視認性を向上",
-      "「カード交換へ」「交換決定」ボタンのCSS競合（!important）を排除し、対戦時は確実に出す/パスのみ表示",
-      "中央祭壇の高さを完全固定し、左右席のカード枚数減少に伴う上下左右の揺れを根絶"
-    ],
-    files: ["index.html", "style.css", "app.js"]
-  },
-  {
-    ver: "v2.5.8",
-    date: "2026-09-13",
-    title: "対戦ボタン排他制御・CPU肖像固定・戦勝メーター色撤廃版",
-    changes: [
-      "「カード交換へ」「交換決定」ボタンを対戦中は完全非表示にし、交換フェーズのみ排他表示するよう制御を徹底",
-      "CPU1・CPU3の肖像画および配置コンテナを完全不動化し、手番や吹き出し等による揺れを根絶",
-      "ゲーム終了ダイアログの「大富豪」等の表示幅を固定し、改行させず見やすくスマートに配置"
-    ],
-    files: ["index.html", "style.css", "app.js"]
-  },
-  {
-    ver: "v2.5.7",
-    date: "2026-09-13",
-    title: "セーブ＆ロード・AI思考中ランプ・UI完全最適化版",
-    changes: [
-      "セーブ機能（下部コンソール）およびロード機能（キャラ選択画面）を新規実装",
-      "「カード交換へ」ボタンの文字を完全センタリング配置へ修正",
-      "ゲーム終了画面でキャラ名が大富豪等の肩書付きでも改行しないよう1行固定化",
-      "キャラ選択画面でゴールドパルス明滅により選択を優雅に促す演出を追加",
-      "プレイヤーの肖像画・キャラ名・情報枠を完全固定し、手札増減時の左右の揺れを根絶"
+      "CPUのカード束が横に大暴走して中央祭壇を突き破る問題を完全解消",
+      "場が流れた際のDOMクリア不具合を修正し、前ターンの残骸カードが混ざる表示ズレを根絶",
+      "対面（CPU2）の肖像拡大演出を下（祭壇側）に向けて拡大するように制御",
+      "ゲーム終了ダイアログの最上部にウィナーの横並び肖像画プレートを新設"
     ],
     files: ["index.html", "style.css", "app.js"]
   }
@@ -966,7 +939,9 @@ async function askPythonAI(hand, currentField, validMoves, modelType = 'hi', pla
   return validMoves.length > 0 ? validMoves[0] : null;
 }
 
-/* 3. AIデータロガー (AIDataLogger) */
+/* ============================================================
+ * 3. AIデータロガー (AIDataLogger) ★isManual＆永続化完全対応
+ * ============================================================ */
 const AIDataLogger = {
   activeGameId: null,
   activePattern: null,
@@ -974,6 +949,48 @@ const AIDataLogger = {
   stepLogs: [],
   episodeLogs: [],
   currentTurnHistory: [],
+  SAVE_KEY_MANUAL_LOGS: 'royalManualStepsLogs_v2',
+
+  init() {
+    this.loadManualLogsFromStorage();
+  },
+
+  loadManualLogsFromStorage() {
+    try {
+      const raw = localStorage.getItem(this.SAVE_KEY_MANUAL_LOGS);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          console.log(`📂 [AIDataLogger] 蓄積された手動対戦ログを復元: ${parsed.length}ステップ`);
+          // 既存のステップログとマージ（重複回避）
+          parsed.forEach(pStep => {
+            if (!this.stepLogs.some(s => s.gameId === pStep.gameId && s.turnNumber === pStep.turnNumber && s.seat === pStep.seat)) {
+              this.stepLogs.push(pStep);
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('手動ログ復元スキップ:', e);
+    }
+  },
+
+  saveManualLogsToStorage() {
+    try {
+      // isManual === true または手動試合のステップを抽出して最大15,000ステップ（約100試合分）保持
+      const manualSteps = this.stepLogs.filter(s => s.pattern === 'MANUAL_GAME' || s.isManual === true);
+      const toSave = manualSteps.slice(-15000);
+      localStorage.setItem(this.SAVE_KEY_MANUAL_LOGS, JSON.stringify(toSave));
+    } catch (e) {
+      console.warn('手動ログ保存警告:', e);
+    }
+  },
+
+  clearManualLogs() {
+    localStorage.removeItem(this.SAVE_KEY_MANUAL_LOGS);
+    this.stepLogs = this.stepLogs.filter(s => s.pattern !== 'MANUAL_GAME' && s.isManual !== true);
+    console.log('🗑️ [AIDataLogger] 手動対戦ログを初期化しました。');
+  },
 
   startNewGame(pattern = 'OBSERVE_GAME') {
     this.activeGameId = 'game_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
@@ -1007,7 +1024,8 @@ const AIDataLogger = {
     });
   },
 
-  recordStep(player, seatNum, charDef, hand, fieldCards, isRev, isEb, consecutivePasses, passMap, validMoves, chosenMove, evalScore = null) {
+  /* ★ isManual（手動フラグ）を正式記録 */
+  recordStep(player, seatNum, charDef, hand, fieldCards, isRev, isEb, consecutivePasses, passMap, validMoves, chosenMove, evalScore = null, isManual = false) {
     if (!CONFIG.ENABLE_AI_DATA_LOGGING) return;
     this.currentTurnCount++;
 
@@ -1025,6 +1043,7 @@ const AIDataLogger = {
       player: player,
       playerChar: charDef?.id || player,
       playerCharName: charDef?.name || (player === 'player' ? 'あなた' : player),
+      isManual: !!isManual, // ★ 手動フラグ（人間が打った手=true, AI/代打=false）
       hand: this.serializeCards(hand),
       fieldCards: this.serializeCards(fieldCards),
       clearedCards: this.serializeCards(clearedCardsHistory),
@@ -1045,6 +1064,11 @@ const AIDataLogger = {
 
     this.stepLogs.push(step);
     if (this.stepLogs.length > 120000) this.stepLogs.shift();
+
+    // 手動プレイの時はローカル保存領域にも逐次同期
+    if (isManual) {
+      this.saveManualLogsToStorage();
+    }
   },
 
   recordEpisodeEnd(seatResults, remainingCardsMap) {
@@ -1079,6 +1103,9 @@ const AIDataLogger = {
     };
     this.episodeLogs.push(ep);
     if (this.episodeLogs.length > 5000) this.episodeLogs.shift();
+
+    // エピソード完了時に手動ログを確実に永続化
+    this.saveManualLogsToStorage();
   },
 
   getStepsByGameId(gameId) {
@@ -1091,6 +1118,14 @@ const AIDataLogger = {
 
   exportJSONL() {
     return this.stepLogs.map(s => JSON.stringify(s)).join('\n');
+  },
+
+  /* ★ あなたの手動対戦ログ専用のJSONL出力 */
+  exportManualJSONL() {
+    // patternがMANUAL_GAME、またはisManualがtrueのステップをすべて抽出
+    const manualSteps = this.stepLogs.filter(s => s.pattern === 'MANUAL_GAME' || s.isManual === true);
+    if (manualSteps.length === 0) return null;
+    return manualSteps.map(s => JSON.stringify(s)).join('\n');
   },
 
   downloadFile(content, fileName, mimeType) {
@@ -1111,6 +1146,7 @@ const AIDataLogger = {
     this.currentTurnHistory = [];
   }
 };
+AIDataLogger.init();
 
 /* 4. 戦績＆データ管理 (LocalStorage) */
 const StorageManager = {
@@ -1242,11 +1278,24 @@ const StorageManager = {
     this.savePlayerStats(pStats);
   },
 
-  clearAll() {
+  /* ★ 個人戦績のみ初期化 */
+  clearPlayerOnly() {
     localStorage.removeItem(this.PLAYER_STATS_KEY);
+    AIDataLogger.clearManualLogs();
+    console.log('👤 [StorageManager] 個人戦績および手動対戦ログを初期化しました。');
+  },
+
+  /* ★ 宮廷格付けランキングのみ初期化 */
+  clearRankingOnly() {
     localStorage.removeItem(this.ALL_CHAR_KEY);
     localStorage.removeItem('royalCardGameStats');
     localStorage.removeItem('royalAllCharStats');
+    console.log('👑 [StorageManager] 宮廷総合ランキングを初期化しました。');
+  },
+
+  clearAll() {
+    this.clearPlayerOnly();
+    this.clearRankingOnly();
   }
 };
 
@@ -1946,6 +1995,7 @@ function decideCpuMove(cpu) {
 
   return chosen;
 }
+
 
 /* ----------------------------------------------------
  * 8. 戦況評価・勝率メーターエンジン
@@ -2766,6 +2816,7 @@ function toggleSelectCard(index) {
   updateControlsOnly();
 }
 
+/* ★ あなたが手動でカードを出した手（isManual: true） */
 function playerPlayCard() {
   if (isProcessing || PLAYERS[currentTurnIndex] !== 'player') return;
   if (selectedIndices.length === 0) { setMessage('出したいカードを選択してください。'); return; }
@@ -2778,9 +2829,10 @@ function playerPlayCard() {
   }
 
   const validMoves = getAllValidMoves(hands.player, fieldCards, rev);
+  // ★ isManual: true を付与して記録
   AIDataLogger.recordStep(
     'player', 1, assignedCharacters.player, hands.player, fieldCards, isRevolution, isElevenBack,
-    consecutivePasses, hasPassedInRound, validMoves, cards
+    consecutivePasses, hasPassedInRound, validMoves, cards, null, true
   );
 
   const playedIndices = [...selectedIndices];
@@ -2790,13 +2842,15 @@ function playerPlayCard() {
   });
 }
 
+/* ★ あなたが手動でパスした手（isManual: true） */
 function playerPass() {
   if (isProcessing || PLAYERS[currentTurnIndex] !== 'player') return;
   const rev = effectiveReverse();
   const validMoves = getAllValidMoves(hands.player, fieldCards, rev);
+  // ★ isManual: true を付与して記録
   AIDataLogger.recordStep(
     'player', 1, assignedCharacters.player, hands.player, fieldCards, isRevolution, isElevenBack,
-    consecutivePasses, hasPassedInRound, validMoves, null
+    consecutivePasses, hasPassedInRound, validMoves, null, null, true
   );
 
   selectedIndices = [];
@@ -3050,6 +3104,7 @@ function checkTurn() {
   }
 }
 
+/* ★ CPU・自動代打の手（isManual: false） */
 async function cpuPlayTurn(cpu) {
   const charDef = assignedCharacters[cpu];
   const rev = effectiveReverse();
@@ -3066,6 +3121,7 @@ async function cpuPlayTurn(cpu) {
   }
 
   const seatNum = PLAYERS.indexOf(cpu) + 1;
+  // ★ AI・代打の手は isManual: false として記録
   AIDataLogger.recordStep(
     cpu,
     seatNum,
@@ -3077,7 +3133,9 @@ async function cpuPlayTurn(cpu) {
     consecutivePasses,
     hasPassedInRound,
     validMoves,
-    move
+    move,
+    null,
+    false
   );
 
   AIStatusUI.restoreIdleState();
@@ -3209,7 +3267,7 @@ async function openUnifiedLogViewer() {
   }
 
   if (AIDataLogger.episodeLogs.length === 0) {
-    alert('対戦データがまだありません。\n「自動プレイ」で対戦を観戦するか、「シミュレーター」を実行してください。');
+    alert('対戦データがまだありません。\n「手動対戦」を行うか、「自動プレイ」「シミュレーター」を実行してください。');
     return;
   }
 
@@ -3232,8 +3290,14 @@ function updateLogViewerUI() {
   const summaryEl = document.getElementById('log-episode-summary');
   const tableWrap = document.getElementById('modal-step-table-wrap');
 
+  const getModeLabel = (p) => {
+    if (p === 'MANUAL_GAME') return '👤 手動対戦';
+    if (p === 'OBSERVE_AUTO') return '🤖 自動観戦';
+    return p || '対戦';
+  };
+
   selectEl.innerHTML = episodes.map((e, idx) =>
-    `<option value="${idx}" ${idx === currentViewerEpisodeIndex ? 'selected' : ''}>試合 ${idx + 1} / ${episodes.length} [${e.pattern || '対戦'}]</option>`
+    `<option value="${idx}" ${idx === currentViewerEpisodeIndex ? 'selected' : ''}>試合 ${idx + 1} / ${episodes.length} [${getModeLabel(e.pattern)}]</option>`
   ).join('');
 
   prevBtn.disabled = (currentViewerEpisodeIndex === 0);
@@ -3256,12 +3320,13 @@ function updateLogViewerUI() {
       <thead>
         <tr>
           <th style="text-align:center;">手数</th>
-          <th style="text-align:center;">座席 (seat)</th>
+          <th style="text-align:center;">座席</th>
           <th>キャラクター</th>
+          <th style="text-align:center;">操作</th>
           <th style="text-align:center;">残り手札</th>
           <th>場のカード</th>
           <th>出した手 (選択手)</th>
-          <th style="text-align:center; color:#fff3a8; background:#1b2838;">確定順位 (finalRank)</th>
+          <th style="text-align:center; color:#fff3a8; background:#1b2838;">確定順位</th>
         </tr>
       </thead>
       <tbody>
@@ -3279,12 +3344,19 @@ function updateLogViewerUI() {
     const cardStr = st.chosenMove ? st.chosenMove.map(formatCard).join(' ') : '<span style="color:#8c9ba5;">[パス]</span>';
     const fieldStr = (st.fieldCards && st.fieldCards.length > 0) ? st.fieldCards.map(formatCard).join(' ') : '<span style="color:#607d8b;">(場なし)</span>';
     const rankBadge = `<span class="step-rank-badge srb-${st.finalRank}">${st.finalRank}位 (${st.rankTitle})</span>`;
+    const isHuman = (st.isManual === true);
+    const actorBadge = isHuman
+      ? `<span style="background:rgba(212,175,55,0.3); color:#ffd700; border:1px solid #ffd700; border-radius:3px; padding:1px 4px; font-size:9.5px; font-weight:bold;">👤 手動</span>`
+      : `<span style="color:#8c9ba5; font-size:9.5px;">🤖 AI</span>`;
+
+    const rowBg = isHuman ? ' style="background:rgba(212,175,55,0.06);"' : '';
 
     thtml += `
-      <tr>
+      <tr${rowBg}>
         <td style="text-align:center; color:#b0bec5;">${st.turnNumber}手目</td>
         <td style="text-align:center; font-weight:bold; color:#fff3a8;">席 ${st.seat}</td>
         <td><strong>${st.playerCharName || st.playerChar}</strong></td>
+        <td style="text-align:center;">${actorBadge}</td>
         <td style="text-align:center;">${st.hand ? st.hand.length : 0}枚</td>
         <td>${fieldStr}</td>
         <td style="font-weight:bold; color:${st.chosenMove ? '#d4af37' : '#8c9ba5'};">${cardStr}</td>
@@ -3393,7 +3465,6 @@ function selectPlayerCharacter(id) {
   resetGame(true, false);
 }
 
-/* ★ ゲーム終了画面の描画（ウィナー肖像画＆名前の反映） */
 function renderFinalRanking() {
   const container = document.getElementById('final-ranking-list');
   const winnerImg = document.getElementById('modal-winner-portrait');
@@ -3481,9 +3552,13 @@ function formatSecondsToDisplay(sec) {
   return m > 0 ? `${m}分${s}秒` : `${s}秒`;
 }
 
+/* ★ 戦績モーダルの描画（個人戦績・格付け・AI自己対戦 ＆ ダウンロードボタン） */
 function renderRankingModalContent() {
   const body = document.getElementById('stats-body');
   if (!body) return;
+
+  // タブに応じたリセットボタンの表示・テキスト制御
+  updateResetButtonUI();
 
   if (currentStatsTab === 'all') {
     const all = StorageManager.loadAllCharStats();
@@ -3640,7 +3715,29 @@ function renderRankingModalContent() {
         <div style="margin-bottom: 4px; font-size: 12px;">最も敗北を喫した相手: <strong style="color:#ff6b6b; font-size: 13.5px;">${nemesis}</strong></div>
         <div style="font-size: 11px; color: #b0bec5; line-height: 1.4;">根拠: ${nemesisReason}</div>
       </div>
+
+      <!-- ★ あなたの手動対戦ログ専用ダウンロードボタン -->
+      <div class="my-stats-download-wrap">
+        <button class="btn-selfplay" id="btn-download-my-jsonl">
+          <span>📄 あなたの対戦手順ログを保存 (JSONL)</span>
+        </button>
+      </div>
     `;
+
+    // ダウンロード処理のバインド
+    const myLogBtn = document.getElementById('btn-download-my-jsonl');
+    if (myLogBtn) {
+      myLogBtn.onclick = () => {
+        soundMgr.playSelect();
+        const jsonlContent = AIDataLogger.exportManualJSONL();
+        if (!jsonlContent) {
+          alert('保存対象の手動対戦ログがまだありません。\n自分で対戦をプレイした後にダウンロードしてください。');
+          return;
+        }
+        AIDataLogger.downloadFile(jsonlContent, `royal_my_play_steps_${Date.now()}.jsonl`, 'application/x-ndjson');
+      };
+    }
+
   } else if (currentStatsTab === 'selfplay') {
     const hasLocalData = AIDataLogger.episodeLogs.length > 0;
     const canDownloadOrView = hasBatchSimulationRun || hasLocalData;
@@ -3752,6 +3849,23 @@ function renderRankingModalContent() {
     if (btnViewer) {
       btnViewer.onclick = openUnifiedLogViewer;
     }
+  }
+}
+
+/* ★ タブ連動リセットボタンの表示制御 */
+function updateResetButtonUI() {
+  const clearBtn = document.getElementById('modal-stats-clear-btn');
+  if (!clearBtn) return;
+
+  if (currentStatsTab === 'my') {
+    clearBtn.style.display = 'inline-block';
+    clearBtn.textContent = '👤 個人戦績のみリセット';
+  } else if (currentStatsTab === 'all') {
+    clearBtn.style.display = 'inline-block';
+    clearBtn.textContent = '👑 格付けランキングのみリセット';
+  } else {
+    // AI自己対戦タブでは非表示
+    clearBtn.style.display = 'none';
   }
 }
 
@@ -4068,11 +4182,20 @@ function initEvents() {
     renderRankingModalContent();
   };
 
+  /* ★ タブ連動型の戦績リセット処理 */
   document.getElementById('modal-stats-clear-btn').onclick = () => {
-    if (confirm('すべての対戦記録・キャラクターランキングを初期化しますか？')) {
-      soundMgr.playSelect();
-      StorageManager.clearAll();
-      renderRankingModalContent();
+    if (currentStatsTab === 'my') {
+      if (confirm('あなたの通算対戦成績、および蓄積された手動対戦手順ログ（JSONL）を初期化しますか？\n（※宮廷総合格付けランキングは保持されます）')) {
+        soundMgr.playSelect();
+        StorageManager.clearPlayerOnly();
+        renderRankingModalContent();
+      }
+    } else if (currentStatsTab === 'all') {
+      if (confirm('宮廷総合格付け（全キャラクターの通算対戦記録）を初期化しますか？\n（※あなたの個人戦績は保持されます）')) {
+        soundMgr.playSelect();
+        StorageManager.clearRankingOnly();
+        renderRankingModalContent();
+      }
     }
   };
 
@@ -4147,6 +4270,22 @@ function initEvents() {
     resetGame(true, false);
   };
 
+  /* ★ メニューボタン（確認ダイアログ付きでキャラ選択画面へ復帰） */
+  const menuBtn = document.getElementById('menu-btn');
+  if (menuBtn) {
+    menuBtn.onclick = () => {
+      if (confirm('キャラクター選択画面に戻りますか？\n（現在の対局は破棄されます）')) {
+        soundMgr.playSelect();
+        GameTimer.clearAll();
+        isProcessing = false;
+        gameEnded = false;
+        bgmMgr.setCharSelectPhase(true);
+        SaveLoadManager.updateLoadButtonState();
+        document.getElementById('char-select-overlay').classList.add('active');
+      }
+    };
+  }
+
   document.getElementById('go-exchange-btn').onclick = proceedToExchange;
   document.getElementById('exchange-btn').onclick = confirmExchange;
   document.getElementById('play-btn').onclick = playerPlayCard;
@@ -4196,5 +4335,4 @@ if (document.readyState === 'loading') {
 } else {
   startApp();
 }
-
 
