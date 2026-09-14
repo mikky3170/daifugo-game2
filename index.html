@@ -1,6 +1,3 @@
-<!-- [HTML Version: v2.8.0] 操作UI直感化・結果テキストコピー＆CSV保存・高速シミュ結果保存完全版
- * 「カードを出す/パス」スマホ最適化・練習試合＆高速シミュ結果コピー/CSV保存・トーン統一対応
- -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -293,6 +290,27 @@
       </div>
     </div>
 
+    <!-- ★ 練習試合 途中成績モーダル（案A対応：消化試合数・4人の平均順位等を表示） -->
+    <div class="modal-overlay" id="practice-interim-modal">
+      <div class="modal-content modal-wide">
+        <div class="modal-header">
+          <div class="modal-title" id="practice-interim-title">⚔️ 練習試合 途中成績</div>
+          <button class="modal-close" id="modal-practice-interim-close-x">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div style="text-align: center; margin-bottom: 8px; color: #fff3a8; font-size: 13px;" id="practice-interim-subtitle">
+            現在までの対戦成績（途中集計結果）
+          </div>
+          <div class="ranking-table-container" id="practice-interim-table-wrap">
+            <!-- JSで動的に4人のランキングテーブルを注入 -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-modal-close" id="btn-practice-interim-close">対局画面へ戻る</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ★ 練習試合 最終総合結果モーダル（結果コピー＆CSV保存＆ログ保存トースト完備） -->
     <div class="modal-overlay" id="practice-finish-modal">
       <div class="modal-content modal-wide">
@@ -428,7 +446,9 @@
           <p class="next-game-prompt" id="next-game-prompt-text">次の対局設定を選択してください：</p>
         </div>
         <div class="modal-footer next-game-footer">
+          <!-- ★ 通常時は「個人戦績」、練習試合時は「練習試合の途中成績」へ動的切替 -->
           <button class="btn btn-sub btn-next-game-stats" id="btn-next-game-stats">👤 あなたの個人戦績を確認</button>
+          
           <div class="next-game-action-row" id="normal-next-game-actions">
             <button class="btn btn-gold" id="btn-keep-char">👑 同じメンバーで続行<br><span class="text-small">(カード交換あり)</span></button>
             <button class="btn" id="btn-change-char">🎲 メンバーを再抽選<br><span class="text-small">(カード交換なし)</span></button>
@@ -614,3 +634,5 @@
   <script src="app.js"></script>
 </body>
 </html>
+
+

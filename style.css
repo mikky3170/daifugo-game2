@@ -1,5 +1,6 @@
-/* [CSS Version: v2.8.0] 操作UI直感化・結果テキストコピー＆CSV保存・高速シミュ結果保存完全版
- * （カードを出す/パス動的表示・次の練習試合へ極太ゴールド・設定ゴールド統一・結果コピー/CSV保存対応）
+
+/* [CSS Version: v2.9.0] 自己対戦UI統一・命名規則統一・練習試合戦績完全独立化・演出最適化対応版
+ * （肖像真下拡大・セリフ直下配置・自己対戦3ボタン王宮ゴールド統一・通信ログ最前面z-index対応・完全版）
  */
 
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap');
@@ -68,7 +69,7 @@ body {
 
 button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 .btn-rule-help, .btn-modal-close, .btn-modal-danger, .btn-speed, .btn-selfplay, .btn-load-game, .btn-debug-act,
-.btn-selfplay-quick-log, .btn-result-act, .btn-practice-next-gold {
+.btn-selfplay-quick-log, .btn-result-act, .btn-practice-next-gold, .btn-selfplay-gold {
   font-family: 'Cinzel', 'Noto Serif JP', serif;
   letter-spacing: 0.5px;
 }
@@ -520,6 +521,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   min-height: 0;
 }
 
+/* ★ 肖像スタイル：全キャラ共通で「上端固定・まっすぐ下へ拡大」 */
 .char-portrait {
   width: clamp(46px, 7.5vh, 64px);
   aspect-ratio: 2 / 3;
@@ -533,6 +535,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   position: relative;
   background: #0d131d;
   flex-shrink: 0;
+  transform-origin: top center; /* ★上端中央固定 */
   transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -541,24 +544,20 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   box-shadow: 0 0 16px rgba(212, 175, 55, 0.9), 0 6px 18px rgba(0, 0, 0, 0.8);
 }
 
+/* ★ セリフ時の拡大：上端を固定してまっすぐ真下へ均等拡大 */
 .char-portrait.portrait-talk {
   transform: scale(1.5) translateZ(0);
+  transform-origin: top center !important; /* ★斜め拡大を完全排除し真下拡大 */
   z-index: 150;
   box-shadow: 0 8px 26px rgba(212, 175, 55, 0.95), 0 10px 28px rgba(0, 0, 0, 0.9);
   border-color: #fff3a8;
 }
 
 .portrait-cpu-top.portrait-talk,
-#cpu2-portrait.portrait-talk {
-  transform-origin: top center;
-}
-
-.portrait-cpu-left.portrait-talk {
-  transform-origin: top left;
-}
-
+#cpu2-portrait.portrait-talk,
+.portrait-cpu-left.portrait-talk,
 .portrait-cpu-right.portrait-talk {
-  transform-origin: top right;
+  transform-origin: top center !important;
 }
 
 .name-rank-stack {
@@ -951,10 +950,28 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 }
 .dialogue-bubble.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
 
-#cpu1 .dialogue-bubble { left: 0; transform: translate(0, 0) scale(0.9); text-align: left; }
-#cpu1 .dialogue-bubble.show { transform: translate(0, 0) scale(1); }
-#cpu3 .dialogue-bubble { left: auto; right: 0; transform: translate(0, 0) scale(0.9); text-align: right; }
-#cpu3 .dialogue-bubble.show { transform: translate(0, 0) scale(1); }
+/* ★ CPU1・CPU3の吹き出し：1.5倍に拡大した肖像のすぐ真下にジャスト配置 */
+#cpu1 .dialogue-bubble {
+  top: calc(clamp(46px, 7.5vh, 64px) * 1.5 + 4px);
+  left: 50%;
+  transform: translate(-50%, 0) scale(0.9);
+  text-align: center;
+  z-index: 650;
+}
+#cpu1 .dialogue-bubble.show {
+  transform: translate(-50%, 0) scale(1);
+}
+
+#cpu3 .dialogue-bubble {
+  top: calc(clamp(46px, 7.5vh, 64px) * 1.5 + 4px);
+  left: 50%;
+  transform: translate(-50%, 0) scale(0.9);
+  text-align: center;
+  z-index: 650;
+}
+#cpu3 .dialogue-bubble.show {
+  transform: translate(-50%, 0) scale(1);
+}
 
 .cpu-card-stack {
   display: flex;
@@ -1566,6 +1583,14 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   transition: all 0.2s ease;
 }
 
+/* パスアイコンの文字色固定（どのOSでも文字色を完全継承） */
+.btn-pass-sub .btn-icon {
+  color: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: -1px;
+}
+
 /* 手番中はクッキリ白文字＆金枠点灯 */
 .btn-pass-sub.is-active {
   border-color: rgba(212, 175, 55, 0.7);
@@ -1642,16 +1667,25 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   box-shadow: 0 0 12px rgba(255, 215, 0, 0.85), inset 0 0 4px rgba(255, 255, 255, 0.8);
 }
 
+/* ★ 再抽選ボタン（練習試合中のdisabledスタイル） */
 .btn-reset-safe {
   background: rgba(45, 20, 24, 0.85);
   border: 1px solid rgba(244, 67, 54, 0.4);
   color: #ffcdd2;
   margin-left: auto;
+  transition: all 0.2s ease;
 }
 .btn-reset-safe:hover:not(:disabled) {
   background: #5a1e24;
   color: #fff;
   border-color: #ef5350;
+}
+.btn-reset-safe:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  filter: grayscale(0.8);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #64748b;
 }
 
 .btn-menu {
@@ -1764,12 +1798,18 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   z-index: 3200;
 }
 
-#practice-finish-modal {
+#practice-finish-modal,
+#practice-interim-modal {
   z-index: 3250;
 }
 
 #log-viewer-modal {
   z-index: 3300;
+}
+
+/* ★ 通信ログモーダル：戦績画面の上からでも確実に最前面に表示 */
+#debug-log-modal {
+  z-index: 3400;
 }
 
 .modal-content {
@@ -2315,34 +2355,6 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   color: #cbd5e1;
 }
 
-.my-stats-download-wrap {
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(212, 175, 55, 0.25);
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 8px;
-}
-
-#btn-download-my-jsonl {
-  padding: 6px 14px;
-  font-size: 11.5px;
-  font-weight: 800;
-  border-radius: 5px;
-  background: linear-gradient(180deg, #fff5b3 0%, #d4af37 60%, #9e7d1e 100%);
-  color: #0b1017;
-  border: 1.5px solid #fffadb;
-  box-shadow: 0 0 12px rgba(255, 215, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.6);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-#btn-download-my-jsonl:hover {
-  background: linear-gradient(180deg, #ffffff 0%, #ffe066 60%, #b8860b 100%);
-  box-shadow: 0 0 18px rgba(255, 215, 0, 0.95);
-  transform: translateY(-1px);
-}
-
 /* ゲーム終了画面 */
 .modal-next-game-compact {
   max-width: 450px;
@@ -2829,9 +2841,54 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 .selfplay-progress-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #d4af37 0%, #4caf50 100%); transition: width 0.2s ease; }
 
 .selfplay-summary-box { background: rgba(10, 16, 26, 0.9); border: 1.5px solid var(--color-border-gold); border-radius: 8px; padding: 10px; }
-.selfplay-download-row { margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(212, 175, 55, 0.3); display: flex; gap: 6px; flex-wrap: wrap; }
-#btn-download-json, #btn-download-jsonl { flex: 1; padding: 8px; font-size: 11px; font-weight: 700; border-radius: 5px; background: #1e2c42; color: #fff3a8; border: 1px solid rgba(212, 175, 55, 0.6); cursor: pointer; }
-#btn-open-viewer { flex: 1.2; padding: 8px; font-size: 11.5px; font-weight: 800; border-radius: 5px; background: linear-gradient(180deg, #fff5b3 0%, #d4af37 100%); color: #0b1017; border: 1px solid #fffadb; cursor: pointer; }
+
+/* ★ 自己対戦ダウンロード＆ビューア行（3ボタン王宮ゴールド統一） */
+.selfplay-download-row {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(212, 175, 55, 0.3);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-selfplay-gold {
+  flex: 1;
+  min-width: 140px;
+  height: 38px;
+  font-size: 11.5px;
+  font-weight: 800;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #fff5b3 0%, #d4af37 60%, #9e7d1e 100%) !important;
+  color: #0b1017 !important;
+  border: 1.5px solid #fffadb !important;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.6) !important;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-shadow: none !important;
+}
+
+.btn-selfplay-gold span {
+  color: #0b1017 !important;
+  font-weight: 900 !important;
+}
+
+.btn-selfplay-gold:hover:not(:disabled) {
+  background: linear-gradient(180deg, #ffffff 0%, #ffe066 60%, #b8860b 100%) !important;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.95), 0 4px 10px rgba(0,0,0,0.8) !important;
+  transform: translateY(-1px);
+}
+
+.btn-selfplay-gold:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.8);
+  box-shadow: none !important;
+  transform: none !important;
+}
 
 /* 高速シミュ結果テキストコピー ＆ CSV保存ボタン行 */
 .selfplay-result-actions {
@@ -3037,4 +3094,13 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   .practice-game-card .pgc-num {
     font-size: 14px;
   }
+
+  .selfplay-download-row {
+    flex-direction: column;
+  }
+  .btn-selfplay-gold {
+    width: 100%;
+  }
 }
+
+
