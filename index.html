@@ -290,7 +290,7 @@
       </div>
     </div>
 
-    <!-- ★ 練習試合 途中成績モーダル（案A対応：消化試合数・4人の平均順位等を表示） -->
+    <!-- 練習試合 途中成績モーダル -->
     <div class="modal-overlay" id="practice-interim-modal">
       <div class="modal-content modal-wide">
         <div class="modal-header">
@@ -301,9 +301,7 @@
           <div style="text-align: center; margin-bottom: 8px; color: #fff3a8; font-size: 13px;" id="practice-interim-subtitle">
             現在までの対戦成績（途中集計結果）
           </div>
-          <div class="ranking-table-container" id="practice-interim-table-wrap">
-            <!-- JSで動的に4人のランキングテーブルを注入 -->
-          </div>
+          <div class="ranking-table-container" id="practice-interim-table-wrap"></div>
         </div>
         <div class="modal-footer">
           <button class="btn-modal-close" id="btn-practice-interim-close">対局画面へ戻る</button>
@@ -311,7 +309,7 @@
       </div>
     </div>
 
-    <!-- ★ 練習試合 最終総合結果モーダル（結果コピー＆CSV保存＆ログ保存トースト完備） -->
+    <!-- 練習試合 最終総合結果モーダル -->
     <div class="modal-overlay" id="practice-finish-modal">
       <div class="modal-content modal-wide">
         <div class="modal-header">
@@ -321,9 +319,7 @@
           <div style="text-align: center; margin-bottom: 8px; color: #fff3a8; font-size: 13px;">
             全試合が終了しました！あなたの打牌ログは正常に記録されました。
           </div>
-          <div class="ranking-table-container" id="practice-finish-table-wrap">
-            <!-- JSで動的に4人のランキングテーブルを注入 -->
-          </div>
+          <div class="ranking-table-container" id="practice-finish-table-wrap"></div>
 
           <!-- 結果保存・共有ボタングループ -->
           <div class="practice-result-save-actions">
@@ -446,14 +442,12 @@
           <p class="next-game-prompt" id="next-game-prompt-text">次の対局設定を選択してください：</p>
         </div>
         <div class="modal-footer next-game-footer">
-          <!-- ★ 通常時は「個人戦績」、練習試合時は「練習試合の途中成績」へ動的切替 -->
           <button class="btn btn-sub btn-next-game-stats" id="btn-next-game-stats">👤 あなたの個人戦績を確認</button>
           
           <div class="next-game-action-row" id="normal-next-game-actions">
             <button class="btn btn-gold" id="btn-keep-char">👑 同じメンバーで続行<br><span class="text-small">(カード交換あり)</span></button>
             <button class="btn" id="btn-change-char">🎲 メンバーを再抽選<br><span class="text-small">(カード交換なし)</span></button>
           </div>
-          <!-- ★ 次の練習試合へ促すボタン（極太王宮ゴールド発光デザイン） -->
           <div class="next-game-action-row is-hidden" id="practice-next-game-actions">
             <button class="btn btn-practice-next-gold" id="btn-practice-next-match">
               ⚔️ 次の練習試合へ (座席シャッフル・交換なし)
@@ -463,19 +457,20 @@
       </div>
     </div>
 
-    <!-- ゲーム盤面（左右幅76px固定・中央祭壇完全不動化） -->
+    <!-- ゲーム盤面 -->
     <div id="game-board">
       <!-- CPU 2 (対面・上部) -->
       <div class="player-box" id="cpu2">
         <div class="cpu2-layout-plate">
           <img class="char-portrait portrait-cpu-top" id="cpu2-portrait" src="" alt="">
           <div class="cpu2-info-col">
+            <!-- ★ AI推論点灯ランプをTHINKINGの左側に配置 -->
             <div class="turn-badge-container">
+              <span class="ai-brain-dot" id="cpu2-brain-dot" title="AI推論中"></span>
               <div class="turn-badge" id="cpu2-badge">THINKING</div>
             </div>
             <div class="name-rank-stack">
               <div class="char-badge-container">
-                <span class="ai-brain-dot" id="cpu2-brain-dot" title="AI推論中"></span>
                 <div class="char-badge char-badge-prominent" id="cpu2-char-title">---</div>
               </div>
               <div class="rank-badge" id="cpu2-rank"></div>
@@ -491,14 +486,15 @@
 
       <!-- CPU 1 (左：祭壇側寄せ ＆ 下方オフセット) -->
       <div class="player-box fixed-cpu-box" id="cpu1">
+        <!-- ★ AI推論点灯ランプをTHINKINGの左側に配置 -->
         <div class="turn-badge-container">
+          <span class="ai-brain-dot" id="cpu1-brain-dot" title="AI推論中"></span>
           <div class="turn-badge" id="cpu1-badge">THINKING</div>
         </div>
         <div class="char-row fixed-char-row">
           <img class="char-portrait fixed-cpu-portrait portrait-cpu-left" id="cpu1-portrait" src="" alt="">
           <div class="name-rank-stack">
             <div class="char-badge-container">
-              <span class="ai-brain-dot" id="cpu1-brain-dot" title="AI推論中"></span>
               <div class="char-badge char-badge-prominent" id="cpu1-char-title">---</div>
             </div>
             <div class="rank-badge" id="cpu1-rank"></div>
@@ -540,14 +536,15 @@
 
       <!-- CPU 3 (右：祭壇側寄せ ＆ 下方オフセット) -->
       <div class="player-box fixed-cpu-box" id="cpu3">
+        <!-- ★ AI推論点灯ランプをTHINKINGの左側に配置 -->
         <div class="turn-badge-container">
+          <span class="ai-brain-dot" id="cpu3-brain-dot" title="AI推論中"></span>
           <div class="turn-badge" id="cpu3-badge">THINKING</div>
         </div>
         <div class="char-row fixed-char-row">
           <img class="char-portrait fixed-cpu-portrait portrait-cpu-right" id="cpu3-portrait" src="" alt="">
           <div class="name-rank-stack">
             <div class="char-badge-container">
-              <span class="ai-brain-dot" id="cpu3-brain-dot" title="AI推論中"></span>
               <div class="char-badge char-badge-prominent" id="cpu3-char-title">---</div>
             </div>
             <div class="rank-badge" id="cpu3-rank"></div>
@@ -567,11 +564,11 @@
           
           <div class="player-info-col fixed-player-info">
             <div class="turn-badge-container turn-badge-container-large">
+              <span class="ai-brain-dot" id="player-brain-dot" title="AI推論中"></span>
               <div class="your-turn-badge" id="player-badge">あなたの順番です</div>
             </div>
             <div class="name-rank-stack">
               <div class="char-badge-container">
-                <span class="ai-brain-dot" id="player-brain-dot" title="AI推論中"></span>
                 <div class="char-badge char-badge-prominent" id="player-char-title">---</div>
               </div>
               <div class="rank-badge" id="player-rank"></div>
@@ -593,14 +590,13 @@
     <!-- 一番下全体を囲む金枠宮廷コンソール -->
     <div class="bottom-console-frame">
       <div id="bottom-bar">
-        <!-- ★ 動的表示対応：メインアクションボタン群 -->
         <div class="action-group main-actions">
           <button class="btn btn-play-main" id="play-btn">
             <span class="btn-icon" id="play-btn-icon">👆</span>
             <span class="btn-text" id="play-btn-text">カードを選択</span>
           </button>
           <button class="btn btn-pass-sub" id="pass-btn">
-            <span class="btn-icon" id="pass-btn-icon">⏭️</span>
+            <span class="btn-icon" id="pass-btn-icon">▶▶</span>
             <span class="btn-text" id="pass-btn-text">パス</span>
           </button>
           <button class="btn btn-gold btn-exchange-main is-hidden" id="go-exchange-btn">カード交換へ</button>
