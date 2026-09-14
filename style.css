@@ -1,6 +1,5 @@
-
-/* [CSS Version: v2.7.1] 練習試合UI視認性向上・カード残骸クリーンアップ・試合数カード選択版
- * （キャラクター名拡大・試合数カードボタンスタイル・倍速ボタン被り解消・JSONL王宮ゴールド調和）
+/* [CSS Version: v2.8.0] 操作UI直感化・結果テキストコピー＆CSV保存・高速シミュ結果保存完全版
+ * （カードを出す/パス動的表示・次の練習試合へ極太ゴールド・設定ゴールド統一・結果コピー/CSV保存対応）
  */
 
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap');
@@ -69,7 +68,7 @@ body {
 
 button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 .btn-rule-help, .btn-modal-close, .btn-modal-danger, .btn-speed, .btn-selfplay, .btn-load-game, .btn-debug-act,
-.btn-selfplay-quick-log {
+.btn-selfplay-quick-log, .btn-result-act, .btn-practice-next-gold {
   font-family: 'Cinzel', 'Noto Serif JP', serif;
   letter-spacing: 0.5px;
 }
@@ -579,7 +578,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   width: 100%;
 }
 
-/* ★ キャラクター名バッジ（文字サイズを拡大・くっきり強調） */
+/* キャラクター名バッジ（サイズ拡大・強調） */
 .char-badge {
   font-size: clamp(11.5px, 1.55vh, 13px);
   font-weight: 800;
@@ -1452,7 +1451,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 }
 
 /* ============================================================
- * 11. 下部金枠宮廷コンソール
+ * 11. 下部金枠宮廷コンソール ＆ 動的ボタンスタイル
  * ============================================================ */
 .bottom-console-frame {
   width: 100%;
@@ -1492,33 +1491,41 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   position: relative;
 }
 
-.card-select-hint-box {
-  display: none;
-  font-size: 11px;
-  color: #94a3b8;
-  padding: 0 4px;
-  white-space: nowrap;
-}
-
+/* ★ 「カードを出す」メインボタン（動的状態切替対応） */
 .btn-play-main {
   flex: 1.8;
-  height: clamp(36px, 5.0vh, 44px);
+  height: clamp(38px, 5.2vh, 44px);
   min-width: 130px;
-  font-size: clamp(12px, 1.6vh, 14.5px);
+  font-size: clamp(12.5px, 1.65vh, 14.5px);
   font-weight: 800;
   border-radius: 7px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
   letter-spacing: 0.5px;
   background: linear-gradient(180deg, #2b394e 0%, #172336 100%);
   color: #a4b5c7;
   border: 1px solid rgba(212, 175, 55, 0.3);
   transition: all 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
   cursor: pointer;
+  white-space: nowrap;
 }
 
+/* ① 手番中・未選択時：やさしい金枠パルス明滅 */
+.btn-play-main.state-prompt {
+  border: 1.5px solid rgba(255, 215, 0, 0.85);
+  color: #fff3a8;
+  background: linear-gradient(180deg, rgba(35, 52, 78, 0.9) 0%, rgba(18, 28, 44, 0.95) 100%);
+  animation: promptGlowPulse 2.2s infinite ease-in-out;
+}
+
+@keyframes promptGlowPulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(212, 175, 55, 0.4); border-color: rgba(212, 175, 55, 0.6); }
+  50% { box-shadow: 0 0 16px rgba(255, 215, 0, 0.85), inset 0 0 8px rgba(212, 175, 55, 0.3); border-color: #ffd700; color: #ffffff; }
+}
+
+/* ② 出せるカード選択時：眩しい王宮ゴールド点灯 */
 .btn-play-main:not(:disabled) {
   background: linear-gradient(180deg, #fff5b3 0%, #d4af37 45%, #946f14 100%);
   color: #0b1017;
@@ -1531,12 +1538,21 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   box-shadow: 0 0 10px rgba(212, 175, 55, 0.6);
 }
 
+/* ③ 出せないカード選択時：落ち着いた赤枠 */
+.btn-play-main.state-invalid {
+  border: 1.5px solid #ef4444 !important;
+  color: #fca5a5 !important;
+  background: linear-gradient(180deg, #3b1419 0%, #1a080a 100%) !important;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.5) !important;
+}
+
+/* ★ 「パス」ボタン（動的状態切替対応） */
 .btn-pass-sub {
   flex: 1;
-  height: clamp(36px, 5.0vh, 44px);
+  height: clamp(38px, 5.2vh, 44px);
   min-width: 76px;
   font-size: clamp(11.5px, 1.55vh, 13.5px);
-  font-weight: 700;
+  font-weight: 800;
   border-radius: 7px;
   background: linear-gradient(180deg, #223249 0%, #121c2b 100%);
   color: #cbd5e1;
@@ -1546,11 +1562,31 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   justify-content: center;
   gap: 4px;
   cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
 }
-.btn-pass-sub:not(:disabled):hover {
-  background: linear-gradient(180deg, #2d4261 0%, #18263a 100%);
-  border-color: var(--color-gold-light);
-  color: #fff;
+
+/* 手番中はクッキリ白文字＆金枠点灯 */
+.btn-pass-sub.is-active {
+  border-color: rgba(212, 175, 55, 0.7);
+  color: #ffffff;
+  background: linear-gradient(180deg, #2a3c58 0%, #142030 100%);
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
+}
+.btn-pass-sub.is-active:hover {
+  background: linear-gradient(180deg, #364e72 0%, #1c2c44 100%);
+  border-color: #fff3a8;
+  color: #fffadb;
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
+}
+
+/* 親番パス不可時は暗くロック */
+.btn-pass-sub:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #64748b;
+  box-shadow: none;
 }
 
 .btn-exchange-main {
@@ -1636,7 +1672,6 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   display: flex;
 }
 
-/* ★ 倍速ボタンの被り解消（上部へ適正配置） */
 .speed-controls {
   position: absolute;
   bottom: calc(100% + 12px);
@@ -1820,7 +1855,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 .btn-modal-danger:hover { background: #ad2d2d; color: #fff; }
 
 /* ============================================================
- * 12.1 練習試合（スパーリング・ログ収集）専用スタイル
+ * 12.1 練習試合設定 ＆ 総合結果・保存ボタンスタイル
  * ============================================================ */
 .practice-panel-box {
   background: rgba(10, 16, 26, 0.9);
@@ -1849,14 +1884,14 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   padding: 1px 6px;
   border-radius: 4px;
   background: #1e293b;
-  color: #38bdf8;
-  border: 1px solid #0284c7;
+  color: #ffd700;
+  border: 1px solid var(--color-border-gold);
 }
 
 .practice-section-title .count-badge.is-ready {
-  background: #064e3b;
-  color: #6ee7b7;
-  border-color: #059669;
+  background: rgba(212, 175, 55, 0.25);
+  color: #fffadb;
+  border-color: #ffd700;
 }
 
 .practice-char-picker-grid {
@@ -1889,10 +1924,12 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   border-color: #fff3a8;
 }
 
+/* ★ キャラ選択時のハイライト：王宮ゴールドに完全統一 */
 .practice-char-pick-item.is-selected {
-  background: linear-gradient(135deg, rgba(88, 28, 135, 0.7) 0%, rgba(126, 34, 206, 0.7) 100%);
-  border-color: #d8b4fe;
-  box-shadow: 0 0 8px rgba(168, 85, 247, 0.6);
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.45) 0%, rgba(122, 90, 15, 0.65) 100%);
+  border: 1.5px solid #ffd700;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.65), inset 0 0 6px rgba(255, 243, 168, 0.3);
+  transform: translateY(-1px);
 }
 
 .practice-char-pick-item.is-disabled {
@@ -1920,7 +1957,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   text-overflow: ellipsis;
 }
 
-/* ★ 試合数カードボタングリッド（キャラ選択と同等の選択ハイライト） */
+/* ★ 試合数カードボタン（選択時に王宮ゴールドに発光） */
 .practice-games-cards-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -1950,6 +1987,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
 }
 
+/* 選択中のカード：全体がゴールドに変化 */
 .practice-game-card.is-active {
   background: linear-gradient(180deg, #fff5b3 0%, #d4af37 60%, #9e7d1e 100%);
   border: 1.5px solid #ffffff;
@@ -1966,7 +2004,6 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 }
 .practice-game-card.is-active .pgc-num {
   color: #0b1017;
-  text-shadow: none;
 }
 
 .practice-game-card .pgc-label {
@@ -2015,12 +2052,83 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   transform: none;
 }
 
-/* ★ 練習試合JSONL保存ボタンの王宮ゴールド調和 */
+/* ★ 「⚔️ 次の練習試合へ」極太王宮ゴールド発光ボタン */
+.btn-practice-next-gold {
+  width: 100%;
+  min-height: 46px;
+  font-size: 13.5px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  background: linear-gradient(180deg, #ffffff 0%, #fff5b3 20%, #d4af37 60%, #9e7d1e 100%) !important;
+  color: #0b1017 !important;
+  border: 2px solid #ffffff !important;
+  border-radius: 8px !important;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.95), 0 4px 14px rgba(0, 0, 0, 0.8) !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  animation: nextMatchGlow 1.8s infinite alternate !important;
+}
+
+@keyframes nextMatchGlow {
+  0% { box-shadow: 0 0 12px rgba(212, 175, 55, 0.7); transform: scale(1); }
+  100% { box-shadow: 0 0 26px rgba(255, 215, 0, 1), 0 0 35px rgba(212, 175, 55, 0.8); transform: scale(1.02); }
+}
+
+.btn-practice-next-gold:hover {
+  background: linear-gradient(180deg, #ffffff 0%, #ffe066 60%, #b8860b 100%) !important;
+  transform: scale(1.03) !important;
+}
+
+/* ★ 結果保存ボタングループ ＆ トースト通知 */
+.practice-result-save-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.result-copy-csv-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.btn-result-act {
+  flex: 1;
+  height: 34px;
+  font-size: 11.5px;
+  font-weight: 700;
+  background: linear-gradient(180deg, #24354f 0%, #121c2c 100%);
+  color: #fff3a8;
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.btn-result-act:hover {
+  background: linear-gradient(180deg, #324a70 0%, #19273d 100%);
+  border-color: #ffd700;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.6);
+}
+
+.result-jsonl-row {
+  width: 100%;
+}
+
 .btn-practice-download-gold {
+  width: 100%;
+  height: 40px;
+  font-size: 13px;
   background: linear-gradient(180deg, #fff5b3 0%, #d4af37 60%, #9e7d1e 100%) !important;
   color: #0b1017 !important;
   font-weight: 900 !important;
   border: 1.5px solid #fffadb !important;
+  border-radius: 7px !important;
   box-shadow: 0 0 16px rgba(255, 215, 0, 0.8), 0 4px 12px rgba(0, 0, 0, 0.7) !important;
   transition: all 0.2s ease !important;
   cursor: pointer;
@@ -2029,6 +2137,20 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   background: linear-gradient(180deg, #ffffff 0%, #ffe066 60%, #b8860b 100%) !important;
   box-shadow: 0 0 24px rgba(255, 215, 0, 1) !important;
   transform: translateY(-1px);
+}
+
+/* トースト通知メッセージ枠 */
+.practice-save-status-msg {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #6ee7b7;
+  background: rgba(6, 78, 59, 0.85);
+  border: 1px solid #059669;
+  border-radius: 5px;
+  padding: 6px 12px;
+  text-align: center;
+  box-shadow: 0 0 10px rgba(5, 150, 105, 0.6);
+  animation: fadeInDown 0.25s ease;
 }
 
 /* バージョン履歴カード */
@@ -2567,7 +2689,8 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   font-size: 12px;
   cursor: pointer;
   display: flex;
-  align-items: gap: 4px;
+  align-items: center;
+  gap: 4px;
   font-weight: bold;
 }
 
@@ -2710,6 +2833,26 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 #btn-download-json, #btn-download-jsonl { flex: 1; padding: 8px; font-size: 11px; font-weight: 700; border-radius: 5px; background: #1e2c42; color: #fff3a8; border: 1px solid rgba(212, 175, 55, 0.6); cursor: pointer; }
 #btn-open-viewer { flex: 1.2; padding: 8px; font-size: 11.5px; font-weight: 800; border-radius: 5px; background: linear-gradient(180deg, #fff5b3 0%, #d4af37 100%); color: #0b1017; border: 1px solid #fffadb; cursor: pointer; }
 
+/* 高速シミュ結果テキストコピー ＆ CSV保存ボタン行 */
+.selfplay-result-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.selfplay-toast-msg {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6ee7b7;
+  background: rgba(6, 78, 59, 0.85);
+  border: 1px solid #059669;
+  border-radius: 4px;
+  padding: 4px 8px;
+  text-align: center;
+  margin-top: 6px;
+  animation: fadeInDown 0.2s ease;
+}
+
 .btn-selfplay-quick-log {
   padding: 4px 10px;
   font-size: 11px;
@@ -2830,7 +2973,6 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
 /* ============================================================
  * 13. メディアクエリ（レスポンシブ対応）
  * ============================================================ */
-/* タブレット特化スタイル（幅 > 600px） */
 @media (min-width: 601px) {
   #player-area .char-portrait,
   #cpu1 .char-portrait,
@@ -2856,7 +2998,6 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   }
 }
 
-/* スマホ特化スタイル（幅 <= 600px） */
 @media (max-width: 600px) {
   #game-board {
     grid-template-columns: 76px 1fr 76px;
@@ -2886,6 +3027,14 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   .practice-char-picker-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .practice-games-cards-grid {
+    gap: 4px;
+  }
+  .practice-game-card {
+    padding: 6px 2px;
+  }
+  .practice-game-card .pgc-num {
+    font-size: 14px;
+  }
 }
-
-

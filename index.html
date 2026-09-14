@@ -1,6 +1,5 @@
-
-<!-- [HTML Version: v2.7.1] 練習試合UI視認性向上・カード残骸クリーンアップ・試合数カード選択版
- * 試合数カードボタンスタイル・キャラクター名拡大・残骸防止・JSONLボタン王宮調和対応
+<!-- [HTML Version: v2.8.0] 操作UI直感化・結果テキストコピー＆CSV保存・高速シミュ結果保存完全版
+ * 「カードを出す/パス」スマホ最適化・練習試合＆高速シミュ結果コピー/CSV保存・トーン統一対応
  -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -30,7 +29,7 @@
           <img src="title_logo.png" alt="ROYAL CARD GAME" class="title-logo-img">
         </div>
 
-        <!-- ★ キャラ選択画面専用の宮廷ヘルパーボタングループ（BGM・キャラ紹介・ルール解説） -->
+        <!-- キャラ選択画面専用の宮廷ヘルパーボタングループ（BGM・キャラ紹介・ルール解説） -->
         <div class="char-select-helper-btns">
           <button class="btn-rule-help" id="char-select-sound-btn">🔊 BGM ON</button>
           <button class="btn-rule-help" id="char-select-char-btn">👥 キャラ紹介</button>
@@ -294,26 +293,39 @@
       </div>
     </div>
 
-    <!-- 練習試合 最終総合結果モーダル（JSONL保存ボタンを宮廷ゴールド調和） -->
+    <!-- ★ 練習試合 最終総合結果モーダル（結果コピー＆CSV保存＆ログ保存トースト完備） -->
     <div class="modal-overlay" id="practice-finish-modal">
       <div class="modal-content modal-wide">
         <div class="modal-header">
           <div class="modal-title">🏆 練習試合 総合決着 🏆</div>
         </div>
         <div class="modal-body">
-          <div style="text-align: center; margin-bottom: 10px; color: #fff3a8; font-size: 13px;">
+          <div style="text-align: center; margin-bottom: 8px; color: #fff3a8; font-size: 13px;">
             全試合が終了しました！あなたの打牌ログは正常に記録されました。
           </div>
           <div class="ranking-table-container" id="practice-finish-table-wrap">
             <!-- JSで動的に4人のランキングテーブルを注入 -->
           </div>
-          <div style="margin-top: 14px; text-align: center;">
-            <p style="font-size: 11.5px; color: #b0bec5; margin-bottom: 8px;">
-              今回の練習試合で蓄積されたプレイヤー手動打牌（isManual: true）データをJSONL形式で手元に保存できます。
-            </p>
-            <button class="btn btn-gold btn-practice-download-gold" id="btn-download-practice-jsonl">
-              📥 練習試合ログを保存 (JSONL)
-            </button>
+
+          <!-- 結果保存・共有ボタングループ -->
+          <div class="practice-result-save-actions">
+            <div class="result-copy-csv-row">
+              <button class="btn btn-sub btn-result-act" id="btn-copy-practice-summary">
+                📋 結果テキストをコピー
+              </button>
+              <button class="btn btn-sub btn-result-act" id="btn-download-practice-csv">
+                📊 成績表CSVを保存
+              </button>
+            </div>
+            
+            <div class="result-jsonl-row">
+              <button class="btn btn-gold btn-practice-download-gold" id="btn-download-practice-jsonl">
+                📥 練習試合ログを保存 (JSONL)
+              </button>
+            </div>
+
+            <!-- 保存完了・コピー完了トースト通知メッセージ枠 -->
+            <div class="practice-save-status-msg is-hidden" id="practice-save-status-msg"></div>
           </div>
         </div>
         <div class="modal-footer">
@@ -421,8 +433,11 @@
             <button class="btn btn-gold" id="btn-keep-char">👑 同じメンバーで続行<br><span class="text-small">(カード交換あり)</span></button>
             <button class="btn" id="btn-change-char">🎲 メンバーを再抽選<br><span class="text-small">(カード交換なし)</span></button>
           </div>
+          <!-- ★ 次の練習試合へ促すボタン（極太王宮ゴールド発光デザイン） -->
           <div class="next-game-action-row is-hidden" id="practice-next-game-actions">
-            <button class="btn btn-gold" id="btn-practice-next-match" style="width: 100%;">⚔️ 次の練習試合へ (座席シャッフル・交換なし)</button>
+            <button class="btn btn-practice-next-gold" id="btn-practice-next-match">
+              ⚔️ 次の練習試合へ (座席シャッフル・交換なし)
+            </button>
           </div>
         </div>
       </div>
@@ -558,15 +573,15 @@
     <!-- 一番下全体を囲む金枠宮廷コンソール -->
     <div class="bottom-console-frame">
       <div id="bottom-bar">
+        <!-- ★ 動的表示対応：メインアクションボタン群 -->
         <div class="action-group main-actions">
-          <div class="card-select-hint-box" id="card-select-hint">カードを選択してください</div>
-          <button class="btn btn-gold btn-play-main" id="play-btn">
-            <span class="btn-icon">🃏</span>
-            <span class="btn-text">カードを出す</span>
+          <button class="btn btn-play-main" id="play-btn">
+            <span class="btn-icon" id="play-btn-icon">👆</span>
+            <span class="btn-text" id="play-btn-text">カードを選択</span>
           </button>
           <button class="btn btn-pass-sub" id="pass-btn">
-            <span class="btn-icon">⏭️</span>
-            <span class="btn-text">パス</span>
+            <span class="btn-icon" id="pass-btn-icon">⏭️</span>
+            <span class="btn-text" id="pass-btn-text">パス</span>
           </button>
           <button class="btn btn-gold btn-exchange-main is-hidden" id="go-exchange-btn">カード交換へ</button>
           <button class="btn btn-gold btn-exchange-main is-hidden" id="exchange-btn">交換決定</button>
@@ -599,5 +614,3 @@
   <script src="app.js"></script>
 </body>
 </html>
-
-
