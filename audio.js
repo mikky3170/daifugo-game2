@@ -1,6 +1,6 @@
 /* ====================================================================
  * ROYAL DAIFUGO - audio.js
- * [Version: v3.7.1 - 英傑BGM対局頭出し同期＆音響完全保護版]
+ * [Version: v4.0.0 - 裏画面完全消音・BGMフェード競合根絶＆音響保護版]
  * ==================================================================== */
 
 /* ★最小化・裏画面での完全消音ガードを備えたSoundManager★ */
@@ -15,22 +15,28 @@ class SoundManager {
     window.addEventListener('click', initAudio);
     window.addEventListener('touchstart', initAudio);
 
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        if (this.ctx && this.ctx.state === 'running') {
-          this.ctx.suspend();
-        }
-      } else {
-        if (this.ctx && this.ctx.state === 'suspended' && (typeof isSoundMuted === 'undefined' || !isSoundMuted)) {
-          this.ctx.resume();
-        }
+    const handleSuspend = () => {
+      if (this.ctx && this.ctx.state === 'running') {
+        this.ctx.suspend().catch(() => {});
       }
+    };
+
+    const handleResume = () => {
+      if (this.ctx && this.ctx.state === 'suspended' && (typeof isSoundMuted === 'undefined' || !isSoundMuted)) {
+        this.ctx.resume().catch(() => {});
+      }
+    };
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) handleSuspend();
+      else handleResume();
     });
-    window.addEventListener('pagehide', () => {
-      if (this.ctx && this.ctx.state === 'running') this.ctx.suspend();
-    });
+    window.addEventListener('pagehide', handleSuspend);
     window.addEventListener('blur', () => {
-      if (document.hidden && this.ctx && this.ctx.state === 'running') this.ctx.suspend();
+      if (document.hidden) handleSuspend();
+    });
+    window.addEventListener('focus', () => {
+      if (!document.hidden) handleResume();
     });
   }
 
@@ -40,7 +46,7 @@ class SoundManager {
       this.ctx = new AudioContext();
     }
     if (this.ctx && this.ctx.state === 'suspended' && !document.hidden && (typeof isSoundMuted === 'undefined' || !isSoundMuted)) {
-      this.ctx.resume();
+      this.ctx.resume().catch(() => {});
     }
   }
 
@@ -49,18 +55,20 @@ class SoundManager {
     if (typeof isSoundMuted !== 'undefined' && isSoundMuted) return;
     this.init();
     if (!this.ctx || this.ctx.state !== 'running') return;
-    const now = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freqStart, now);
-    if (freqEnd !== null) osc.frequency.exponentialRampToValueAtTime(freqEnd, now + duration);
-    gain.gain.setValueAtTime(gainStart, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    osc.start(now);
-    osc.stop(now + duration);
+    try {
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freqStart, now);
+      if (freqEnd !== null) osc.frequency.exponentialRampToValueAtTime(freqEnd, now + duration);
+      gain.gain.setValueAtTime(gainStart, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + duration);
+    } catch (e) {}
   }
 
   playSelect() { this.playTone(440, 880, 'sine', 0.05, 0.15); }
@@ -73,23 +81,25 @@ class SoundManager {
     if (typeof isSoundMuted !== 'undefined' && isSoundMuted) return;
     this.init();
     if (!this.ctx || this.ctx.state !== 'running') return;
-    const bufferSize = this.ctx.sampleRate * 0.1;
-    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-    const noise = this.ctx.createBufferSource();
-    noise.buffer = buffer;
-    const filter = this.ctx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(1000, this.ctx.currentTime);
-    filter.frequency.exponentialRampToValueAtTime(400, this.ctx.currentTime + 0.1);
-    const gain = this.ctx.createGain();
-    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
-    noise.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.ctx.destination);
-    noise.start();
+    try {
+      const bufferSize = this.ctx.sampleRate * 0.1;
+      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = buffer;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(1000, this.ctx.currentTime);
+      filter.frequency.exponentialRampToValueAtTime(400, this.ctx.currentTime + 0.1);
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.ctx.destination);
+      noise.start();
+    } catch (e) {}
   }
 
   playSpecial() {
@@ -135,7 +145,7 @@ class SoundManager {
   }
 }
 
-/* ★排他制御と完全停止ガードを備えたBgmManager（重複鳴動根絶・復帰フラグ正常リセット版）★ */
+/* ★排他制御と完全消音ガードを備えたBgmManager（裏画面完全消音・タイマー競合根絶版）★ */
 class BgmManager {
   constructor() {
     this.audioA = new Audio();
@@ -154,6 +164,7 @@ class BgmManager {
     this.isCharSelectPhase = true;
     this.isHeroAdvMode = false;
     this.wasPlayingBeforeHidden = false;
+    this.isBackgrounded = false;
 
     this.currentBattleBaseSrc = 'bgm_normal.mp3';
 
@@ -165,17 +176,23 @@ class BgmManager {
     };
 
     const handleHide = () => {
+      this.isBackgrounded = true;
+      if (this.fadeTimer) {
+        clearInterval(this.fadeTimer);
+        this.fadeTimer = null;
+      }
+
       const isAnyPlaying = (!this.audioA.paused || !this.audioB.paused);
       if (isAnyPlaying) {
         this.wasPlayingBeforeHidden = true;
-        this.audioA.pause();
-        this.audioB.pause();
-      } else {
-        this.wasPlayingBeforeHidden = false;
       }
+
+      try { this.audioA.pause(); } catch (e) {}
+      try { this.audioB.pause(); } catch (e) {}
     };
 
     const handleShow = () => {
+      this.isBackgrounded = false;
       if (this.wasPlayingBeforeHidden && (typeof isSoundMuted === 'undefined' || !isSoundMuted)) {
         this.activeAudio.volume = this.targetVolume;
         this.activeAudio.play().catch(() => {});
@@ -188,10 +205,15 @@ class BgmManager {
       else handleShow();
     });
     window.addEventListener('pagehide', handleHide);
-    window.addEventListener('blur', () => { if (document.hidden) handleHide(); });
-    window.addEventListener('focus', () => { if (!document.hidden) handleShow(); });
+    window.addEventListener('blur', () => {
+      if (document.hidden) handleHide();
+    });
+    window.addEventListener('focus', () => {
+      if (!document.hidden) handleShow();
+    });
 
     const unlockAudio = () => {
+      if (this.isBackgrounded || document.hidden) return;
       if (typeof isSoundMuted === 'undefined' || !isSoundMuted) {
         const src = (this.isCharSelectPhase && !this.isHeroAdvMode) ? this.tracks.charSelect : this.currentBattleBaseSrc;
         if (!this.activeAudio.src || this.currentSrc !== src) {
@@ -214,8 +236,8 @@ class BgmManager {
       clearInterval(this.fadeTimer);
       this.fadeTimer = null;
     }
-    this.audioA.pause();
-    this.audioB.pause();
+    try { this.audioA.pause(); } catch (e) {}
+    try { this.audioB.pause(); } catch (e) {}
     this.audioA.currentTime = 0;
     this.audioB.currentTime = 0;
     this.audioA.volume = 0;
@@ -225,6 +247,10 @@ class BgmManager {
 
   crossFade(nextSrc, forceRestart = false) {
     if (!nextSrc) return;
+    if (this.isBackgrounded || document.hidden) {
+      this.currentSrc = nextSrc;
+      return;
+    }
     if (!forceRestart && this.currentSrc === nextSrc && !this.activeAudio.paused) return;
     this.currentSrc = nextSrc;
 
@@ -249,12 +275,26 @@ class BgmManager {
     const playPromise = incoming.play();
 
     const startTransition = () => {
+      if (this.isBackgrounded || document.hidden) {
+        incoming.pause();
+        outgoing.pause();
+        return;
+      }
+
       const steps = 8;
       const interval = 25;
       let step = 0;
       const startOutVol = outgoing.volume;
 
       this.fadeTimer = setInterval(() => {
+        if (this.isBackgrounded || document.hidden) {
+          clearInterval(this.fadeTimer);
+          this.fadeTimer = null;
+          incoming.pause();
+          outgoing.pause();
+          return;
+        }
+
         step++;
         const factor = step / steps;
         outgoing.volume = Math.max(0, startOutVol * (1 - factor));
@@ -275,10 +315,12 @@ class BgmManager {
 
     if (playPromise !== undefined) {
       playPromise.then(startTransition).catch(() => {
-        incoming.volume = this.targetVolume;
-        outgoing.pause();
-        this.activeAudio = incoming;
-        this.idleAudio = outgoing;
+        if (!this.isBackgrounded && !document.hidden) {
+          incoming.volume = this.targetVolume;
+          outgoing.pause();
+          this.activeAudio = incoming;
+          this.idleAudio = outgoing;
+        }
       });
     } else {
       startTransition();

@@ -285,17 +285,23 @@ const GameTimer = {
 };
 
 /* ----------------------------------------------------
- * 1. 設定・定数・キャラクター定義（初期貴族 ➔ 王族 ➔ 歴史の英傑）
+ * 1. 設定・定数・キャラクター定義（Render＆ローカル完全ハイブリッド解決版）
  * ---------------------------------------------------- */
 const RENDER_BACKEND_URL = 'https://daifugo-game2.onrender.com';
+const LOCAL_BACKEND_URL = 'http://127.0.0.1:5000';
 
-const AI_SERVER_BASE_URL = (
-  window.location.hostname === 'localhost' ||
-  window.location.hostname === '127.0.0.1' ||
-  window.location.protocol === 'file:'
-)
-  ? 'http://127.0.0.1:5000'
-  : (window.location.origin && window.location.origin.startsWith('http') ? window.location.origin : RENDER_BACKEND_URL);
+/**
+ * サーバー接続先URL動的解決
+ * ・localhost / 127.0.0.1 のローカル開発時：127.0.0.1:5000 を優先
+ * ・file: プロトコル、GitHub Pages、Web公開時：Render本番サーバー（RENDER_BACKEND_URL）へ自動接続
+ */
+let AI_SERVER_BASE_URL = RENDER_BACKEND_URL;
+
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  AI_SERVER_BASE_URL = LOCAL_BACKEND_URL;
+} else {
+  AI_SERVER_BASE_URL = RENDER_BACKEND_URL;
+}
 
 console.log(`[SYSTEM] Target API Backend: ${AI_SERVER_BASE_URL}`);
 

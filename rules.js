@@ -1,6 +1,6 @@
 /* ====================================================================
  * ROYAL DAIFUGO - rules.js
- * [Version: v3.9.9 - 完全正規化＆絶対強度テーブル（K/A判定バグ完全根絶版）]
+ * [Version: v4.0.0 - 平時3合法あがり完全保証＆絶対強度テーブル版]
  * ==================================================================== */
 
 /* ----------------------------------------------------
@@ -234,6 +234,9 @@ function getPlayStrength(cards, reverse = false) {
 
 /**
  * 指定されたカードセットが禁止あがり対象カードを含むか純粋判定
+ * 【王道ルール完全準拠版】
+ * ・平時（通常時）：2、8、JOKERでのあがりが禁止（※3〜Aはスート問わず全て合法）
+ * ・革命中：3、8、JOKERでのあがりが禁止（※4〜2は全て合法）
  * @param {Array} cards - 出されたカード配列
  * @param {boolean} reverse - 革命中フラグ
  * @returns {boolean} 禁止あがり対象なら true
@@ -257,20 +260,13 @@ function isForbiddenFinish(cards, reverse = false) {
     return true;
   }
 
-  // 4. スペード3単騎あがり禁止（平時のみ最強ジョーカーキラーのため禁止扱い）
-  if (!reverse && cards.length === 1) {
-    const c = cards[0];
-    if (normalizeCardSuit(c) === '♠' && normalizeCardRank(c) === '3') {
-      return true;
-    }
-  }
-
+  // ※平時（!reverse）において、3（♠3含む）でのあがりは完全な合法手とする（理不尽な反則化を完全撤廃）
   return false;
 }
 
 /**
  * 禁止あがり手判定純粋関数
- * rules.forbiddenFinish が ON の場合のみ、ラスト1手になるあがり手（JOKER、2/3、8、スペ3等）を反則手とみなす
+ * rules.forbiddenFinish が ON の場合のみ、ラスト1手になるあがり手を反則手とみなす
  */
 function isForbiddenFinishMove(cards, hand, rules = null, reverse = false) {
   if (!cards || cards.length === 0 || !hand) return false;
@@ -285,7 +281,7 @@ function isForbiddenFinishMove(cards, hand, rules = null, reverse = false) {
 }
 
 /**
- * 選択したカードを出した場合、残りの手札がすべて禁止あがりカード（2・8・JOKER・革命時3・♠3等）のみになり
+ * 選択したカードを出した場合、残りの手札がすべて禁止あがりカード（2・8・JOKER・革命時3等）のみになり
  * 次回以降にあがれなくなる「1手前詰み状態」になるかを厳密判定するヘルパー
  * @param {Array} selectedCards - 出そうとしているカード配列
  * @param {Array} hand - 現在の手札配列
@@ -301,15 +297,12 @@ function willLeaveOnlyForbiddenCards(selectedCards, hand, reverse = false) {
   if (remainingHand.length === 0) return false;
 
   // 残り手札に含まれるすべてのカードが単体で禁止あがり対象であるか検証
-  // （2, 8, JOKER, 革命時3, ♠3単騎など、あがる瞬間に反則となる札しか手元に残らない状態）
+  // （平時なら2, 8, JOKER、革命時なら3, 8, JOKERのみで構成されているか）
   const allCardsForbidden = remainingHand.every(card => isForbiddenFinish([card], reverse));
   if (!allCardsForbidden) {
-    return false; // 1枚でも通常あがり可能なカード（3〜A等）が残るなら詰みではない
+    return false; // 1枚でも通常あがり可能なカード（平時なら3〜A等）が残るなら詰みではない
   }
 
-  // 残手札がすべて禁止カードで構成されている場合、
-  // それらを単騎で出そうが、ペアやトリプルで出そうが、あがる瞬間には必ず禁止カードが含まれるため
-  // 例外なく100%反則負け（完全詰み）となる
   return true;
 }
 
@@ -365,7 +358,6 @@ function isValidPlay(cards, currentField, reverse = false) {
   }
 
   // 厳格な大なり比較（playStr > fieldStr）
-  // 平時: K(11) に対して A(12) -> 12 > 11 (true)
   return playStr > fieldStr;
 }
 
@@ -605,7 +597,7 @@ function evaluatePlayFinish(context) {
     return { status: 'CONTINUE' };
   }
 
-  // ① 禁止あがりチェック
+  // ① 禁止あがりチェック（平時3は完全に合法勝利、2・8・JOKER・革命時3のみ反則）
   if (activeRules.forbiddenFinish && isForbiddenFinish(playedCards, effRev)) {
     return {
       status: 'FORBIDDEN_FINISH',

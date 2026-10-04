@@ -1,10 +1,10 @@
 /* ====================================================================
  * ROYAL DAIFUGO - ai.js
- * [本格競技ルール（禁止あがり自爆防止・都落ち防衛動員・手札形成）完全同期版]
+ * [Version: v4.0.0 - Render対応型リアルタイム・ステータス完全同期版]
  * ==================================================================== */
 
 /* ============================================================
- * 1. AI通信ステータスランプ管理（Pythonサーバー通信キャラ専用）
+ * 1. AI通信ステータスランプ管理（Render/Pythonサーバー通信キャラ専用）
  * ============================================================ */
 const AI_SERVER_TARGET_CHAR_IDS = [
   'GILGAMESH', 'AWAKENED_KING', 'BEGINNER_AI', 'SUPER_AI',
@@ -17,6 +17,7 @@ function isPythonServerTargetChar(charId) {
 
 const AIStatusUI = {
   isServerOnline: false,
+  isWakingUp: false,
   retryTimer: null,
   consecutiveFailures: 0,
 
@@ -26,24 +27,21 @@ const AIStatusUI = {
     const summary = document.getElementById('debug-status-summary');
     if (!label) return;
 
-    if (!this.isServerOnline && state === 'thinking') {
-      if (dot) {
-        dot.classList.remove('status-online', 'status-waking', 'status-thinking');
-        dot.classList.add('status-offline');
-      }
-      label.textContent = 'AI: オフライン';
-      return;
-    }
-
     if (dot) {
       dot.classList.remove('status-online', 'status-waking', 'status-offline', 'status-thinking');
     }
 
     if (state === 'thinking') {
-      if (dot) dot.classList.add('status-thinking');
-      label.textContent = text || 'AI: 思考中...';
+      if (this.isServerOnline) {
+        if (dot) dot.classList.add('status-thinking');
+        label.textContent = text || 'AI: 思考中...';
+      } else {
+        if (dot) dot.classList.add('status-offline');
+        label.textContent = 'AI: オフライン(思考中)';
+      }
     } else if (state === 'online') {
       this.isServerOnline = true;
+      this.isWakingUp = false;
       this.consecutiveFailures = 0;
       if (dot) dot.classList.add('status-online');
       label.textContent = text || 'AI: 稼働中';
@@ -53,19 +51,21 @@ const AIStatusUI = {
         this.retryTimer = null;
       }
     } else if (state === 'waking') {
+      this.isWakingUp = true;
       if (dot) dot.classList.add('status-waking');
-      label.textContent = text || 'AI: 接続確認中';
-      if (summary) summary.textContent = `🟡 接続確認中: ${AI_SERVER_BASE_URL}`;
+      label.textContent = text || 'AI: サーバー起動中...';
+      if (summary) summary.textContent = `🟡 起動確認中: ${AI_SERVER_BASE_URL}`;
     } else {
       this.isServerOnline = false;
+      this.isWakingUp = false;
       if (dot) dot.classList.add('status-offline');
-      label.textContent = 'AI: オフライン';
+      label.textContent = text || 'AI: オフライン';
       if (summary) summary.textContent = `🔴 未接続: ${AI_SERVER_BASE_URL}`;
 
       if (!this.retryTimer) {
         this.retryTimer = setInterval(() => {
           if (!this.isServerOnline) this.pingServer(true);
-        }, 10000);
+        }, 15000);
       }
     }
   },
@@ -73,6 +73,8 @@ const AIStatusUI = {
   restoreIdleState() {
     if (this.isServerOnline) {
       this.set('online', 'AI: 稼働中');
+    } else if (this.isWakingUp) {
+      this.set('waking', 'AI: サーバー起動中...');
     } else {
       this.set('offline', 'AI: オフライン');
     }
@@ -94,7 +96,7 @@ const AIStatusUI = {
 
     dot.classList.remove('active', 'offline-thinking');
     void dot.offsetWidth;
-    if (isOnline) {
+    if (isOnline && this.isServerOnline) {
       dot.classList.add('active');
     } else {
       dot.classList.add('offline-thinking');
@@ -124,12 +126,24 @@ const AIStatusUI = {
   },
 
   async pingServer(isSilent = false) {
-    if (!isSilent) this.set('waking', 'AI: 接続確認中');
+    if (!this.isServerOnline) {
+      this.set('waking', 'AI: サーバー起動中...');
+    }
     try {
-      const res = await fetch(CONFIG.PYTHON_HEALTH_URL, { method: 'GET', cache: 'no-cache' });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+      const res = await fetch(CONFIG.PYTHON_HEALTH_URL, {
+        method: 'GET',
+        cache: 'no-cache',
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
       if (res.ok) {
         const data = await res.json();
         this.isServerOnline = true;
+        this.isWakingUp = false;
         this.consecutiveFailures = 0;
         this.set('online', 'AI: 稼働中');
         console.log(`✅ [Pythonサーバー接続成功] モデル: ${data.hi2_name || 'hi2'} & ${data.gilgamesh_name || 'gilgamesh'}`);
@@ -137,7 +151,7 @@ const AIStatusUI = {
         throw new Error(`HTTP ${res.status}`);
       }
     } catch (err) {
-      if (!isSilent) console.warn(`⚠️ [ヘルスチェック未到達] サーバー未起動またはオフライン: ${err.message}`);
+      if (!isSilent) console.warn(`⚠️ [ヘルスチェック未到達] サーバー未起動またはスリープ中: ${err.message}`);
       this.isServerOnline = false;
       this.set('offline', 'AI: オフライン');
     }
@@ -168,7 +182,7 @@ function getCharacterTacticalProfile(charId) {
 }
 
 /* ----------------------------------------------------
- * 3. PyTorch深層学習サーバー通信
+ * 3. PyTorch深層学習サーバー通信（確実なオフライン保護版）
  * ---------------------------------------------------- */
 let currentSessionGeneration = 0;
 
@@ -219,7 +233,7 @@ async function askPythonAI(hand, currentField, validMoves, modelType = 'super', 
   const targetMoves = filterCpuMovesForCharacter(charDef.id, validMoves);
 
   const isHeavyMcts = (charDef.id === 'GILGAMESH' || charDef.id === 'AWAKENED_KING');
-  const timeoutMs = isHeavyMcts ? 5000 : 3200;
+  const timeoutMs = isHeavyMcts ? 5000 : 3500;
 
   try {
     const controller = new AbortController();
@@ -282,6 +296,8 @@ async function askPythonAI(hand, currentField, validMoves, modelType = 'super', 
     if (AIStatusUI.consecutiveFailures >= 2) {
       AIStatusUI.isServerOnline = false;
       AIStatusUI.set('offline', 'AI: オフライン');
+    } else {
+      AIStatusUI.restoreIdleState();
     }
     AIStatusUI.setBrainDot(playerKey, true, false);
   }
@@ -742,7 +758,6 @@ function evaluateHandFormation(move, hand, effRev = false, minOppLen = 99) {
     return 200;
   }
 
-  // ★【禁止あがり完全詰み判定連携】このカードを切ると残りが禁止カードのみになる手は自爆として除外★
   if (willLeaveOnlyForbiddenCards(move, hand, effRev) && minOppLen > 1) {
     return -99999;
   }
@@ -753,7 +768,6 @@ function evaluateHandFormation(move, hand, effRev = false, minOppLen = 99) {
 
   let score = 0;
 
-  // 残り1手・2手の段階で禁止あがり札しか残らない形を強く抑制
   if (remLen === 1) {
     if (isForbiddenFinish(remHand, effRev)) score -= 120;
     else score += 40;
@@ -779,7 +793,6 @@ function evaluateHandFormation(move, hand, effRev = false, minOppLen = 99) {
     }
   });
 
-  // 1. ペア崩し防止ガードレール（手札5枚以上かつ非リーチ時）
   if (handLen >= 5 && minOppLen > 2 && moveLen === 1 && !move[0].isJoker) {
     const disp = move[0].display || move[0].rank;
     const origCount = origGroups[disp] || 0;
@@ -788,7 +801,6 @@ function evaluateHandFormation(move, hand, effRev = false, minOppLen = 99) {
     }
   }
 
-  // 2. 支配力（脱出チケット）の保持
   if (remLen >= 3 && minOppLen > 2) {
     const hasBossRem = (
       remJokers > 0 ||
@@ -802,7 +814,6 @@ function evaluateHandFormation(move, hand, effRev = false, minOppLen = 99) {
     }
   }
 
-  // 3. 孤立ゴミ札の早期処分加点
   if (moveLen === 1 && !move[0].isJoker) {
     const disp = move[0].display || move[0].rank;
     if ((origGroups[disp] || 0) === 1 && getCardStrength(move[0], effRev) <= 7) {
@@ -810,7 +821,6 @@ function evaluateHandFormation(move, hand, effRev = false, minOppLen = 99) {
     }
   }
 
-  // 4. 手札のコンパクト性（手数短縮評価）
   const groupCount = Object.keys(remGroups).length;
   const effectiveTurns = groupCount + (remJokers > 0 && groupCount === 0 ? 1 : 0);
   score -= (effectiveTurns * 3.5);
@@ -949,7 +959,6 @@ function evaluateMoveDefault(move, hand = null, isFieldEmpty = false, rev = fals
     return 500;
   }
 
-  // ★【禁止あがり完全詰み判定連携】相手非リーチ時、残りが禁止カードのみになる手は自爆回避★
   if (hand && willLeaveOnlyForbiddenCards(move, hand, rev) && minOppLen > 1) {
     return -99999;
   }
@@ -2245,7 +2254,7 @@ function decideCpuMove(cpu, explicitContext = null) {
     chosen = selectMoveByCharacterDef(charDef, hand, field, rev, otherCounts, canPass, unrevealed, nextCount, rules, ctx.playedHistory);
   }
 
-  // 親番フォールバック（手札が禁止あがり札のみで手詰まりの場合もフリーズを起こさず打牌を成立させる）
+  // 親番フォールバック
   if (field.length === 0 && (!chosen || chosen.length === 0)) {
     const safeInstant = validMoves.filter(m => !isForbiddenFinishMove(m, hand, rules, rev));
     chosen = safeInstant.length > 0 ? safeInstant[0] : validMoves[0];
