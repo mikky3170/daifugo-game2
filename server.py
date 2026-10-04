@@ -1,11 +1,21 @@
+# ==============================================================================
+# [Python Server] server.py - 大富豪 ROYAL CARD GAME 本番統合サーバー
+# 👑 ギルガメッシュ【全知全能透視15,000回MCTS ＆ 終盤確定詰み】
+# ＆ 覚醒新王【APEX-v3直感×7,500回MCTS完全体 ＆ 手札形成フル適用 ＆ 確定詰み】
+# ＆ 女王【正統派5,000回MCTS ＆ 不完全情報確定詰み】
+# ＆ 🏰 王【APEX-v3直感×手札形成0.8×深さ5詰み＆絶対防衛】
+# ＆ 🤴 新王【俊英マルチ×手札形成0.6×深さ5詰み】
+# ＆ 🏛️ 始皇帝【深さ6詰み】 ＆ 🛡️ アレク王【深さ7詰み】 ＆ 四大英傑
+# 【本格競技ルール（禁止あがり自爆防止・都落ち・10連戦）完全同期版】
+# ==============================================================================
 
-# [Python Server] server.py - 大富豪 上級AI(110次元)・超級AI(163次元 6層深層・新4パターン高速シミュレーター対応版 v2.2.2)
 import os
 import sys
 import json
 import time
 import random
 import math
+from collections import defaultdict
 
 try:
     sys.stdout.reconfigure(line_buffering=True)
@@ -15,11 +25,11 @@ except Exception:
 
 import torch
 import torch.nn as nn
-from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, abort
 from flask_cors import CORS
 
 # ----------------------------------------------------
-# 1. PyTorchモデルの定義
+# 1. PyTorchモデルの定義 ＆ 三刀流モデル並行ロード機構
 # ----------------------------------------------------
 class ImprovedDaifugoModel(nn.Module):
     """163次元 / 159次元 対応モデル: 6層全結合 + BatchNorm + Dropout対応"""
@@ -28,19 +38,15 @@ class ImprovedDaifugoModel(nn.Module):
         self.fc1 = nn.Linear(input_size, 512)
         self.bn1 = nn.BatchNorm1d(512)
         self.dropout1 = nn.Dropout(0.4)
-
         self.fc2 = nn.Linear(512, 256)
         self.bn2 = nn.BatchNorm1d(256)
         self.dropout2 = nn.Dropout(0.4)
-
         self.fc3 = nn.Linear(256, 128)
         self.bn3 = nn.BatchNorm1d(128)
         self.dropout3 = nn.Dropout(0.3)
-
         self.fc4 = nn.Linear(128, 64)
         self.bn4 = nn.BatchNorm1d(64)
         self.dropout4 = nn.Dropout(0.2)
-
         self.fc5 = nn.Linear(64, 53)
         self.relu = nn.ReLU()
 
@@ -53,11 +59,10 @@ class ImprovedDaifugoModel(nn.Module):
         x = self.dropout3(x)
         x = self.relu(self.bn4(self.fc4(x)))
         x = self.dropout4(x)
-        x = self.fc5(x)
-        return x
+        return self.fc5(x)
 
 class SuperDaifugoAI(nn.Module):
-    """旧版超級AI: 4層全結合(fc1〜fc4) + BatchNorm(bn1, bn2) モデル（後方互換用）"""
+    """4層全結合モデル"""
     def __init__(self, in_dim=159, h1=128, h2=64, h3=64, out_dim=53, has_bn3=False):
         super(SuperDaifugoAI, self).__init__()
         self.fc1 = nn.Linear(in_dim, h1)
@@ -66,8 +71,7 @@ class SuperDaifugoAI(nn.Module):
         self.bn2 = nn.BatchNorm1d(h2)
         self.fc3 = nn.Linear(h2, h3)
         self.has_bn3 = has_bn3
-        if has_bn3:
-            self.bn3 = nn.BatchNorm1d(h3)
+        if has_bn3: self.bn3 = nn.BatchNorm1d(h3)
         self.fc4 = nn.Linear(h3, out_dim)
         self.relu = nn.ReLU()
 
@@ -75,141 +79,208 @@ class SuperDaifugoAI(nn.Module):
         x = self.relu(self.bn1(self.fc1(x)))
         x = self.relu(self.bn2(self.fc2(x)))
         x = self.relu(self.bn3(self.fc3(x))) if self.has_bn3 else self.relu(self.fc3(x))
-        x = self.fc4(x)
-        return x
-
-class StandardFCDaifugoAI(nn.Module):
-    """標準3層全結合モデル"""
-    def __init__(self, in_dim=106, h1=128, h2=64, out_dim=53):
-        super(StandardFCDaifugoAI, self).__init__()
-        self.fc1 = nn.Linear(in_dim, h1)
-        self.fc2 = nn.Linear(h1, h2)
-        self.fc3 = nn.Linear(h2, out_dim)
-        self.relu = nn.ReLU()
-
-    def forward(self, x):
-        x = self.relu(self.fc1(x))
-        x = self.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
-
-class DeepSequentialDaifugoAI(nn.Module):
-    """Sequential + BatchNorm対応 動的構築モデル (110次元等)"""
-    def __init__(self, net_module):
-        super(DeepSequentialDaifugoAI, self).__init__()
-        self.net = net_module
-
-    def forward(self, x):
-        return self.net(x)
+        return self.fc4(x)
 
 device = torch.device('cpu')
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def load_flexible_model(target_filenames, default_dim=163, model_role="超級AI"):
-    """モデル構造（163次元6層BN / 159次元6層BN / 旧4層BN / Sequential）を自動識別してロードする万能ローダー"""
     for fname in target_filenames:
         full_path = os.path.join(BASE_DIR, fname)
         if not os.path.exists(full_path) and os.path.exists(fname):
             full_path = os.path.abspath(fname)
         if not os.path.exists(full_path):
             continue
-
         try:
             state_dict = torch.load(full_path, map_location=device)
-
             if 'fc5.weight' in state_dict and 'bn4.weight' in state_dict:
                 in_dim = state_dict['fc1.weight'].shape[1]
                 model = ImprovedDaifugoModel(input_size=in_dim).to(device)
                 model.load_state_dict(state_dict)
                 model.eval()
-                print(f"✅ {model_role}モデルロード成功 (深層6層BN構造): '{os.path.basename(full_path)}' (入力次元: {in_dim}, 構成: {in_dim} -> 512 -> 256 -> 128 -> 64 -> 53)", flush=True)
+                print(f"✅ {model_role}ロード成功: '{os.path.basename(full_path)}' ({in_dim}次元 6層BN)", flush=True)
                 return model, True, os.path.basename(full_path), in_dim
-
             elif 'fc4.weight' in state_dict and 'bn1.weight' in state_dict:
                 in_dim = state_dict['fc1.weight'].shape[1]
-                h1 = state_dict['fc1.weight'].shape[0]
-                h2 = state_dict['fc2.weight'].shape[0]
-                h3 = state_dict['fc3.weight'].shape[0]
-                out_dim = state_dict['fc4.weight'].shape[0]
-                has_bn3 = ('bn3.weight' in state_dict)
-
-                model = SuperDaifugoAI(in_dim=in_dim, h1=h1, h2=h2, h3=h3, out_dim=out_dim, has_bn3=has_bn3).to(device)
+                model = SuperDaifugoAI(in_dim=in_dim).to(device)
                 model.load_state_dict(state_dict)
                 model.eval()
-                print(f"✅ {model_role}モデルロード成功 (旧4層BN構造): '{os.path.basename(full_path)}' (入力次元: {in_dim}, 構成: {in_dim} -> {h1} -> {h2} -> {h3} -> {out_dim})", flush=True)
+                print(f"✅ {model_role}ロード成功: '{os.path.basename(full_path)}' ({in_dim}次元 4層BN)", flush=True)
                 return model, True, os.path.basename(full_path), in_dim
-
-            elif any(k.startswith("net.") for k in state_dict):
-                net_keys = list(state_dict.keys())
-                module_dict = nn.ModuleDict()
-                for k in net_keys:
-                    parts = k.split('.')
-                    if len(parts) >= 3 and parts[2] == 'weight':
-                        layer_idx = parts[1]
-                        w = state_dict[k]
-                        if len(w.shape) == 2:
-                            bias = f"net.{layer_idx}.bias" in state_dict
-                            module_dict[layer_idx] = nn.Linear(w.shape[1], w.shape[0], bias=bias)
-                        elif len(w.shape) == 1:
-                            module_dict[layer_idx] = nn.BatchNorm1d(w.shape[0])
-
-                sorted_indices = sorted([int(i) for i in module_dict.keys()])
-                seq_layers = []
-                for i in range(max(sorted_indices) + 1):
-                    s_i = str(i)
-                    if s_i in module_dict:
-                        seq_layers.append(module_dict[s_i])
-                    else:
-                        seq_layers.append(nn.ReLU())
-
-                net = nn.Sequential(*seq_layers)
-                model = DeepSequentialDaifugoAI(net).to(device)
-                model.load_state_dict(state_dict)
-                model.eval()
-                in_dim = state_dict['net.0.weight'].shape[1] if 'net.0.weight' in state_dict else default_dim
-                print(f"✅ {model_role}モデルロード成功 (Sequential構造): '{os.path.basename(full_path)}' (入力次元: {in_dim})", flush=True)
-                return model, True, os.path.basename(full_path), in_dim
-
-            elif 'fc1.weight' in state_dict and 'fc3.weight' in state_dict:
-                in_dim = state_dict['fc1.weight'].shape[1]
-                h1 = state_dict['fc1.weight'].shape[0]
-                h2 = state_dict['fc2.weight'].shape[0] if 'fc2.weight' in state_dict else 64
-                out_dim = state_dict['fc3.weight'].shape[0] if 'fc3.weight' in state_dict else 53
-
-                model = StandardFCDaifugoAI(in_dim=in_dim, h1=h1, h2=h2, out_dim=out_dim).to(device)
-                model.load_state_dict(state_dict)
-                model.eval()
-                print(f"✅ {model_role}モデルロード成功 (標準3層FC): '{os.path.basename(full_path)}' (構成: {in_dim} -> {h1} -> {h2} -> {out_dim})", flush=True)
-                return model, True, os.path.basename(full_path), in_dim
-
         except Exception as e:
-            print(f"⚠️ モデルファイル '{fname}' のロードで例外が発生しました: {e}", flush=True)
-
+            print(f"⚠️ モデルロード例外 ({fname}): {e}", flush=True)
     return None, False, None, default_dim
 
-# 1. 上級AIモデルのロード（110次元）
-model_hi, model_hi_loaded, hi_model_name, hi_in_dim = load_flexible_model(
-    ['daifugou_ai_hi.pth', 'daifugo_ai_hi.pth'],
-    default_dim=110,
-    model_role="上級AI"
+# 三刀流モデル並行ロード機構（最新APEX-v3最優先認識）
+model_hi2, model_hi2_loaded, hi2_name, hi2_in_dim = load_flexible_model(
+    ['daifugou_ai_hi2.pth', 'daifugou_ai_apex_v2.pth', 'daifugo_ai_163dim.pth'],
+    default_dim=163, model_role="Model-1 [hi2/標準]"
 )
 
-# 2. 超級AIモデルのロード（163次元完全版）
-model_super, model_super_loaded, super_model_name, super_in_dim = load_flexible_model(
-    ['daifugou_ai_hi2.pth', 'daifugo_ai_hi2.pth', 'daifugo_ai_163dim.pth', 'daifugo_ai_159dim_improved.pth'],
-    default_dim=163,
-    model_role="超級AI"
+model_gilgamesh, model_gilgamesh_loaded, gilgamesh_name, gilgamesh_in_dim = load_flexible_model(
+    ['daifugou_ai_gilgamesh.pth', 'daifugou_ai_hi2.pth'],
+    default_dim=163, model_role="Model-2 [gilgamesh/特化]"
 )
 
-# ----------------------------------------------------
-# 2. カード定義 & ヘルパー
-# ----------------------------------------------------
-SUITS = ['♠', '♥', '♦', '♣']
-RANKS = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2']
-RANK_VALUE_MAP = {r: i + 1 for i, r in enumerate(RANKS)}
-RANK_VALUE_MAP['JOKER'] = 14
+model_apex, model_apex_loaded, apex_name, apex_in_dim = load_flexible_model(
+    ['daifugou_ai_apex_v3.pth', 'daifugou_ai_apex.pth', 'daifugou_ai_hi2.pth'],
+    default_dim=163, model_role="Model-3 [apex/覚醒新王・王専用]"
+)
 
+if not model_gilgamesh_loaded and model_hi2_loaded:
+    model_gilgamesh = model_hi2
+    model_gilgamesh_loaded = True
+    gilgamesh_name = hi2_name
+    gilgamesh_in_dim = hi2_in_dim
+
+if not model_apex_loaded and model_hi2_loaded:
+    model_apex = model_hi2
+    model_apex_loaded = True
+    apex_name = hi2_name
+    apex_in_dim = hi2_in_dim
+
+if not model_hi2_loaded and model_gilgamesh_loaded:
+    model_hi2 = model_gilgamesh
+    model_hi2_loaded = True
+    hi2_name = gilgamesh_name
+    hi2_in_dim = gilgamesh_in_dim
+
+# ----------------------------------------------------
+# 2. キャラクター別 定石パーセント設定値 (CHARACTER_TACTICAL_PROFILES)
+# ----------------------------------------------------
+CHARACTER_TACTICAL_PROFILES = {
+    'GILGAMESH': {
+        'R2_reachBlock': 1.00, 'R3_capitalFallDefense': 1.00, 'R4_leadMulti': 0.95,
+        'R5_trashCardClear': 0.95, 'R6_eightCutBridge': 1.00, 'R7_elevenBackControl': 1.00,
+        'R8_plannedRevolution': 0.95, 'R9_revolutionCounter': 1.00, 'R10_suitLockAwareness': 0.70,
+        'R11_spade3Alert': 1.00, 'R12_smartPass': 0.90, 'R14_endgameSolverDepth': 1.00
+    },
+    'SHI_HUANGDI': {
+        'R2_reachBlock': 0.85, 'R3_capitalFallDefense': 0.90, 'R4_leadMulti': 1.00,
+        'R5_trashCardClear': 1.00, 'R6_eightCutBridge': 0.90, 'R7_elevenBackControl': 1.00,
+        'R8_plannedRevolution': 0.85, 'R9_revolutionCounter': 0.40, 'R10_suitLockAwareness': 0.50,
+        'R11_spade3Alert': 0.85, 'R12_smartPass': 0.85, 'R14_endgameSolverDepth': 0.60
+    },
+    'SUPER_AI': {
+        'R2_reachBlock': 0.85, 'R3_capitalFallDefense': 0.85, 'R4_leadMulti': 0.70,
+        'R5_trashCardClear': 0.75, 'R6_eightCutBridge': 0.75, 'R7_elevenBackControl': 0.90,
+        'R8_plannedRevolution': 0.60, 'R9_revolutionCounter': 0.50, 'R10_suitLockAwareness': 0.50,
+        'R11_spade3Alert': 0.90, 'R12_smartPass': 0.95, 'R14_endgameSolverDepth': 0.70
+    },
+    'ALEXANDER': {
+        'R2_reachBlock': 0.80, 'R3_capitalFallDefense': 0.85, 'R4_leadMulti': 1.00,
+        'R5_trashCardClear': 0.80, 'R6_eightCutBridge': 0.95, 'R7_elevenBackControl': 0.80,
+        'R8_plannedRevolution': 0.85, 'R9_revolutionCounter': 0.40, 'R10_suitLockAwareness': 0.50,
+        'R11_spade3Alert': 0.85, 'R12_smartPass': 0.75, 'R14_endgameSolverDepth': 0.60
+    },
+    'SHOTOKU': {
+        'R2_reachBlock': 1.00, 'R3_capitalFallDefense': 0.85, 'R4_leadMulti': 0.80,
+        'R5_trashCardClear': 0.85, 'R6_eightCutBridge': 0.80, 'R7_elevenBackControl': 1.00,
+        'R8_plannedRevolution': 0.80, 'R9_revolutionCounter': 1.00, 'R10_suitLockAwareness': 0.60,
+        'R11_spade3Alert': 1.00, 'R12_smartPass': 0.80, 'R14_endgameSolverDepth': 0.70
+    },
+    'NOBUNAGA': {
+        'R2_reachBlock': 0.85, 'R3_capitalFallDefense': 0.85, 'R4_leadMulti': 1.00,
+        'R5_trashCardClear': 0.80, 'R6_eightCutBridge': 1.00, 'R7_elevenBackControl': 0.80,
+        'R8_plannedRevolution': 0.85, 'R9_revolutionCounter': 0.40, 'R10_suitLockAwareness': 0.40,
+        'R11_spade3Alert': 0.85, 'R12_smartPass': 0.50, 'R14_endgameSolverDepth': 0.60
+    },
+    'BEGINNER_AI': {
+        'R2_reachBlock': 0.80, 'R3_capitalFallDefense': 0.80, 'R4_leadMulti': 0.90,
+        'R5_trashCardClear': 0.80, 'R6_eightCutBridge': 0.80, 'R7_elevenBackControl': 0.80,
+        'R8_plannedRevolution': 0.75, 'R9_revolutionCounter': 0.40, 'R10_suitLockAwareness': 0.40,
+        'R11_spade3Alert': 0.80, 'R12_smartPass': 0.80, 'R14_endgameSolverDepth': 0.75
+    },
+    'KING': {
+        'R2_reachBlock': 0.95, 'R3_capitalFallDefense': 0.90, 'R4_leadMulti': 0.85,
+        'R5_trashCardClear': 0.80, 'R6_eightCutBridge': 0.85, 'R7_elevenBackControl': 0.85,
+        'R8_plannedRevolution': 0.80, 'R9_revolutionCounter': 0.45, 'R10_suitLockAwareness': 0.50,
+        'R11_spade3Alert': 0.90, 'R12_smartPass': 0.85, 'R14_endgameSolverDepth': 0.85
+    },
+    'AWAKENED_KING': {
+        'R2_reachBlock': 0.85, 'R3_capitalFallDefense': 0.85, 'R4_leadMulti': 0.85,
+        'R5_trashCardClear': 0.80, 'R6_eightCutBridge': 0.85, 'R7_elevenBackControl': 0.85,
+        'R8_plannedRevolution': 0.80, 'R9_revolutionCounter': 0.50, 'R10_suitLockAwareness': 0.50,
+        'R11_spade3Alert': 0.85, 'R12_smartPass': 0.80, 'R14_endgameSolverDepth': 0.80
+    },
+    'DUKE': {
+        'R2_reachBlock': 1.00, 'R3_capitalFallDefense': 0.85, 'R4_leadMulti': 0.60,
+        'R5_trashCardClear': 0.50, 'R6_eightCutBridge': 0.80, 'R7_elevenBackControl': 0.80,
+        'R8_plannedRevolution': 0.50, 'R9_revolutionCounter': 0.30, 'R10_suitLockAwareness': 0.40,
+        'R11_spade3Alert': 0.85, 'R12_smartPass': 0.95, 'R14_endgameSolverDepth': 0.40
+    },
+    'MARQUIS': {
+        'R2_reachBlock': 0.75, 'R3_capitalFallDefense': 0.80, 'R4_leadMulti': 0.50,
+        'R5_trashCardClear': 0.60, 'R6_eightCutBridge': 0.60, 'R7_elevenBackControl': 0.80,
+        'R8_plannedRevolution': 0.50, 'R9_revolutionCounter': 0.30, 'R10_suitLockAwareness': 0.40,
+        'R11_spade3Alert': 0.85, 'R12_smartPass': 1.00, 'R14_endgameSolverDepth': 0.30
+    },
+    'COUNT': {
+        'R2_reachBlock': 0.75, 'R3_capitalFallDefense': 0.80, 'R4_leadMulti': 0.60,
+        'R5_trashCardClear': 0.60, 'R6_eightCutBridge': 0.85, 'R7_elevenBackControl': 0.80,
+        'R8_plannedRevolution': 0.50, 'R9_revolutionCounter': 0.30, 'R10_suitLockAwareness': 0.40,
+        'R11_spade3Alert': 0.85, 'R12_smartPass': 0.90, 'R14_endgameSolverDepth': 0.40
+    },
+    'KNIGHT': {
+        'R2_reachBlock': 0.40, 'R3_capitalFallDefense': 0.50, 'R4_leadMulti': 0.00,
+        'R5_trashCardClear': 1.00, 'R6_eightCutBridge': 0.50, 'R7_elevenBackControl': 0.70,
+        'R8_plannedRevolution': 0.10, 'R9_revolutionCounter': 0.10, 'R10_suitLockAwareness': 0.10,
+        'R11_spade3Alert': 0.80, 'R12_smartPass': 0.00, 'R14_endgameSolverDepth': 0.10
+    },
+    'MERCHANT': {
+        'R2_reachBlock': 0.40, 'R3_capitalFallDefense': 0.50, 'R4_leadMulti': 1.00,
+        'R5_trashCardClear': 0.20, 'R6_eightCutBridge': 0.60, 'R7_elevenBackControl': 0.70,
+        'R8_plannedRevolution': 0.20, 'R9_revolutionCounter': 0.10, 'R10_suitLockAwareness': 0.20,
+        'R11_spade3Alert': 0.80, 'R12_smartPass': 0.60, 'R14_endgameSolverDepth': 0.10
+    },
+    'SCHOLAR': {
+        'R2_reachBlock': 0.80, 'R3_capitalFallDefense': 0.80, 'R4_leadMulti': 0.60,
+        'R5_trashCardClear': 0.60, 'R6_eightCutBridge': 0.65, 'R7_elevenBackControl': 0.85,
+        'R8_plannedRevolution': 0.50, 'R9_revolutionCounter': 0.30, 'R10_suitLockAwareness': 0.50,
+        'R11_spade3Alert': 0.85, 'R12_smartPass': 0.80, 'R14_endgameSolverDepth': 0.90
+    },
+    'STRATEGIST': {
+        'R2_reachBlock': 1.00, 'R3_capitalFallDefense': 0.85, 'R4_leadMulti': 0.60,
+        'R5_trashCardClear': 0.60, 'R6_eightCutBridge': 0.95, 'R7_elevenBackControl': 0.80,
+        'R8_plannedRevolution': 0.50, 'R9_revolutionCounter': 0.30, 'R10_suitLockAwareness': 0.50,
+        'R11_spade3Alert': 0.85, 'R12_smartPass': 0.80, 'R14_endgameSolverDepth': 0.30
+    },
+    'REVOLUTIONARY': {
+        'R2_reachBlock': 0.50, 'R3_capitalFallDefense': 0.50, 'R4_leadMulti': 0.60,
+        'R5_trashCardClear': 0.30, 'R6_eightCutBridge': 0.95, 'R7_elevenBackControl': 0.70,
+        'R8_plannedRevolution': 1.00, 'R9_revolutionCounter': 0.90, 'R10_suitLockAwareness': 0.20,
+        'R11_spade3Alert': 0.80, 'R12_smartPass': 0.20, 'R14_endgameSolverDepth': 0.10
+    },
+    'JESTER': {
+        'R2_reachBlock': 0.15, 'R3_capitalFallDefense': 0.10, 'R4_leadMulti': 0.20,
+        'R5_trashCardClear': 0.20, 'R6_eightCutBridge': 0.15, 'R7_elevenBackControl': 0.60,
+        'R8_plannedRevolution': 0.30, 'R9_revolutionCounter': 0.10, 'R10_suitLockAwareness': 0.10,
+        'R11_spade3Alert': 0.80, 'R12_smartPass': 0.35, 'R14_endgameSolverDepth': 0.00
+    }
+}
+
+def get_tactical_profile(char_id):
+    char_key = str(char_id).upper()
+    return CHARACTER_TACTICAL_PROFILES.get(char_key, {
+        'R2_reachBlock': 0.80, 'R3_capitalFallDefense': 0.80, 'R4_leadMulti': 0.80,
+        'R5_trashCardClear': 0.70, 'R6_eightCutBridge': 0.70, 'R7_elevenBackControl': 0.80,
+        'R8_plannedRevolution': 0.60, 'R9_revolutionCounter': 0.40, 'R10_suitLockAwareness': 0.40,
+        'R11_spade3Alert': 0.85, 'R12_smartPass': 0.75, 'R14_endgameSolverDepth': 0.50
+    })
+
+# ----------------------------------------------------
+# 3. カード定義 ＆ 基本ルールエンジン
+# ----------------------------------------------------
 CHARACTER_NAMES = {
+    'GILGAMESH': 'ギルガメッシュ',
+    'AWAKENED_KING': '覚醒新王',
+    'NOBUNAGA': '織田信長',
+    'SHOTOKU': '聖徳太子',
+    'SHI_HUANGDI': '秦の始皇帝',
+    'ALEXANDER': 'アレク王',
+    'SUPER_AI': '女王',
+    'BEGINNER_AI': '新王',
+    'KING': '王',
     'DUKE': '公爵',
     'MARQUIS': '侯爵',
     'COUNT': '伯爵',
@@ -218,48 +289,46 @@ CHARACTER_NAMES = {
     'SCHOLAR': '学者',
     'STRATEGIST': '軍師',
     'REVOLUTIONARY': '革命家',
-    'JESTER': '道化師',
-    'KING': '王',
-    'BEGINNER_AI': '上級AI',
-    'SUPER_AI': '超級AI',
-    'MID_AI': '超級AI'
+    'JESTER': '道化師'
 }
 
-CHARACTER_ICONS = {
-    'DUKE': '👑', 'MARQUIS': '🍷', 'COUNT': '📜', 'KNIGHT': '⚔️',
-    'MERCHANT': '⚖️', 'SCHOLAR': '📖', 'STRATEGIST': '♟️',
-    'REVOLUTIONARY': '🔥', 'JESTER': '🤡', 'KING': '🏰',
-    'BEGINNER_AI': '🤖', 'SUPER_AI': '👸', 'MID_AI': '👸'
-}
-
-PLAYERS = [0, 1, 2, 3]
+SUITS = ['♠', '♥', '♦', '♣']
+RANKS = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2']
+RANK_VALUE_MAP = {r: i + 1 for i, r in enumerate(RANKS)}
+RANK_VALUE_MAP['JOKER'] = 14
 
 class Card:
+    __slots__ = ('suit', 'display', 'is_joker', 'joker_id')
     def __init__(self, suit, display, is_joker=False, joker_id=None):
         self.suit = suit
         self.display = display
         self.is_joker = is_joker
         self.joker_id = joker_id
 
-    def key(self):
-        return 'JOKER' if self.is_joker else self.display
-
-    def val(self):
-        return RANK_VALUE_MAP[self.key()]
-
+    def key(self): return 'JOKER' if self.is_joker else self.display
+    def val(self): return 14 if self.is_joker else RANK_VALUE_MAP[self.display]
     def strength(self, rev=False):
         if self.is_joker: return 9999
         v = self.val()
         return (14 - v) if rev else v
 
-    def __eq__(self, other):
-        if not isinstance(other, Card): return False
-        if self.is_joker or other.is_joker:
-            return self.is_joker and other.is_joker and (self.joker_id == other.joker_id if self.joker_id and other.joker_id else True)
-        return self.suit == other.suit and self.display == other.display
+    def __eq__(self, o):
+        if not isinstance(o, Card): return False
+        if self.is_joker or o.is_joker:
+            return self.is_joker and o.is_joker and (self.joker_id == o.joker_id if self.joker_id and o.joker_id else True)
+        return self.suit == o.suit and self.display == o.display
 
     def __hash__(self):
         return hash((self.suit, self.display, self.is_joker, self.joker_id))
+
+def parse_card_obj(c):
+    if not c: return None
+    if isinstance(c, Card): return c
+    is_j = c.get('isJoker') or c.get('rank') == 'JOKER' or c.get('display') == 'JOKER'
+    suit = c.get('suit') or c.get('suitSymbol') or ('★' if is_j else '♠')
+    disp = c.get('rank') or c.get('display') or ('JOKER' if is_j else '3')
+    j_id = c.get('jokerId')
+    return Card(suit, disp, is_j, j_id)
 
 def serialize_card(c):
     if not c: return None
@@ -268,15 +337,7 @@ def serialize_card(c):
             j_id = c.joker_id or ('J1' if c.suit == '★' else 'J2')
             return {'suit': c.suit, 'rank': 'JOKER', 'isJoker': True, 'jokerId': j_id}
         return {'suit': c.suit, 'rank': c.display, 'isJoker': False}
-    else:
-        is_joker = c.get('isJoker') or c.get('rank') == 'JOKER' or c.get('display') == 'JOKER'
-        if is_joker:
-            suit = c.get('suit') or c.get('suitSymbol') or '★'
-            j_id = c.get('jokerId') or ('J1' if suit == '★' else 'J2')
-            return {'suit': suit, 'rank': 'JOKER', 'isJoker': True, 'jokerId': j_id}
-        suit = c.get('suit') or c.get('suitSymbol')
-        rank = c.get('rank') or c.get('display')
-        return {'suit': suit, 'rank': rank, 'isJoker': False}
+    return c
 
 def serialize_cards(cards):
     return [serialize_card(c) for c in cards] if cards else []
@@ -287,82 +348,345 @@ def create_deck():
     deck.append(Card('☆', 'JOKER', True, 'J2'))
     return deck
 
-def card_to_idx(card):
-    if isinstance(card, Card):
-        if card.is_joker: return 52
-        if card.suit in SUITS and card.display in RANKS:
-            return SUITS.index(card.suit) * 13 + RANKS.index(card.display)
-        return -1
-    else:
-        if card.get('isJoker') or card.get('rank') == 'JOKER' or card.get('display') == 'JOKER':
-            return 52
-        suit = card.get('suit') or card.get('suitSymbol')
-        rank = card.get('rank') or card.get('display')
-        if suit in SUITS and rank in RANKS:
-            return SUITS.index(suit) * 13 + RANKS.index(rank)
-        return -1
+def card_to_idx(c):
+    if isinstance(c, dict): c = parse_card_obj(c)
+    if c.is_joker: return 52
+    if c.suit in SUITS and c.display in RANKS:
+        return SUITS.index(c.suit) * 13 + RANKS.index(c.display)
+    return -1
 
-def encode_cards_to_vector(cards):
+def encode_cards_vector(cards):
     vec = [0.0] * 53
-    if not cards: return vec
     for c in cards:
         idx = card_to_idx(c)
         if 0 <= idx < 53: vec[idx] = 1.0
     return vec
 
-def build_input_vector(hand, field, required_dim=106, is_rev=False, is_eb=False, cleared_cards=None):
-    h_vec = encode_cards_to_vector(hand)
-    f_vec = encode_cards_to_vector(field)
+def build_input_vector(hand, field, required_dim=163, is_rev=False, is_eb=False, cleared_cards=None):
+    h_vec = encode_cards_vector(hand)
+    f_vec = encode_cards_vector(field)
+    flags = [1.0 if is_rev else 0.0, 1.0 if is_eb else 0.0, 1.0 if (not field) else 0.0, min(1.0, len(hand) / 14.0)]
+    c_vec = encode_cards_vector(cleared_cards or [])
+    full_vec = h_vec + f_vec + c_vec + flags
+    return full_vec[:159] if required_dim == 159 else full_vec
 
-    flags = [
-        1.0 if is_rev else 0.0,
-        1.0 if is_eb else 0.0,
-        1.0 if (not field or len(field) == 0) else 0.0,
-        min(1.0, len(hand) / 14.0)
-    ]
+# ----------------------------------------------------
+# 【本格競技ルール】禁止あがり判定ヘルパー（完全同期版）
+# ----------------------------------------------------
+def is_forbidden_finish_move(move, eff_rev=False):
+    if not move: return False
+    if any(c.is_joker for c in move): return True
+    if any(c.display == '8' for c in move): return True
+    forbidden_rank = '3' if eff_rev else '2'
+    if any(c.display == forbidden_rank for c in move): return True
+    if not eff_rev and len(move) == 1 and not move[0].is_joker and move[0].suit == '♠' and move[0].display == '3':
+        return True
+    return False
 
-    if required_dim == 163:
-        c_vec = encode_cards_to_vector(cleared_cards or [])
-        return h_vec + f_vec + c_vec + flags
+def will_leave_only_forbidden_cards(move, hand, eff_rev=False):
+    """
+    指定の手 move を出した後の残手札が、すべて禁止あがり対象カードのみになり
+    次回以降どうあがいても反則負けになる完全詰み状態かを厳密判定
+    """
+    if not move or hand is None: return False
+    if len(move) >= len(hand): return False
 
-    if required_dim == 159:
-        c_vec = encode_cards_to_vector(cleared_cards or [])
-        return h_vec + f_vec + c_vec
+    rem_hand = [c for c in hand if c not in move]
+    if not rem_hand: return False
 
-    base = h_vec + f_vec
+    # 残手札のすべてのカードが単体で禁止あがり対象であるか検証
+    return all(is_forbidden_finish_move([c], eff_rev) for c in rem_hand)
 
-    if required_dim == 110:
-        return base + flags
+def is_joker_waste_move(move, hand):
+    if not move or hand is None: return False
+    if len(move) == len(hand): return False
 
-    return base
+    jokers_in_move = any(c.is_joker for c in move)
+    nj_in_move = any(not c.is_joker for c in move)
+
+    if jokers_in_move and nj_in_move and len(move) < 4:
+        return True
+    if jokers_in_move and not nj_in_move and len(move) >= 2 and len(hand) >= 4:
+        return True
+    return False
+
+def evaluate_move_default(move, hand=None, is_field_empty=False, profile=None, eff_rev=False, min_opp_len=99):
+    if not move: return -999.0
+    prof = profile or get_tactical_profile('KING')
+
+    if hand is not None and len(move) == len(hand):
+        if is_forbidden_finish_move(move, eff_rev):
+            return -99999.0
+        return 500.0
+
+    # 残り手札が禁止カードのみになる手は自爆として除外（相手リーチ時は親権迎撃を優先）
+    if hand is not None and will_leave_only_forbidden_cards(move, hand, eff_rev) and min_opp_len > 1:
+        return -99999.0
+
+    nj = [c for c in move if not c.is_joker]
+    val = nj[0].val() if nj else 14
+    count = len(move)
+
+    multi_mult = (0.6 + prof['R4_leadMulti'] * 0.5) if count >= 2 else 1.0
+    score = float(((count * 10) * multi_mult) - val)
+
+    if hand is not None:
+        if is_joker_waste_move(move, hand):
+            score -= 55.0
+
+        if any(c.display == '8' for c in move):
+            if len(move) == len(hand):
+                score = -99999.0 if is_forbidden_finish_move(move, eff_rev) else (score + 90.0)
+            elif is_field_empty:
+                score -= 45.0 if len(hand) >= 4 else 10.0
+            else:
+                score += (15.0 * prof['R6_eightCutBridge'])
+
+        if is_field_empty and len(hand) >= 3 and len(move) == 1:
+            is_solo_joker = move[0].is_joker
+            is_solo_two = (not move[0].is_joker and move[0].display == '2')
+            if is_solo_joker or is_solo_two:
+                has_low_or_mid = any(not c.is_joker and c.val() <= 10 for c in hand)
+                if has_low_or_mid:
+                    score -= (50.0 + prof['R5_trashCardClear'] * 25.0)
+
+    return score
+
+def evaluate_hand_formation(move, hand, eff_rev=False, min_opp_len=99):
+    if not move or hand is None:
+        return 0.0
+
+    hand_len = len(hand)
+    move_len = len(move)
+    if move_len == hand_len:
+        if is_forbidden_finish_move(move, eff_rev):
+            return -99999.0
+        return 200.0
+
+    # 残り手札がすべて禁止カードになる手は自爆回避
+    if will_leave_only_forbidden_cards(move, hand, eff_rev) and min_opp_len > 1:
+        return -99999.0
+
+    rem_hand = [c for c in hand if c not in move]
+    rem_len = len(rem_hand)
+    if rem_len == 0:
+        return 200.0
+
+    score = 0.0
+
+    orig_groups = defaultdict(list)
+    for c in hand:
+        if not c.is_joker:
+            orig_groups[c.display].append(c)
+
+    rem_groups = defaultdict(list)
+    rem_jokers = sum(1 for c in rem_hand if c.is_joker)
+    for c in rem_hand:
+        if not c.is_joker:
+            rem_groups[c.display].append(c)
+
+    if rem_len == 1:
+        if is_forbidden_finish_move(rem_hand, eff_rev):
+            score -= 120.0
+        else:
+            score += 40.0
+    elif rem_len == 2:
+        if all(is_forbidden_finish_move([c], eff_rev) for c in rem_hand):
+            score -= 80.0
+
+    if hand_len >= 5 and min_opp_len > 2 and move_len == 1 and not move[0].is_joker:
+        disp = move[0].display
+        orig_count = len(orig_groups.get(disp, []))
+        if orig_count >= 2:
+            score -= 22.0 if orig_count == 2 else 35.0
+
+    if rem_len >= 3 and min_opp_len > 2:
+        has_boss_rem = (
+            rem_jokers > 0 or
+            any(c.display == ('3' if eff_rev else '2') for c in rem_hand) or
+            any(c.display == '8' for c in rem_hand)
+        )
+        if has_boss_rem:
+            score += 15.0
+        else:
+            score -= 20.0
+
+    if move_len == 1 and not move[0].is_joker:
+        disp = move[0].display
+        if len(orig_groups.get(disp, [])) == 1 and move[0].strength(eff_rev) <= 7:
+            score += 12.0
+
+    effective_turns = len(rem_groups) + (1 if rem_jokers > 0 and len(rem_groups) == 0 else 0)
+    score -= effective_turns * 3.5
+
+    return score
+
+def identify_exit_ticket(hand):
+    if not hand: return None
+    hand = [parse_card_obj(c) for c in hand]
+    jokers = [c for c in hand if c.is_joker]
+    if jokers: return jokers[0]
+    twos = [c for c in hand if c.display == '2']
+    if twos: return twos[0]
+    aces = [c for c in hand if c.display == 'A']
+    if aces: return aces[0]
+    return max(hand, key=lambda c: c.val())
+
+def evaluate_eight_bridge(move, hand, min_opp_len, is_opp_reach, is_field_empty=False, profile=None, eff_rev=False):
+    if not move or not any(c.display == '8' for c in move):
+        return 0.0
+
+    prof = profile or get_tactical_profile('KING')
+    bridge_weight = prof.get('R6_eightCutBridge', 1.0)
+
+    hand_len = len(hand)
+    if len(move) == hand_len:
+        return -99999.0 if is_forbidden_finish_move(move, eff_rev) else 130.0
+
+    if is_field_empty and hand_len >= 4:
+        return -40.0
+
+    rem_hand = [c for c in hand if c not in move]
+    rem_len = len(rem_hand)
+
+    if is_opp_reach:
+        return 65.0 * bridge_weight
+
+    rem_groups = defaultdict(list)
+    rem_jokers = 0
+    for c in rem_hand:
+        if c.is_joker: rem_jokers += 1
+        else: rem_groups[c.display].append(c)
+
+    can_finish_next = (
+        rem_len == 1 or
+        (len(rem_groups) == 1 and rem_jokers == 0) or
+        (len(rem_groups) == 0 and rem_jokers > 0)
+    )
+    if can_finish_next:
+        if not is_forbidden_finish_move(rem_hand, eff_rev):
+            return 95.0 * bridge_weight
+
+    if hand_len >= 6:
+        has_strong_followup = (
+            rem_jokers > 0 or
+            any(c.display == '2' for c in rem_hand) or
+            any(len(cards) >= 2 for cards in rem_groups.values())
+        )
+        if not has_strong_followup:
+            return -28.0
+
+    return (-20.0 if is_field_empty else 20.0) * bridge_weight
+
+def evaluate_eleven_back_balance(move, hand, eff_rev, profile=None):
+    if not move or not any(c.display == 'J' for c in move):
+        return 0.0
+
+    prof = profile or get_tactical_profile('KING')
+    ctrl_weight = prof.get('R7_elevenBackControl', 1.0)
+
+    rem_hand = [c for c in hand if c not in move]
+    if not rem_hand: return 10.0
+
+    low_beneficial = sum(1 for c in rem_hand if not c.is_joker and c.val() <= 4)
+    high_ruined = sum(1 for c in rem_hand if not c.is_joker and c.val() >= 11)
+
+    if not eff_rev:
+        if low_beneficial >= 3 and high_ruined <= 1:
+            return 25.0 * ctrl_weight
+        elif high_ruined >= 2:
+            return -30.0 * ctrl_weight
+    else:
+        if high_ruined >= 2:
+            return 30.0 * ctrl_weight
+        elif low_beneficial >= 2:
+            return -25.0 * ctrl_weight
+
+    return 0.0
+
+def should_strategic_pass_on_high_card(move, hand, field, rev, min_opp_len, profile=None):
+    if not field or not move: return False
+    prof = profile or get_tactical_profile('KING')
+
+    if min_opp_len <= 2:
+        if random.random() < prof.get('R2_reachBlock', 0.80):
+            return False
+
+    if prof.get('R12_smartPass', 0.80) <= 0.05:
+        return False
+
+    hand_len = len(hand)
+    if hand_len <= 3: return False
+    if len(move) == hand_len: return False
+
+    is_solo_joker = (len(move) == 1 and move[0].is_joker)
+    is_solo_two = (len(move) == 1 and not move[0].is_joker and move[0].display == '2')
+
+    if is_joker_waste_move(move, hand) and hand_len >= 4:
+        return True
+
+    if is_solo_joker or is_solo_two:
+        low_cards_count = sum(1 for c in hand if not c.is_joker and c.val() <= 7)
+        if low_cards_count >= 2:
+            return (random.random() < prof.get('R12_smartPass', 0.80))
+        field_top_val = 14 if field[0].is_joker else field[0].val()
+        if field_top_val <= 11:
+            return (random.random() < prof.get('R12_smartPass', 0.80))
+
+    return False
+
+def should_strategic_pass_smart_shotoku(move, hand, field, eff_rev, min_opp_len):
+    if not field or not move: return False
+    if min_opp_len <= 2: return False
+    hand_len = len(hand)
+    if hand_len <= 3: return False
+    if len(move) == hand_len: return False
+
+    if is_joker_waste_move(move, hand) and hand_len >= 4:
+        return True
+
+    if len(move) == 1:
+        c = move[0]
+        is_boss = c.is_joker or (c.display == '3' if eff_rev else c.display == '2')
+        if is_boss:
+            weak_count = sum(1 for hc in hand if hc.strength(eff_rev) <= 6)
+            if weak_count >= 2: return True
+            field_top_str = field[0].strength(eff_rev)
+            if field_top_str <= 11: return True
+    return False
 
 def get_play_strength(cards, rev=False):
     if len(cards) == 1 and cards[0].is_joker: return 9999
-    non_joker = [c for c in cards if not c.is_joker]
-    return 9999 if not non_joker else non_joker[0].strength(rev)
+    nj = [c for c in cards if not c.is_joker]
+    return 9999 if not nj else nj[0].strength(rev)
 
 def is_valid_play(cards, field, rev=False):
     if not cards: return False
     if len(field) == 1 and field[0].is_joker and len(cards) == 1 and not cards[0].is_joker and cards[0].suit == '♠' and cards[0].display == '3':
         return True
-    non_joker = [c for c in cards if not c.is_joker]
-    if non_joker:
-        t = non_joker[0].display
-        if not all(c.display == t for c in non_joker): return False
+
+    if field and all(c.is_joker for c in field):
+        return False
+
+    nj = [c for c in cards if not c.is_joker]
+    if nj:
+        t = nj[0].display
+        if not all(c.display == t for c in nj): return False
     if not field: return True
     if len(cards) != len(field): return False
-    if len(field) == 1 and field[0].is_joker: return False
+
     p_str = get_play_strength(cards, rev)
     f_str = get_play_strength(field, rev)
     return True if p_str == 9999 else p_str > f_str
 
 def get_all_valid_moves(hand, field, rev=False):
+    hand = [parse_card_obj(c) for c in hand]
+    field = [parse_card_obj(c) for c in field]
     moves = []
     jokers = [c for c in hand if c.is_joker]
     non_jokers = [c for c in hand if not c.is_joker]
-    groups = {}
-    for c in non_jokers:
-        groups.setdefault(c.display, []).append(c)
+    groups = defaultdict(list)
+    for c in non_jokers: groups[c.display].append(c)
 
     if not field:
         for disp, cards in groups.items():
@@ -372,7 +696,10 @@ def get_all_valid_moves(hand, field, rev=False):
                 jok = l - nat
                 if jok <= len(jokers):
                     moves.append(cards[:nat] + jokers[:jok])
-        if jokers: moves.append([jokers[0]])
+        if jokers:
+            moves.append([jokers[0]])
+        if len(jokers) >= 2:
+            moves.append([jokers[0], jokers[1]])
     else:
         req = len(field)
         if req == 1 and field[0].is_joker:
@@ -387,131 +714,217 @@ def get_all_valid_moves(hand, field, rev=False):
                 cand = cards[:nat] + jokers[:jok]
                 if is_valid_play(cand, field, rev):
                     moves.append(cand)
+
         if req == 1 and jokers and is_valid_play([jokers[0]], field, rev):
             moves.append([jokers[0]])
 
+        if req == 2 and len(jokers) >= 2 and is_valid_play([jokers[0], jokers[1]], field, rev):
+            moves.append([jokers[0], jokers[1]])
+
     return moves
 
-def evaluate_move_default(move):
-    if not move: return -999
-    v = move[0].val() if isinstance(move[0], Card) else RANK_VALUE_MAP.get(move[0].get('rank', move[0].get('display', '3')), 3)
-    return (len(move) * 10) - v
-
 # ----------------------------------------------------
-# 3. 王（KING）専用エンジン
+# 3.2 終盤確定読みエンジン (Endgame Solver 黄金版)
 # ----------------------------------------------------
-def estimate_turns_to_win(hand, rev=False):
-    if not hand: return 0
-    control_cards = 0
-    groups = {}
-    jokers = 0
-    for c in hand:
-        if c.is_joker: jokers += 1
-        else: groups[c.display] = groups.get(c.display, 0) + 1
-
-    turns = len(groups)
-    if jokers > 0 and turns == 0: turns = 1
-
-    if '8' in groups: control_cards += groups['8']
-    for k, cnt in groups.items():
-        if k == '8': continue
-        val = RANK_VALUE_MAP[k]
-        is_strong = (val <= 3) if rev else (val >= 12)
-        if is_strong: control_cards += cnt
-
-    control_cards += jokers
-    if turns == 1: return 1
-    return max(1, turns - int(control_cards * 0.8))
-
 def is_guaranteed_absolute_win(move, unrevealed, rev=False):
-    if len(move) == 1 and move[0].is_joker: return True
-    move_val = move[0].val()
+    if not move: return False
     count = len(move)
+    is_joker_solo = (count == 1 and move[0].is_joker)
 
-    groups = {}
+    if is_joker_solo:
+        has_spade3 = any(not c.is_joker and c.suit == '♠' and c.display == '3' for c in unrevealed)
+        return not has_spade3
+
+    nj = [c for c in move if not c.is_joker]
+    move_val = nj[0].val() if nj else 14
+    move_str = nj[0].strength(rev) if nj else 9999
+
+    groups = defaultdict(int)
     jokers = 0
     for c in unrevealed:
         if c.is_joker: jokers += 1
-        else: groups[c.display] = groups.get(c.display, 0) + 1
-
-    if count == 1 and move[0].is_joker and '3' in groups:
-        if any(c.suit == '♠' and c.display == '3' for c in unrevealed):
-            return False
+        else: groups[c.display] += 1
 
     for disp, cnt in groups.items():
         val = RANK_VALUE_MAP[disp]
-        is_stronger = (val < move_val) if rev else (val > move_val)
-        if is_stronger and (cnt + jokers >= count):
-            return False
+        str_val = (14 - val) if rev else val
+        if str_val > move_str:
+            if cnt + jokers >= count:
+                return False
 
-    if jokers >= count and move_val < RANK_VALUE_MAP['JOKER']:
+    if jokers >= count and move_val < 14:
         return False
+
     return True
 
+def solve_endgame_winning_sequence(hand, current_field, unrevealed, rev=False, max_depth=4):
+    if not hand: return None
+    hand = [parse_card_obj(c) for c in hand]
+    current_field = [parse_card_obj(c) for c in current_field]
+    unrevealed = [parse_card_obj(c) for c in (unrevealed or [])]
+
+    raw_moves = get_all_valid_moves(hand, current_field, rev)
+    if not raw_moves: return None
+
+    # 1. 手札全出し（安全な即ゴールのみ）
+    instant = next((m for m in raw_moves if len(m) == len(hand) and not is_forbidden_finish_move(m, rev)), None)
+    if instant: return instant
+
+    if len(hand) > 5: return None
+
+    # 2. 8切り架け橋コンボ探索
+    eight_moves = [m for m in raw_moves if any(c.display == '8' for c in m)]
+    for em in eight_moves:
+        rem_hand = [c for c in hand if c not in em]
+        if not rem_hand: continue
+        next_lead_moves = get_all_valid_moves(rem_hand, [], rev)
+        win_next = next((nm for nm in next_lead_moves if len(nm) == len(rem_hand) and not is_forbidden_finish_move(nm, rev)), None)
+        if win_next:
+            return em
+
+    # 3. 親番確定制圧コンボ探索
+    if not current_field and len(hand) <= 4:
+        for first_move in raw_moves:
+            if is_forbidden_finish_move(first_move, rev): continue
+            if is_guaranteed_absolute_win(first_move, unrevealed, rev):
+                rem_hand = [c for c in hand if c not in first_move]
+                if not rem_hand: return first_move
+                next_moves = get_all_valid_moves(rem_hand, [], rev)
+                win_next = next((nm for nm in next_moves if len(nm) == len(rem_hand) and not is_forbidden_finish_move(nm, rev)), None)
+                if win_next:
+                    return first_move
+
+                if max_depth >= 3 and len(rem_hand) <= 3:
+                    for second_move in next_moves:
+                        if is_forbidden_finish_move(second_move, rev): continue
+                        if is_guaranteed_absolute_win(second_move, unrevealed, rev):
+                            rem_rem = [c for c in rem_hand if c not in second_move]
+                            final_moves = get_all_valid_moves(rem_rem, [], rev)
+                            win_final = next((fm for fm in final_moves if len(fm) == len(rem_rem) and not is_forbidden_finish_move(fm, rev)), None)
+                            if win_final:
+                                return first_move
+
+    return None
+
+# ----------------------------------------------------
+# 4. 探索コア ＆ MCTSエンジン
+# ----------------------------------------------------
+def get_unrevealed_cards(my_hand, field, cleared):
+    known = set(my_hand) | set(field) | set(cleared or [])
+    full_deck = create_deck()
+    return [c for c in full_deck if c not in known]
+
 class SimGame:
-    def __init__(self, hands, field_cards, is_revolution, is_eleven_back, last_played_player, consecutive_passes, finished_players, player_keys=PLAYERS):
-        self.player_keys = list(player_keys)
-        self.hands = {p: list(hands.get(p, [])) for p in self.player_keys}
-        self.field_cards = list(field_cards)
-        self.is_revolution = is_revolution
-        self.is_eleven_back = is_eleven_back
-        self.last_played_player = last_played_player
-        self.consecutive_passes = consecutive_passes
-        self.finished_players = list(finished_players)
+    def __init__(self, hands, field, rev, eb, last_p, passes, finished, p_keys=[0,1,2,3]):
+        self.p_keys = list(p_keys)
+        self.hands = {p: [parse_card_obj(c) for c in hands.get(p, [])] for p in self.p_keys}
+        self.field = [parse_card_obj(c) for c in field]
+        self.rev = rev
+        self.eb = eb
+        self.last_p = last_p
+        self.passes = passes
+        self.finished = list(finished)
 
     def clone(self):
-        return SimGame(
-            self.hands, self.field_cards, self.is_revolution,
-            self.is_eleven_back, self.last_played_player, self.consecutive_passes,
-            self.finished_players, self.player_keys
-        )
+        return SimGame(self.hands, self.field, self.rev, self.eb, self.last_p, self.passes, self.finished, self.p_keys)
 
-    def effective_reverse(self):
-        return self.is_revolution != self.is_eleven_back
+    def eff_rev(self): return self.rev != self.eb
 
-    def get_valid_moves(self, player):
-        return get_all_valid_moves(self.hands.get(player, []), self.field_cards, self.effective_reverse())
+    def get_valid_moves(self, p):
+        return get_all_valid_moves(self.hands.get(p, []), self.field, self.eff_rev())
 
-    def do_move(self, player, move):
-        h = self.hands[player]
+    def do_move(self, p, move):
+        h = self.hands[p]
         for c in move:
-            if c in h: h.remove(c)
-        self.field_cards = list(move)
-        self.last_played_player = player
-        self.consecutive_passes = 0
+            for hc in list(h):
+                if hc == c:
+                    h.remove(hc)
+                    break
+        self.field = list(move)
+        self.last_p = p
+        self.passes = 0
+        if len(move) >= 4: self.rev = not self.rev
+        if any(c.display == 'J' for c in move): self.eb = True
+        if len(h) == 0 and p not in self.finished:
+            self.finished.append(p)
 
-        if len(move) >= 4: self.is_revolution = not self.is_revolution
-        if move[0].display == 'J': self.is_eleven_back = True
+    def do_pass(self): self.passes += 1
 
-        if len(self.hands[player]) == 0 and player not in self.finished_players:
-            self.finished_players.append(player)
-
-    def do_pass(self):
-        self.consecutive_passes += 1
-
-    def advance_turn(self, current_idx, was_eight):
-        active = [p for p in self.player_keys if p not in self.finished_players]
-
-        if was_eight or (self.last_played_player is not None and (self.consecutive_passes >= len(active) - 1 or self.consecutive_passes >= 3)):
-            self.field_cards = []
-            self.is_eleven_back = False
-            self.consecutive_passes = 0
-            next_p = current_idx if was_eight else self.player_keys.index(self.last_played_player)
+    def advance_turn(self, curr_idx, was_8):
+        active = [p for p in self.p_keys if p not in self.finished]
+        if was_8 or (self.last_p is not None and (self.passes >= len(active) - 1 or self.passes >= 3)):
+            self.field = []
+            self.eb = False
+            self.passes = 0
+            next_p = curr_idx if was_8 else self.p_keys.index(self.last_p)
             g = 0
-            while self.player_keys[next_p] in self.finished_players and g < 8:
-                next_p = (next_p + 1) % len(self.player_keys)
+            while self.p_keys[next_p] in self.finished and g < 8:
+                next_p = (next_p + 1) % len(self.p_keys)
                 g += 1
             return next_p
 
-        next_p = (current_idx + 1) % len(self.player_keys)
+        next_p = (curr_idx + 1) % len(self.p_keys)
         g = 0
-        while self.player_keys[next_p] in self.finished_players and g < 8:
-            next_p = (next_p + 1) % len(self.player_keys)
+        while self.p_keys[next_p] in self.finished and g < 8:
+            next_p = (next_p + 1) % len(self.p_keys)
             g += 1
         return next_p
 
-    def advanceTurn(self, current_idx, was_eight):
-        return self.advance_turn(current_idx, was_eight)
+def king_solve_exact(sim, king_p, depth=0, max_depth=7, budget=None):
+    if budget is not None:
+        budget[0] -= 1
+        if budget[0] < 0: return False, None
+    if len(sim.hands.get(king_p, [])) == 0: return True, None
+    if depth >= max_depth: return False, None
+
+    moves = sim.get_valid_moves(king_p)
+    if not moves: return False, None
+
+    eff_rev = sim.eff_rev()
+    instant = next((m for m in moves if len(m) == len(sim.hands[king_p]) and not is_forbidden_finish_move(m, eff_rev)), None)
+    if instant: return True, instant
+
+    for move in moves:
+        if len(move) == len(sim.hands[king_p]) and is_forbidden_finish_move(move, eff_rev):
+            continue
+
+        nxt = sim.clone()
+        nxt.do_move(king_p, move)
+        was_8 = any(c.display == '8' for c in move)
+        next_idx = nxt.advance_turn(sim.p_keys.index(king_p), was_8)
+
+        beaten = False
+        all_others_pass = True
+
+        if not was_8:
+            curr_sim = nxt.clone()
+            curr_idx = next_idx
+            safety_count = 0
+
+            while safety_count < 6:
+                safety_count += 1
+                p = curr_sim.p_keys[curr_idx]
+                if p == king_p: break
+
+                if p not in curr_sim.finished:
+                    opp_moves = curr_sim.get_valid_moves(p)
+                    if opp_moves:
+                        all_others_pass = False
+                        if any(len(om) == len(curr_sim.hands.get(p, [])) for om in opp_moves):
+                            beaten = True
+                        break
+                    else:
+                        curr_sim.do_pass()
+                curr_idx = curr_sim.advance_turn(curr_idx, False)
+
+        if not beaten and (was_8 or all_others_pass):
+            if len(nxt.hands.get(king_p, [])) == 0: return True, move
+            nxt.field = []
+            nxt.passes = 0
+            win, _ = king_solve_exact(nxt, king_p, depth + 1, max_depth, budget)
+            if win: return True, move
+
+    return False, None
 
 class MCTSNode:
     def __init__(self, move, parent, player_idx):
@@ -523,125 +936,68 @@ class MCTSNode:
         self.total_score = 0.0
         self.unexpanded_moves = None
 
-def king_evaluate_state(sim, king_cpu):
-    if king_cpu in sim.finished_players:
-        return 200000 - sim.finished_players.index(king_cpu) * 50000
+def estimate_turns_to_win(hand, rev=False):
+    if not hand: return 0
+    groups = defaultdict(int)
+    jokers = 0
+    for c in hand:
+        if c.is_joker: jokers += 1
+        else: groups[c.display] += 1
+    turns = len(groups)
+    if jokers > 0 and turns == 0: turns = 1
+    control = jokers + sum(1 for c in hand if not c.is_joker and (c.display == '8' or (c.val() <= 3 if rev else c.val() >= 12)))
+    if turns == 1: return 1
+    return max(1, turns - int(control * 0.8))
 
-    score = 0
-    king_hand = sim.hands.get(king_cpu, [])
-    rev = sim.effective_reverse()
-    my_turns = estimate_turns_to_win(king_hand, rev)
+def king_evaluate_state(sim, king_p):
+    if king_p in sim.finished:
+        return 200000.0 - sim.finished.index(king_p) * 50000.0
 
-    score -= my_turns * 4000
-    score -= len(king_hand) * 15
+    score = 0.0
+    k_hand = sim.hands.get(king_p, [])
+    rev = sim.eff_rev()
+    my_turns = estimate_turns_to_win(k_hand, rev)
 
-    rank_counts = {}
-    for c in king_hand:
-        k = c.key()
-        rank_counts[k] = rank_counts.get(k, 0) + 1
-    for cnt in rank_counts.values():
-        if cnt == 2: score += 40
-        elif cnt == 3: score += 80
-        elif cnt >= 4: score += 150
+    score -= my_turns * 6000.0
+    score -= len(k_hand) * 80.0
 
-    for c in king_hand:
-        score += c.strength(rev) * 4
-
-    for p in sim.player_keys:
-        if p == king_cpu: continue
-        if p in sim.finished_players:
-            score -= (200000 - sim.finished_players.index(p) * 50000) / 2.5
-            continue
-        p_len = len(sim.hands.get(p, []))
-        e_turns = estimate_turns_to_win(sim.hands.get(p, []), rev)
-        score += e_turns * 80 + p_len * 20
-        if p_len == 1: score -= 9000
-        elif p_len == 2: score -= 4000
-        elif p_len == 3: score -= 1800
-
-    if not sim.field_cards and sim.last_played_player == king_cpu:
-        score += 800
+    for p in sim.p_keys:
+        if p == king_p: continue
+        if p in sim.finished:
+            score -= (200000.0 - sim.finished.index(p) * 50000.0) / 2.0
+        else:
+            opp_len = len(sim.hands.get(p, []))
+            if opp_len == 1: score -= 15000.0
+            elif opp_len == 2: score -= 7000.0
+            elif opp_len == 3: score -= 3000.0
     return score
 
-def king_solve_exact_win(sim, king_cpu, depth=0, max_depth=5):
-    if len(sim.hands.get(king_cpu, [])) == 0: return True, None
-    if depth >= max_depth: return False, None
-
-    moves = sim.get_valid_moves(king_cpu)
-    if not moves: return False, None
-
-    instant = next((m for m in moves if len(m) == len(sim.hands[king_cpu])), None)
-    if instant: return True, instant
-
-    for move in moves:
-        next_sim = sim.clone()
-        next_sim.do_move(king_cpu, move)
-        was_eight = (move[0].display == '8')
-        next_idx = next_sim.advance_turn(sim.player_keys.index(king_cpu), was_eight)
-
-        can_be_beaten = False
-        next_p = sim.player_keys[next_idx]
-        if next_p != king_cpu and next_p not in next_sim.finished_players:
-            opp_moves = next_sim.get_valid_moves(next_p)
-            candidates = opp_moves if opp_moves else [None]
-
-            for opp_move in candidates:
-                opp_sim = next_sim.clone()
-                if opp_move is None: opp_sim.do_pass()
-                else: opp_sim.do_move(next_p, opp_move)
-
-                opp_sim.advance_turn(next_idx, opp_move is not None and opp_move[0].display == '8')
-                if len(opp_sim.hands.get(next_p, [])) == 0:
-                    can_be_beaten = True
-                    break
-
-        if not can_be_beaten:
-            if len(next_sim.hands.get(king_cpu, [])) == 0: return True, move
-            win, _ = king_solve_exact_win(next_sim, king_cpu, depth + 1, max_depth)
-            if win: return True, move
-
-    return False, None
-
-def king_decide_move_universal(cpu_key, hand, current_field, rev, all_hands, all_finished, played_history, last_player, pass_count, player_keys=PLAYERS):
-    valid_moves = get_all_valid_moves(hand, current_field, rev)
-    can_pass = len(current_field) > 0
+def run_mcts_core(seat, hand, field, rev, eb, hands_for_sim, finished, last_p, pass_cnt, max_iters=5000, time_budget=0.10):
+    eff_rev = (rev != eb)
+    valid_moves = get_all_valid_moves(hand, field, eff_rev)
+    can_pass = bool(field)
     if not valid_moves: return None
 
-    active_others = [p for p in player_keys if p != cpu_key and p not in all_finished]
-    if not active_others: return valid_moves[0]
-
-    finish = next((m for m in valid_moves if len(m) == len(hand)), None)
+    finish = next((m for m in valid_moves if len(m) == len(hand) and not is_forbidden_finish_move(m, eff_rev)), None)
     if finish: return finish
 
-    total_cards = sum(len(all_hands.get(p, [])) for p in player_keys)
-    base_sim = SimGame(all_hands, current_field, False, False, last_player, pass_count, all_finished, player_keys)
+    base_sim = SimGame(hands_for_sim, field, rev, eb, last_p, pass_cnt, finished)
+    root = MCTSNode(None, None, seat)
+    cands = sorted(valid_moves, key=lambda m: evaluate_move_default(m, hand, not field, eff_rev=eff_rev), reverse=True)
+    root.unexpanded_moves = list(cands)
+    if can_pass:
+        root.unexpanded_moves.insert(0, None)
 
-    if total_cards <= 16 or len(hand) <= 5 or any(len(all_hands.get(p, [])) <= 3 for p in active_others):
-        win, exact_move = king_solve_exact_win(base_sim, cpu_key, 0, 5)
-        if win and exact_move: return exact_move
+    start_t = time.perf_counter()
+    iters = 0
 
-    known = list(hand) + list(played_history) + list(current_field)
-    unrevealed = [c for c in create_deck() if not any(c == k for k in known)]
-    safe_moves = [m for m in valid_moves if is_guaranteed_absolute_win(m, unrevealed, rev)]
-    if safe_moves and estimate_turns_to_win(hand, rev) <= 2:
-        safe_moves.sort(key=lambda m: (len(m), evaluate_move_default(m)), reverse=True)
-        return safe_moves[0]
-
-    king_idx = player_keys.index(cpu_key)
-    root = MCTSNode(None, None, king_idx)
-
-    candidate_moves = sorted(valid_moves, key=evaluate_move_default, reverse=True)
-    root.unexpanded_moves = list(candidate_moves)
-    if can_pass: root.unexpanded_moves.insert(0, None)
-
-    max_iterations = 100
-    for _ in range(max_iterations):
+    while (time.perf_counter() - start_t < time_budget) and (iters < max_iters):
+        iters += 1
         node = root
         sim = base_sim.clone()
 
         while node.unexpanded_moves is not None and len(node.unexpanded_moves) == 0 and len(node.children) > 0:
-            best_child = None
-            best_ucb = -float('inf')
+            best_child, best_ucb = None, -float('inf')
             for child in node.children:
                 if child.visits == 0:
                     best_child = child
@@ -651,717 +1007,1053 @@ def king_decide_move_universal(cpu_key, hand, current_field, rev, all_hands, all
                     best_ucb = ucb
                     best_child = child
             node = best_child
-            if node.move is None: sim.do_pass()
-            else: sim.do_move(sim.player_keys[node.parent.player_idx], node.move)
-            sim.advance_turn(node.parent.player_idx, node.move is not None and node.move[0].display == '8')
+            if node.move is None:
+                sim.do_pass()
+            else:
+                sim.do_move(sim.p_keys[node.parent.player_idx], node.move)
+            sim.advance_turn(node.parent.player_idx, node.move is not None and any(c.display == '8' for c in node.move))
 
         if node.unexpanded_moves and len(node.unexpanded_moves) > 0:
-            move = node.unexpanded_moves.pop()
-            next_idx = sim.advance_turn(node.player_idx, move is not None and move[0].display == '8')
-            if move is None: sim.do_pass()
-            else: sim.do_move(sim.player_keys[node.player_idx], move)
+            mv = node.unexpanded_moves.pop()
+            next_idx = sim.advance_turn(node.player_idx, mv is not None and any(c.display == '8' for c in mv))
+            if mv is None:
+                sim.do_pass()
+            else:
+                sim.do_move(sim.p_keys[node.player_idx], mv)
 
-            child = MCTSNode(move, node, next_idx)
-            child.unexpanded_moves = sim.get_valid_moves(sim.player_keys[next_idx])
-            if len(sim.field_cards) > 0: child.unexpanded_moves.append(None)
+            child = MCTSNode(mv, node, next_idx)
+            child.unexpanded_moves = sim.get_valid_moves(sim.p_keys[next_idx])
+            if sim.field:
+                child.unexpanded_moves.append(None)
             node.children.append(child)
             node = child
 
         depth = 0
-        curr_p_idx = node.player_idx
-        while depth < 4 and len(sim.finished_players) < 3:
-            p = sim.player_keys[curr_p_idx]
-            cands = sim.get_valid_moves(p)
-            if len(sim.field_cards) > 0: cands.append(None)
-            if not cands: break
-            chosen = random.choice(cands)
-            if chosen is None: sim.do_pass()
-            else: sim.do_move(p, chosen)
-            curr_p_idx = sim.advance_turn(curr_p_idx, chosen is not None and chosen[0].display == '8')
+        curr_p = node.player_idx
+        while depth < 4 and len(sim.finished) < 3:
+            p = sim.p_keys[curr_p]
+            c_moves = sim.get_valid_moves(p)
+            if sim.field: c_moves.append(None)
+            if not c_moves: break
+            ch = random.choice(c_moves)
+            if ch is None: sim.do_pass()
+            else: sim.do_move(p, ch)
+            curr_p = sim.advance_turn(curr_p, ch is not None and any(c.display == '8' for c in ch))
             depth += 1
 
-        score = king_evaluate_state(sim, cpu_key)
-        reward = 1.0 / (1.0 + math.exp(-score / 8000.0))
+        sc = king_evaluate_state(sim, seat)
+        reward = 1.0 / (1.0 + math.exp(-sc / 8000.0))
         curr = node
         while curr is not None:
             curr.visits += 1
             curr.total_score += reward
             curr = curr.parent
 
-    best_child = None
-    max_visits = -1
-    for child in root.children:
-        if child.visits > max_visits:
-            max_visits = child.visits
-            best_child = child
+    best_child = max(root.children, key=lambda c: c.visits) if root.children else None
+    return best_child.move if best_child else cands[0]
 
-    return best_child.move if best_child else candidate_moves[0]
+def get_nn_scores(hand, field, rev=False, eb=False, cleared=None, model_choice='hi2'):
+    if model_choice in ['apex_v3', 'apex'] and model_apex_loaded:
+        target_model = model_apex
+        in_dim = apex_in_dim
+    elif model_choice == 'gilgamesh' and model_gilgamesh_loaded:
+        target_model = model_gilgamesh
+        in_dim = gilgamesh_in_dim
+    else:
+        target_model = model_hi2
+        in_dim = hi2_in_dim
+
+    if target_model is None:
+        return [evaluate_move_default([c], hand, not field) for c in hand]
+
+    hand = [parse_card_obj(c) for c in hand]
+    field = [parse_card_obj(c) for c in field]
+    cleared = [parse_card_obj(c) for c in (cleared or [])]
+
+    vec = build_input_vector(hand, field, required_dim=in_dim, is_rev=rev, is_eb=eb, cleared_cards=cleared)
+    with torch.no_grad():
+        t = torch.tensor([vec], dtype=torch.float32).to(device)
+        return target_model(t).squeeze(0).tolist()
 
 # ----------------------------------------------------
-# 4. キャラクター思考ルーチン ＆ モデルAI意思決定エンジン
+# 5. キャラクター別 本番思考ルーチン (Endgame Solver 黄金版 連動)
 # ----------------------------------------------------
-BASE_10_CHARACTERS = ['DUKE', 'MARQUIS', 'COUNT', 'KNIGHT', 'MERCHANT', 'SCHOLAR', 'STRATEGIST', 'REVOLUTIONARY', 'JESTER', 'KING']
-ALL_12_CHARACTERS = BASE_10_CHARACTERS + ['BEGINNER_AI', 'SUPER_AI']
 
-# === 4-1. 通常キャラクター ルールベース思考 ===
-def select_move_by_character_def(cid, hand, field, rev, other_counts, can_pass, unrevealed, next_cnt):
-    valid_moves = get_all_valid_moves(hand, field, rev)
-    if not valid_moves: return None
+# [0] 👑 ギルガメッシュ
+def decide_gilgamesh(seat, hand, field, valid, rev, eb, cleared, all_hands, finished, last_p, pass_cnt):
+    hand = [parse_card_obj(c) for c in hand]
+    field = [parse_card_obj(c) for c in field]
+    if not valid: return None
 
-    if cid == 'DUKE':
-        high = [c for c in hand if c.display in ['A', '2']]
-        other = [c for c in hand if c.display not in ['A', '2']]
-        filtered = [m for m in valid_moves if not any(c.display in ['A', '2'] for c in m)] if len(high) < len(other) else valid_moves
-        if field and next_cnt >= 8 and 1 <= field[0].val() <= 7: return None
-        if not filtered: return None if can_pass else valid_moves[0]
-        filtered.sort(key=evaluate_move_default, reverse=True)
-        return filtered[0]
+    profile = get_tactical_profile('GILGAMESH')
+    eff_rev = (rev != eb)
 
-    if cid == 'MARQUIS':
-        best_m = max(valid_moves, key=evaluate_move_default)
-        return None if (can_pass and evaluate_move_default(best_m) < -5) else best_m
+    instant_win = next((m for m in valid if len(m) == len(hand) and not is_forbidden_finish_move(m, eff_rev)), None)
+    if instant_win: return instant_win
 
-    if cid == 'COUNT':
-        is_late = len(hand) <= 5
-        best_m, best_s = valid_moves[0], -999
-        for m in valid_moves:
-            v = m[0].val()
-            s = (len(m) * 10) + (v * 2) if is_late else (len(m) * 10) - (v * 3)
-            if s > best_s: best_s, best_m = s, m
-        return best_m
+    unrevealed = get_unrevealed_cards(hand, field, cleared)
+    endgame_m = solve_endgame_winning_sequence(hand, field, unrevealed, eff_rev, max_depth=6)
+    if endgame_m: return endgame_m
 
-    if cid == 'KNIGHT':
-        valid_moves.sort(key=lambda m: (m[0].val() if not rev else -m[0].val()))
-        return valid_moves[0]
-
-    if cid == 'MERCHANT':
-        groups = {}
-        for c in hand: groups[c.key()] = groups.get(c.key(), 0) + 1
-        best_m, best_s = valid_moves[0], -999
-        for m in valid_moves:
-            s = evaluate_move_default(m)
-            if len(m) == 2: s += 15
-            elif len(m) >= 3: s += 25
-            if len(m) == 1 and groups.get(m[0].key(), 0) >= 2: s -= 20
-            if s > best_s: best_s, best_m = s, m
-        return best_m
-
-    if cid == 'SCHOLAR':
-        safe = [m for m in valid_moves if is_guaranteed_absolute_win(m, unrevealed, rev)]
-        if safe:
-            safe.sort(key=lambda m: (len(m), evaluate_move_default(m)), reverse=True)
-            return safe[0]
-        valid_moves.sort(key=evaluate_move_default, reverse=True)
-        return valid_moves[0]
-
-    if cid == 'STRATEGIST':
-        danger = any(cnt <= 3 for cnt in other_counts)
-        best_m, best_s = None, -999
-        for m in valid_moves:
-            s = evaluate_move_default(m)
-            if is_guaranteed_absolute_win(m, unrevealed, rev): s += 50
-            if danger:
-                if m[0].display == '8': s += 60
-                elif m[0].display in ['A', '2']: s += 40
-                elif m[0].display == 'J': s += 30
-            if s > best_s: best_s, best_m = s, m
-        if danger and can_pass and best_s < 20: return None
-        return best_m or valid_moves[0]
-
-    if cid == 'REVOLUTIONARY':
-        quad = next((m for m in valid_moves if len(m) >= 4), None)
-        if quad and not field: return quad
-        best_m, best_s = valid_moves[0], -999
-        for m in valid_moves:
-            s = evaluate_move_default(m)
-            if m[0].display == '8': s += 50
-            if s > best_s: best_s, best_m = s, m
-        return best_m
-
-    if cid == 'JESTER' and random.random() < 0.4:
-        if can_pass and random.random() < 0.5: return None
-        m2 = next((m for m in valid_moves if any(c.display == '2' for c in m)), None)
-        if m2: return m2
-        return random.choice(valid_moves)
-
-    valid_moves.sort(key=evaluate_move_default, reverse=True)
-    return valid_moves[0]
-
-# === 4-2. [モデルAI専用] 安全弁・戦術フィルター ===
-def apply_tactical_safety_rails(move, raw_model_scores, hand, field, rev=False):
-    if not move:
-        return -999.0
-
-    card_scores = [raw_model_scores[card_to_idx(c)] for c in move if 0 <= card_to_idx(c) < 53]
-    s = (sum(card_scores) / max(1, len(card_scores))) if card_scores else 0.0
+    if len(field) == 1 and field[0].is_joker:
+        spade3 = next((c for c in hand if not c.is_joker and c.suit == '♠' and c.display == '3'), None)
+        if spade3: return [spade3]
 
     hand_len = len(hand)
-    move_len = len(move)
+    is_field_empty = (len(field) == 0)
+    other_lens = [len(all_hands[s]) for s in range(4) if s != seat and s not in finished]
+    min_opp_len = min(other_lens) if other_lens else 99
+    is_opp_reach = (min_opp_len <= 2)
 
-    if move_len == 2:
-        s += 2.0
-    elif move_len >= 3:
-        s += 3.5
+    safe_valid = [m for m in valid if not (len(m) == hand_len and is_forbidden_finish_move(m, eff_rev))]
+    use_valid = safe_valid if safe_valid else valid
 
-    first_disp = move[0].display if isinstance(move[0], Card) else (move[0].get('rank') or move[0].get('display'))
-    if first_disp == '8':
-        if hand_len <= 5:
-            s += 3.0
-        else:
-            s += 1.0
+    if hand_len <= 8 or min_opp_len <= 3:
+        base_sim = SimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
+        win, exact_m = king_solve_exact(base_sim, seat, depth=0, max_depth=8, budget=[4000])
+        if win and exact_m: return exact_m
 
-    f_val = 0
-    if field and len(field) > 0:
-        if isinstance(field[0], Card):
-            f_val = field[0].val() if not field[0].is_joker else 14
-        else:
-            r_str = field[0].get('rank') or field[0].get('display') or '3'
-            f_val = RANK_VALUE_MAP.get(r_str, 3)
+    if is_opp_reach and field:
+        reach_seats = [s for s in range(4) if s != seat and s not in finished and len(all_hands[s]) <= 2]
+        threat_cards = [c for rs in reach_seats for c in all_hands[rs]]
+        solid_blockers = []
+        for m in use_valid:
+            if any(c.display == '8' for c in m): return m
+            if all(not is_valid_play([tc], m, eff_rev) for tc in threat_cards):
+                solid_blockers.append(m)
 
-    is_joker_move = any(
-        (c.is_joker if isinstance(c, Card) else (c.get('isJoker') or c.get('rank') == 'JOKER' or c.get('display') == 'JOKER'))
-        for c in move
-    )
+        if solid_blockers:
+            solid_blockers.sort(key=lambda m: (len(m) * 100) - m[0].strength(eff_rev))
+            return solid_blockers[0]
 
-    if is_joker_move:
-        if hand_len <= 3:
-            s += 3.5
-        else:
-            if not field or len(field) == 0:
-                s -= 10.0
-            else:
-                if not rev and f_val <= 8:
-                    s -= 7.0
-                elif rev and f_val >= 6:
-                    s -= 7.0
+    filtered_valid = [m for m in use_valid if not is_joker_waste_move(m, hand)]
+    if is_field_empty:
+        non_eight = [m for m in filtered_valid if not (any(c.display == '8' for c in m) and hand_len > len(m))]
+        if non_eight: filtered_valid = non_eight
+    pool = filtered_valid if filtered_valid else use_valid
 
-    return s
+    mcts_res = run_mcts_core(seat, hand, field, rev, eb, all_hands, finished, last_p, pass_cnt, max_iters=15000, time_budget=0.25)
+    if mcts_res:
+        if not should_strategic_pass_on_high_card(mcts_res, hand, field, eff_rev, min_opp_len, profile):
+            if not (len(mcts_res) == hand_len and is_forbidden_finish_move(mcts_res, eff_rev)):
+                return mcts_res
 
-# === 4-3. [モデルAI共通] 統合意思決定エンジン ===
-def select_best_neural_move(target_model, is_loaded, required_dim, hand, field, valid_moves, is_rev=False, is_eb=False, cleared_cards=None, is_super=False):
-    if not valid_moves:
-        return None, 0.0
+    pool.sort(key=lambda m: (len(m) * 100) - m[0].strength(eff_rev), reverse=True)
+    chosen = pool[0]
+    if should_strategic_pass_on_high_card(chosen, hand, field, eff_rev, min_opp_len, profile):
+        return None
+    return chosen
 
-    if not is_loaded or target_model is None:
-        valid_sorted = sorted(valid_moves, key=evaluate_move_default, reverse=True)
-        return valid_sorted[0], 0.0
-
-    in_vec = build_input_vector(hand, field, required_dim=required_dim, is_rev=is_rev, is_eb=is_eb, cleared_cards=cleared_cards)
-    with torch.no_grad():
-        t = torch.tensor([in_vec], dtype=torch.float32).to(device)
-        output_scores = target_model(t).squeeze(0).tolist()
-
-    best_move = None
-    best_score = -float('inf')
-    effective_rev = (is_rev != is_eb)
-
-    for move in valid_moves:
-        if is_super:
-            score = apply_tactical_safety_rails(move, output_scores, hand, field, rev=effective_rev)
-        else:
-            card_scores = [output_scores[card_to_idx(c)] for c in move if 0 <= card_to_idx(c) < 53]
-            score = (sum(card_scores) / max(1, len(card_scores))) if card_scores else 0.0
-            if len(move) >= 2:
-                score += 0.5 * len(move)
-
-        if score > best_score:
-            best_score = score
-            best_move = move
-
-    return (best_move or valid_moves[0]), best_score
-
-# === 4-4. シミュレーション用 手選択ルーチン ===
-def decide_move_sim(seat, seat_chars, hands, field, rev, finished, played_history, last_seat, pass_cnt, is_rev=False, is_eb=False, cleared_cards=None):
-    cid = seat_chars[seat]
-    hand = hands[seat]
-    valid = get_all_valid_moves(hand, field, rev)
+# [1] 🤴 覚醒新王 (AWAKENED_KING)
+def decide_awakened_young_king(seat, hand, field, valid, rev, eb, cleared, all_hands, finished, last_p, pass_cnt):
+    hand = [parse_card_obj(c) for c in hand]
+    field = [parse_card_obj(c) for c in field]
     if not valid: return None
-    can_pass = len(field) > 0
 
-    if cid == 'KING':
-        return king_decide_move_universal(seat, hand, field, rev, hands, finished, played_history, last_seat, pass_cnt, PLAYERS)
+    profile = get_tactical_profile('AWAKENED_KING')
+    eff_rev = (rev != eb)
 
-    if cid == 'BEGINNER_AI':
-        move, _ = select_best_neural_move(model_hi, model_hi_loaded, hi_in_dim, hand, field, valid, is_rev=is_rev, is_eb=is_eb, is_super=False)
-        return move
+    instant_win = next((m for m in valid if len(m) == len(hand) and not is_forbidden_finish_move(m, eff_rev)), None)
+    if instant_win: return instant_win
 
-    if cid in ['SUPER_AI', 'MID_AI']:
-        move, _ = select_best_neural_move(model_super, model_super_loaded, super_in_dim, hand, field, valid, is_rev=is_rev, is_eb=is_eb, cleared_cards=cleared_cards, is_super=True)
-        return move
+    unrevealed = get_unrevealed_cards(hand, field, cleared)
+    endgame_m = solve_endgame_winning_sequence(hand, field, unrevealed, eff_rev, max_depth=5)
+    if endgame_m: return endgame_m
 
-    next_seat = (seat + 1) % 4
-    next_cnt = len(hands[next_seat])
-    other_counts = [len(hands[st]) for st in PLAYERS if st != seat and st not in finished]
-    known = list(hand) + list(played_history) + list(field)
-    unrevealed = [c for c in create_deck() if not any(c == k for k in known)]
-    return select_move_by_character_def(cid, hand, field, rev, other_counts, can_pass, unrevealed, next_cnt)
+    if len(field) == 1 and field[0].is_joker:
+        spade3 = next((c for c in hand if not c.is_joker and c.suit == '♠' and c.display == '3'), None)
+        if spade3: return [spade3]
 
-# ----------------------------------------------------
-# 5. 高速シミュレーション
-# ----------------------------------------------------
-latest_batch_data = {
-    "episodes": [],
-    "steps": []
-}
+    hand_len = len(hand)
+    is_field_empty = (len(field) == 0)
+    other_lens = [len(all_hands[s]) for s in range(4) if s != seat and s not in finished]
+    min_opp_len = min(other_lens) if other_lens else 99
 
-def run_single_game_fast(seat_chars, pattern_name="PATTERN_A", collect_steps=True):
-    game_id = f"game_{int(time.time() * 1000)}_{random.randint(1000, 9999)}"
-    deck = create_deck()
-    random.shuffle(deck)
+    safe_valid = [m for m in valid if not (len(m) == hand_len and is_forbidden_finish_move(m, eff_rev))]
+    use_valid = safe_valid if safe_valid else valid
 
-    hands = {s: [] for s in range(4)}
-    for i, c in enumerate(deck): hands[i % 4].append(c)
-    for s in range(4): hands[s].sort(key=lambda c: (14 if c.is_joker else c.val()))
+    if hand_len <= 7 or min_opp_len <= 3:
+        base_sim = SimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
+        win, exact_m = king_solve_exact(base_sim, seat, depth=0, max_depth=7)
+        if win and exact_m: return exact_m
 
-    field = []
-    current_round_cards = []
-    cleared_cards = []
-    is_rev, is_eb = False, False
-    last_seat, pass_cnt = None, 0
-    pass_map = {f"seat_{s + 1}": False for s in range(4)}
-    played_history = []
-    finished = []
-    ranks = {}
-    game_steps = []
-    turn_history = []
-    turn_count = 0
+    if hand_len <= 8:
+        mcts_move = run_mcts_core(
+            seat, hand, field, rev, eb, all_hands, finished, last_p, pass_cnt,
+            max_iters=7500, time_budget=0.15
+        )
+        if mcts_move:
+            if not should_strategic_pass_on_high_card(mcts_move, hand, field, eff_rev, min_opp_len, profile):
+                if not (len(mcts_move) == hand_len and is_forbidden_finish_move(mcts_move, eff_rev)):
+                    return mcts_move
 
-    curr_seat = 0
-    for s in range(4):
-        if any(c.suit == '♦' and c.display == '3' for c in hands[s]):
-            curr_seat = s
-            break
+    scores = get_nn_scores(hand, field, rev, eb, cleared, model_choice='apex')
 
-    turn_limit = 250
-    while len(finished) < 3 and turn_limit > 0:
-        turn_limit -= 1
-        turn_count += 1
-        s = curr_seat
-        p_hand = hands[s]
-        rev = (is_rev != is_eb)
-        cid = seat_chars[s]
+    best_m, best_s = None, -float('inf')
+    for m in use_valid:
+        card_sc = [scores[card_to_idx(c)] for c in m if 0 <= card_to_idx(c) < 53]
+        s = (sum(card_sc) / max(1, len(card_sc))) + (len(m) * 10.0 * profile['R4_leadMulti'])
 
-        valid_moves = get_all_valid_moves(p_hand, field, rev)
-        move = decide_move_sim(s, seat_chars, hands, field, rev, finished, played_history, last_seat, pass_cnt, is_rev=is_rev, is_eb=is_eb, cleared_cards=cleared_cards)
+        if len(m) >= 4:
+            s += (25.0 * profile['R8_plannedRevolution'])
 
-        if collect_steps:
-            rem_counts = {f"seat_{st + 1}": len(hands[st]) for st in range(4)}
-            step_record = {
-                "gameId": game_id,
-                "pattern": pattern_name,
-                "turnNumber": turn_count,
-                "seat": s + 1,
-                "player": f"seat_{s + 1}",
-                "playerChar": cid,
-                "playerCharName": CHARACTER_NAMES.get(cid, cid),
-                "hand": serialize_cards(p_hand),
-                "fieldCards": serialize_cards(field),
-                "clearedCards": serialize_cards(cleared_cards),
-                "isRevolution": bool(is_rev),
-                "isElevenBack": bool(is_eb),
-                "consecutivePasses": pass_cnt,
-                "hasPassedInRound": dict(pass_map),
-                "remainingCounts": rem_counts,
-                "validMoves": [serialize_cards(m) for m in valid_moves],
-                "chosenMove": serialize_cards(move) if move else None,
-                "isPass": (move is None),
-                "evalScore": None,
-                "finalRank": None,
-                "rankTitle": None,
-                "allSeatsFinalRank": None,
-                "timestamp": int(time.time() * 1000)
-            }
-            game_steps.append(step_record)
+        if is_joker_waste_move(m, hand):
+            s -= 50.0
 
-        if move:
-            for c in move: p_hand.remove(c)
-            field = move
-            current_round_cards.extend(move)
-            last_seat = s
-            pass_cnt = 0
-            played_history.extend(move)
-            for st in range(4): pass_map[f"seat_{st + 1}"] = False
+        if is_field_empty and any(c.display == '8' for c in m) and hand_len > len(m):
+            s -= 45.0
 
-            if len(move) >= 4:
-                is_rev = not is_rev
-                for st in range(4): hands[st].sort(key=lambda c: (14 if c.is_joker else c.val()))
-            if move[0].display == 'J':
-                is_eb = True
-                for st in range(4): hands[st].sort(key=lambda c: (14 if c.is_joker else c.val()))
+        s += evaluate_hand_formation(m, hand, eff_rev, min_opp_len) * 1.0
 
-            is_eight = (move[0].display == '8')
-            if len(p_hand) == 0 and s not in finished:
-                finished.append(s)
-                ranks[s] = ['大富豪', '富豪', '貧民', '大貧民'][len(finished) - 1]
+        if s > best_s:
+            best_s = s
+            best_m = m
 
-            turn_history.append({
-                "turn": turn_count,
-                "seat": s + 1,
-                "action": "play",
-                "cards": serialize_cards(move),
-                "isCleared": is_eight
-            })
+    chosen = best_m or use_valid[0]
+    if should_strategic_pass_on_high_card(chosen, hand, field, eff_rev, min_opp_len, profile):
+        return None
+    return chosen
 
-            if is_eight:
-                cleared_cards.extend(current_round_cards)
-                current_round_cards = []
-                field = []
-                is_eb = False
-                pass_cnt = 0
-                for st in range(4): pass_map[f"seat_{st + 1}"] = False
-                active = [st for st in range(4) if st not in finished]
-                if len(active) <= 1: break
+# [2] 👸 女王 (SUPER_AI)
+def decide_queen_mcts_fair(seat, hand, field, rev, eb, cleared, all_hands, finished, last_p, pass_cnt):
+    hand = [parse_card_obj(c) for c in hand]
+    field = [parse_card_obj(c) for c in field]
+    eff_rev = (rev != eb)
+    valid = get_all_valid_moves(hand, field, eff_rev)
+    if not valid: return None
 
-                if s in finished:
-                    while True:
-                        curr_seat = (curr_seat + 1) % 4
-                        if curr_seat not in finished: break
-                else:
-                    curr_seat = s
-                continue
+    profile = get_tactical_profile('SUPER_AI')
+    instant_win = next((m for m in valid if len(m) == len(hand) and not is_forbidden_finish_move(m, eff_rev)), None)
+    if instant_win: return instant_win
+
+    unrevealed = get_unrevealed_cards(hand, field, cleared)
+    endgame_m = solve_endgame_winning_sequence(hand, field, unrevealed, eff_rev, max_depth=4)
+    if endgame_m: return endgame_m
+
+    if len(field) == 1 and field[0].is_joker:
+        spade3 = next((c for c in hand if not c.is_joker and c.suit == '♠' and c.display == '3'), None)
+        if spade3: return [spade3]
+
+    is_field_empty = (len(field) == 0)
+    random.shuffle(unrevealed)
+
+    sim_hands = {seat: list(hand)}
+    curr_idx = 0
+    for p in range(4):
+        if p == seat: continue
+        req_len = len(all_hands.get(p, []))
+        sim_hands[p] = unrevealed[curr_idx : curr_idx + req_len]
+        curr_idx += req_len
+
+    active_others = [p for p in range(4) if p != seat and p not in finished]
+    if len(hand) <= 6 or any(len(all_hands.get(p, [])) <= 3 for p in active_others):
+        base_sim = SimGame(sim_hands, field, rev, eb, last_p, pass_cnt, finished)
+        win, em = king_solve_exact(base_sim, seat, 0, 7)
+        if win and em: return em
+
+    mcts_res = run_mcts_core(seat, hand, field, rev, eb, sim_hands, finished, last_p, pass_cnt, max_iters=5000, time_budget=0.10)
+    other_lens = [len(all_hands[s]) for s in range(4) if s != seat and s not in finished]
+    min_opp_len = min(other_lens) if other_lens else 99
+    is_opp_reach = (min_opp_len <= 2)
+
+    if mcts_res:
+        if not should_strategic_pass_on_high_card(mcts_res, hand, field, eff_rev, min_opp_len, profile):
+            if not (len(mcts_res) == len(hand) and is_forbidden_finish_move(mcts_res, eff_rev)):
+                return mcts_res
+
+    safe_valid = [m for m in valid if not (len(m) == len(hand) and is_forbidden_finish_move(m, eff_rev))]
+    use_valid = safe_valid if safe_valid else valid
+
+    use_valid.sort(key=lambda m: evaluate_move_default(m, hand, is_field_empty, profile, eff_rev, min_opp_len) + evaluate_eight_bridge(m, hand, min_opp_len, is_opp_reach, is_field_empty, profile, eff_rev) + evaluate_eleven_back_balance(m, hand, eff_rev, profile), reverse=True)
+    chosen = use_valid[0]
+    if should_strategic_pass_on_high_card(chosen, hand, field, eff_rev, min_opp_len, profile):
+        return None
+    return chosen
+
+# [3] 🏰 王 (KING)
+def decide_king_apex_direct(seat, hand, field, valid, rev, eb, cleared, all_hands, finished, last_p, pass_cnt):
+    hand = [parse_card_obj(c) for c in hand]
+    field = [parse_card_obj(c) for c in field]
+    if not valid: return None
+
+    profile = get_tactical_profile('KING')
+    eff_rev = (rev != eb)
+
+    instant_win = next((m for m in valid if len(m) == len(hand) and not is_forbidden_finish_move(m, eff_rev)), None)
+    if instant_win: return instant_win
+
+    unrevealed = get_unrevealed_cards(hand, field, cleared)
+    endgame_m = solve_endgame_winning_sequence(hand, field, unrevealed, eff_rev, max_depth=5)
+    if endgame_m: return endgame_m
+
+    if len(field) == 1 and field[0].is_joker:
+        spade3 = next((c for c in hand if not c.is_joker and c.suit == '♠' and c.display == '3'), None)
+        if spade3: return [spade3]
+
+    hand_len = len(hand)
+    is_field_empty = (len(field) == 0)
+    other_lens = [len(all_hands[s]) for s in range(4) if s != seat and s not in finished]
+    min_opp_len = min(other_lens) if other_lens else 99
+    is_opp_reach = (min_opp_len <= 2)
+
+    safe_valid = [m for m in valid if not (len(m) == hand_len and is_forbidden_finish_move(m, eff_rev))]
+    use_valid = safe_valid if safe_valid else valid
+
+    if hand_len <= 6 or min_opp_len <= 3:
+        base_sim = SimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
+        win, exact_m = king_solve_exact(base_sim, seat, depth=0, max_depth=5)
+        if win and exact_m: return exact_m
+
+    if is_opp_reach and field:
+        eight_m = next((m for m in use_valid if any(c.display == '8' for c in m)), None)
+        if eight_m: return eight_m
+        use_valid.sort(key=lambda m: (len(m) * 100) + m[0].strength(eff_rev), reverse=True)
+        return use_valid[0]
+
+    groups = defaultdict(list)
+    for c in hand:
+        if not c.is_joker: groups[c.display].append(c)
+
+    if not field:
+        quads = [m for m in use_valid if len(m) >= 4]
+        if quads: return quads[0]
+        triples = [m for m in use_valid if len(m) == 3]
+        if triples:
+            triples.sort(key=lambda m: m[0].val())
+            return triples[0]
+        pairs = [m for m in use_valid if len(m) == 2]
+        if pairs:
+            pairs.sort(key=lambda m: m[0].val())
+            return pairs[0]
+
+    scores = get_nn_scores(hand, field, rev, eb, cleared, model_choice='apex')
+    exit_ticket = identify_exit_ticket(hand)
+
+    cands = [m for m in use_valid if not (len(m) == 1 and not m[0].is_joker and len(groups[m[0].display]) >= 2 and hand_len > 2)]
+    if not cands: cands = use_valid
+
+    best_m, best_s = None, -float('inf')
+    for m in cands:
+        card_sc = [scores[card_to_idx(c)] for c in m if 0 <= card_to_idx(c) < 53]
+        s = sum(card_sc) / max(1, len(card_sc))
+        m_len = len(m)
+        disp = m[0].display if not m[0].is_joker else 'JOKER'
+
+        if m_len >= 4: s += 55.0
+        elif m_len == 3: s += 24.0
+        elif m_len == 2: s += 18.0
+        elif m_len == 1:
+            if disp in groups and len(groups[disp]) >= 2: s -= 45.0
+            if exit_ticket is not None and exit_ticket in m:
+                if hand_len >= 4: s -= 45.0
+            elif m[0].val() <= 8: s += 8.0
+
+        if is_joker_waste_move(m, hand):
+            s -= 50.0
+
+        if is_field_empty and any(c.display == '8' for c in m) and hand_len > m_len:
+            s -= 45.0
+        elif not is_field_empty and any(c.display == '8' for c in m) and (min_opp_len <= 3 or hand_len <= 4):
+            s += 20.0
+
+        s += evaluate_hand_formation(m, hand, eff_rev, min_opp_len) * 0.8
+
+        if s > best_s: best_s, best_m = s, m
+
+    chosen = best_m or use_valid[0]
+    if should_strategic_pass_on_high_card(chosen, hand, field, eff_rev, min_opp_len, profile):
+        return None
+    return chosen
+
+# [4] ⚔️ 織田信長 (NOBUNAGA)
+def decide_nobunaga(seat, hand, field, valid, rev, eb, cleared, all_hands, finished, last_p, pass_cnt):
+    hand = [parse_card_obj(c) for c in hand]
+    field = [parse_card_obj(c) for c in field]
+    if not valid: return None
+
+    profile = get_tactical_profile('NOBUNAGA')
+    eff_rev = (rev != eb)
+
+    instant_win = next((m for m in valid if len(m) == len(hand) and not is_forbidden_finish_move(m, eff_rev)), None)
+    if instant_win: return instant_win
+
+    unrevealed = get_unrevealed_cards(hand, field, cleared)
+    endgame_m = solve_endgame_winning_sequence(hand, field, unrevealed, eff_rev, max_depth=4)
+    if endgame_m: return endgame_m
+
+    if len(field) == 1 and field[0].is_joker:
+        spade3 = next((c for c in hand if not c.is_joker and c.suit == '♠' and c.display == '3'), None)
+        if spade3: return [spade3]
+
+    hand_len = len(hand)
+    is_field_empty = (len(field) == 0)
+    other_lens = [len(all_hands[s]) for s in range(4) if s != seat and s not in finished]
+    min_opp_len = min(other_lens) if other_lens else 99
+
+    safe_valid = [m for m in valid if not (len(m) == hand_len and is_forbidden_finish_move(m, eff_rev))]
+    use_valid = safe_valid if safe_valid else valid
+
+    if hand_len <= 6 or min_opp_len <= 3:
+        base_sim = SimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
+        win, em = king_solve_exact(base_sim, seat, 0, 5)
+        if win and em: return em
+
+    groups = defaultdict(list)
+    for c in hand:
+        if not c.is_joker: groups[c.display].append(c)
+
+    quads = [m for m in use_valid if len(m) >= 4]
+    if quads:
+        if hand_len == len(quads[0]): return quads[0]
+        remaining = [c for c in hand if c not in quads[0]]
+        if rev:
+            normal_high = sum(1 for c in remaining if c.is_joker or c.val() >= 11)
+            rev_high = sum(1 for c in remaining if not c.is_joker and c.val() <= 5)
+            if normal_high >= rev_high or min_opp_len <= 2: return quads[0]
         else:
-            pass_cnt += 1
-            pass_map[f"seat_{s + 1}"] = True
+            low_count = sum(1 for c in remaining if not c.is_joker and c.val() <= 5)
+            high_count = sum(1 for c in remaining if c.is_joker or c.val() >= 12)
+            if low_count >= high_count or min_opp_len <= 2: return quads[0]
 
-            active = [st for st in range(4) if st not in finished]
-            will_clear = bool(field and (pass_cnt >= len(active) - 1 or pass_cnt >= 3))
+    eight_moves = [m for m in use_valid if any(c.display == '8' for c in m)]
+    if eight_moves and field:
+        if min_opp_len <= 2 or hand_len <= 5: return eight_moves[0]
+        has_multi_followup = any(len(cards) >= 2 for cards in groups.values())
+        if has_multi_followup: return eight_moves[0]
 
-            turn_history.append({
-                "turn": turn_count,
-                "seat": s + 1,
-                "action": "pass",
-                "cards": [],
-                "isCleared": will_clear
-            })
+    if not field:
+        if min_opp_len == 1:
+            multi = [m for m in use_valid if len(m) >= 2]
+            if multi:
+                multi.sort(key=lambda m: (len(m), -m[0].strength(eff_rev)), reverse=True)
+                return multi[0]
 
-        active = [st for st in range(4) if st not in finished]
-        if len(active) <= 1: break
+        triples = [m for m in use_valid if len(m) == 3]
+        if triples:
+            triples.sort(key=lambda m: m[0].strength(eff_rev))
+            return triples[0]
+        pairs = [m for m in use_valid if len(m) == 2]
+        if pairs:
+            pairs.sort(key=lambda m: m[0].strength(eff_rev))
+            return pairs[0]
 
-        if field and (pass_cnt >= len(active) - 1 or pass_cnt >= 3):
-            cleared_cards.extend(current_round_cards)
-            current_round_cards = []
-            field = []
-            is_eb = False
-            pass_cnt = 0
-            for st in range(4): pass_map[f"seat_{st + 1}"] = False
-            if last_seat is not None:
-                curr_seat = last_seat
-                while curr_seat in finished:
-                    curr_seat = (curr_seat + 1) % 4
+    scores = get_nn_scores(hand, field, rev, eb, cleared, model_choice='hi2')
+    cands = use_valid
+
+    best_m, best_s = None, -float('inf')
+    for m in cands:
+        card_sc = [scores[card_to_idx(c)] for c in m if 0 <= card_to_idx(c) < 53]
+        s = sum(card_sc) / max(1, len(card_sc))
+        m_len = len(m)
+        disp = m[0].display if not m[0].is_joker else 'JOKER'
+
+        if m_len >= 4: s += (55.0 * profile['R8_plannedRevolution'])
+        elif m_len == 3: s += (26.0 * profile['R4_leadMulti'])
+        elif m_len == 2: s += (18.0 * profile['R4_leadMulti'])
+        elif m_len == 1:
+            if disp in groups and len(groups[disp]) >= 2: s -= 48.0
+            if m[0].strength(eff_rev) <= 7: s += 10.0
+
+        if is_joker_waste_move(m, hand):
+            s -= 50.0
+
+        if is_field_empty and any(c.display == '8' for c in m) and hand_len > m_len:
+            s -= 45.0
+
+        if s > best_s: best_s, best_m = s, m
+
+    return best_m or use_valid[0]
+
+# [5] 🏛️ 秦の始皇帝 (SHI_HUANGDI)
+def decide_shi_huangdi(seat, hand, field, valid, rev, eb, cleared, all_hands, finished, last_p, pass_cnt):
+    hand = [parse_card_obj(c) for c in hand]
+    field = [parse_card_obj(c) for c in field]
+    if not valid: return None
+
+    profile = get_tactical_profile('SHI_HUANGDI')
+    eff_rev = (rev != eb)
+
+    instant_win = next((m for m in valid if len(m) == len(hand) and not is_forbidden_finish_move(m, eff_rev)), None)
+    if instant_win: return instant_win
+
+    unrevealed = get_unrevealed_cards(hand, field, cleared)
+    endgame_m = solve_endgame_winning_sequence(hand, field, unrevealed, eff_rev, max_depth=6)
+    if endgame_m: return endgame_m
+
+    if len(field) == 1 and field[0].is_joker:
+        spade3 = next((c for c in hand if not c.is_joker and c.suit == '♠' and c.display == '3'), None)
+        if spade3: return [spade3]
+
+    hand_len = len(hand)
+    is_field_empty = (len(field) == 0)
+    other_lens = [len(all_hands[s]) for s in range(4) if s != seat and s not in finished]
+    min_opp_len = min(other_lens) if other_lens else 99
+    is_opp_reach = (min_opp_len <= 2)
+
+    safe_valid = [m for m in valid if not (len(m) == hand_len and is_forbidden_finish_move(m, eff_rev))]
+    use_valid = safe_valid if safe_valid else valid
+
+    if hand_len <= 6 or min_opp_len <= 3:
+        base_sim = SimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
+        win, em = king_solve_exact(base_sim, seat, 0, 6)
+        if win and em: return em
+
+    groups = defaultdict(list)
+    for c in hand:
+        if not c.is_joker: groups[c.display].append(c)
+
+    quads = [m for m in use_valid if len(m) >= 4]
+    if quads:
+        if hand_len == len(quads[0]): return quads[0]
+        remaining = [c for c in hand if c not in quads[0]]
+        if rev:
+            normal_high = sum(1 for c in remaining if c.is_joker or c.val() >= 11)
+            rev_high = sum(1 for c in remaining if not c.is_joker and c.val() <= 5)
+            if normal_high >= rev_high or min_opp_len <= 2: return quads[0]
         else:
-            while True:
-                curr_seat = (curr_seat + 1) % 4
-                if curr_seat not in finished: break
+            low_count = sum(1 for c in remaining if not c.is_joker and c.val() <= 5)
+            high_count = sum(1 for c in remaining if c.is_joker or c.val() >= 12)
+            if low_count >= high_count or min_opp_len <= 2: return quads[0]
 
-    remaining = [st for st in range(4) if st not in finished]
-    if remaining:
-        finished.append(remaining[0])
-        ranks[remaining[0]] = '大貧民'
+    eight_moves = [m for m in use_valid if any(c.display == '8' for c in m)]
+    if eight_moves and field:
+        if is_opp_reach or hand_len <= 5: return eight_moves[0]
+        if evaluate_eight_bridge(eight_moves[0], hand, min_opp_len, is_opp_reach, is_field_empty, profile, eff_rev) > 0: return eight_moves[0]
 
-    rank_vals = {'大富豪': 1, '富豪': 2, '貧民': 3, '大貧民': 4}
+    if not field:
+        if min_opp_len == 1:
+            multi = [m for m in use_valid if len(m) >= 2]
+            if multi:
+                multi.sort(key=lambda m: (len(m), -m[0].strength(eff_rev)), reverse=True)
+                return multi[0]
 
-    seat_results = [{
-        'seat': s + 1,
-        'charId': seat_chars[s],
-        'charName': CHARACTER_NAMES.get(seat_chars[s], seat_chars[s]),
-        'finalRank': rank_vals[ranks[s]],
-        'rankTitle': ranks[s]
-    } for s in range(4)]
+        triples = [m for m in use_valid if len(m) == 3]
+        if triples:
+            triples.sort(key=lambda m: m[0].strength(eff_rev))
+            return triples[0]
+        pairs = [m for m in use_valid if len(m) == 2]
+        if pairs:
+            pairs.sort(key=lambda m: m[0].strength(eff_rev))
+            return pairs[0]
 
-    if collect_steps:
-        rank_map_by_seat = {r['seat']: r['finalRank'] for r in seat_results}
-        title_map_by_seat = {r['seat']: r['rankTitle'] for r in seat_results}
-        for st in game_steps:
-            st['finalRank'] = rank_map_by_seat.get(st['seat'], 4)
-            st['rankTitle'] = title_map_by_seat.get(st['seat'], '大貧民')
-            st['allSeatsFinalRank'] = rank_map_by_seat
+    scores = get_nn_scores(hand, field, rev, eb, cleared, model_choice='gilgamesh')
+    exit_t = identify_exit_ticket(hand)
 
-    rem_cards_map = {f"seat_{s + 1}": serialize_cards(hands[s]) for s in range(4)}
-    episode_record = {
-        "gameId": game_id,
-        "pattern": pattern_name,
-        "totalTurns": turn_count,
-        "seats": seat_results,
-        "remainingCards": rem_cards_map,
-        "playedCardsHistory": turn_history,
-        "timestamp": int(time.time() * 1000)
-    }
+    cands = use_valid
+    if field and hand_len > 3:
+        non_ticket = [m for m in use_valid if not (len(m) == 1 and (m[0].is_joker or (m[0].display == '3' if eff_rev else m[0].display == '2')))]
+        if non_ticket: cands = non_ticket
 
-    return seat_results, episode_record, game_steps
+    best_m, best_s = None, -float('inf')
+    for m in cands:
+        card_sc = [scores[card_to_idx(c)] for c in m if 0 <= card_to_idx(c) < 53]
+        s = sum(card_sc) / max(1, len(card_sc))
+        m_len = len(m)
+        disp = m[0].display if not m[0].is_joker else 'JOKER'
+
+        if m_len >= 4: s += 55.0
+        elif m_len == 3: s += 24.0
+        elif m_len == 2: s += 18.0
+        elif m_len == 1:
+            if disp in groups and len(groups[disp]) >= 2: s -= 48.0
+            if exit_t is not None and exit_t in m:
+                if hand_len >= 4: s -= 45.0
+            elif m[0].strength(eff_rev) <= 8: s += 8.0
+
+        if is_joker_waste_move(m, hand): s -= 60.0
+
+        s += evaluate_eight_bridge(m, hand, min_opp_len, is_opp_reach, is_field_empty, profile, eff_rev)
+        s += evaluate_eleven_back_balance(m, hand, eff_rev, profile)
+
+        if s > best_s: best_s, best_m = s, m
+
+    chosen = best_m or use_valid[0]
+    if should_strategic_pass_on_high_card(chosen, hand, field, eff_rev, min_opp_len, profile):
+        return None
+    return chosen
+
+# [6] 🔮 聖徳太子 (SHOTOKU)
+def decide_shotoku(seat, hand, field, rev, allHands, finished, played, other_lens, last_p, pass_cnt, cleared=None):
+    hand = [parse_card_obj(c) for c in hand]
+    field = [parse_card_obj(c) for c in field]
+    eff_rev = rev
+    valid = get_all_valid_moves(hand, field, eff_rev)
+    if not valid: return None
+
+    profile = get_tactical_profile('SHOTOKU')
+    instant_win = next((m for m in valid if len(m) == len(hand) and not is_forbidden_finish_move(m, eff_rev)), None)
+    if instant_win: return instant_win
+
+    unrevealed = get_unrevealed_cards(hand, field, cleared)
+    endgame_m = solve_endgame_winning_sequence(hand, field, unrevealed, eff_rev, max_depth=5)
+    if endgame_m: return endgame_m
+
+    if len(field) == 1 and field[0].is_joker:
+        spade3 = next((c for c in hand if not c.is_joker and c.suit == '♠' and c.display == '3'), None)
+        if spade3: return [spade3]
+
+    hand_len = len(hand)
+    is_field_empty = (len(field) == 0)
+    min_len = min(other_lens) if other_lens else 99
+    is_opp_reach = (min_len <= 2)
+
+    safe_valid = [m for m in valid if not (len(m) == hand_len and is_forbidden_finish_move(m, eff_rev))]
+    use_valid = safe_valid if safe_valid else valid
+
+    if hand_len <= 6 or min_len <= 3:
+        base_sim = SimGame(allHands, field, rev, False, last_p, pass_cnt, finished)
+        win, em = king_solve_exact(base_sim, seat, 0, 7)
+        if win and em: return em
+
+    groups = defaultdict(list)
+    for c in hand:
+        if not c.is_joker: groups[c.display].append(c)
+
+    quads = [m for m in use_valid if len(m) >= 4]
+    if quads:
+        if rev:
+            normal_high_count = sum(1 for c in hand if c.is_joker or c.val() >= 11)
+            rev_high_count = sum(1 for c in hand if not c.is_joker and c.val() <= 4)
+            if (normal_high_count >= rev_high_count) or (min_len <= 2):
+                return quads[0]
+            elevens = [m for m in use_valid if any(c.display == 'J' for c in m)]
+            if elevens: return elevens[0]
+        else:
+            remaining = [c for c in hand if c not in quads[0]]
+            if not remaining: return quads[0]
+            rev_strong = sum(1 for c in remaining if c.is_joker or c.val() <= 5)
+            rev_weak = sum(1 for c in remaining if not c.is_joker and c.val() >= 9)
+            if rev_strong >= rev_weak or min_len <= 2: return quads[0]
+
+    if not field:
+        if min_len <= 2:
+            multi = [m for m in use_valid if len(m) >= 2]
+            if multi:
+                multi.sort(key=lambda m: (len(m), -m[0].strength(rev)), reverse=True)
+                return multi[0]
+        pairs = [m for m in use_valid if len(m) >= 2]
+        if pairs:
+            pairs.sort(key=lambda m: m[0].strength(rev))
+            return pairs[0]
+
+    if is_opp_reach and field:
+        blockers = [m for m in use_valid if any(c.display == '8' for c in m)]
+        if blockers: return blockers[0]
+
+    safe_moves = [m for m in use_valid if not (len(m) == 1 and not m[0].is_joker and len(groups[m[0].display]) >= 2 and hand_len > 2)]
+    safe_moves = [m for m in safe_moves if not is_joker_waste_move(m, hand)]
+    cands = safe_moves if safe_moves else use_valid
+
+    best_m, best_s = None, -float('inf')
+    for m in cands:
+        s = (len(m) * 100) - m[0].strength(rev)
+        s += evaluate_eight_bridge(m, hand, min_len, is_opp_reach, is_field_empty, profile, eff_rev)
+        s += evaluate_eleven_back_balance(m, hand, rev, profile)
+        if s > best_s:
+            best_s = s
+            best_m = m
+
+    chosen = best_m or cands[0]
+    if field and should_strategic_pass_smart_shotoku(chosen, hand, field, rev, min_len):
+        return None
+    return chosen
+
+# [7] 🛡️ アレク王 (ALEXANDER)
+def decide_alexander_hybrid(seat, hand, field, rev, eb, cleared, all_hands, finished, played, last_p, pass_cnt):
+    hand = [parse_card_obj(c) for c in hand]
+    field = [parse_card_obj(c) for c in field]
+    eff_rev = (rev != eb)
+    valid = get_all_valid_moves(hand, field, eff_rev)
+    if not valid: return None
+
+    profile = get_tactical_profile('ALEXANDER')
+    instant_win = next((m for m in valid if len(m) == len(hand) and not is_forbidden_finish_move(m, eff_rev)), None)
+    if instant_win: return instant_win
+
+    unrevealed = get_unrevealed_cards(hand, field, cleared)
+    endgame_m = solve_endgame_winning_sequence(hand, field, unrevealed, eff_rev, max_depth=7)
+    if endgame_m: return endgame_m
+
+    if len(field) == 1 and field[0].is_joker:
+        spade3 = next((c for c in hand if not c.is_joker and c.suit == '♠' and c.display == '3'), None)
+        if spade3: return [spade3]
+
+    hand_len = len(hand)
+    is_field_empty = (len(field) == 0)
+    other_lens = [len(all_hands[s]) for s in range(4) if s != seat and s not in finished]
+    min_opp_len = min(other_lens) if other_lens else 99
+    is_opp_reach = (min_opp_len <= 2)
+
+    safe_valid = [m for m in valid if not (len(m) == hand_len and is_forbidden_finish_move(m, eff_rev))]
+    use_valid = safe_valid if safe_valid else valid
+
+    if hand_len <= 6 or min_opp_len <= 3:
+        base_sim = SimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
+        win, exact_m = king_solve_exact(base_sim, seat, depth=0, max_depth=7)
+        if win and exact_m: return exact_m
+
+    groups = defaultdict(list)
+    for c in hand:
+        if not c.is_joker: groups[c.display].append(c)
+
+    quads = [m for m in use_valid if len(m) >= 4]
+    if quads:
+        if hand_len == len(quads[0]): return quads[0]
+        remaining = [c for c in hand if c not in quads[0]]
+        if rev:
+            normal_high = sum(1 for c in remaining if c.is_joker or c.val() >= 11)
+            rev_high = sum(1 for c in remaining if not c.is_joker and c.val() <= 5)
+            if normal_high >= rev_high or min_opp_len <= 2: return quads[0]
+        else:
+            low_count = sum(1 for c in remaining if not c.is_joker and c.val() <= 5)
+            high_count = sum(1 for c in remaining if c.is_joker or c.val() >= 12)
+            if low_count >= high_count or min_opp_len <= 2: return quads[0]
+
+    eight_moves = [m for m in use_valid if any(c.display == '8' for c in m)]
+    if eight_moves and field:
+        if is_opp_reach or hand_len <= 5: return eight_moves[0]
+        if evaluate_eight_bridge(eight_moves[0], hand, min_opp_len, is_opp_reach, is_field_empty, profile, eff_rev) > 0: return eight_moves[0]
+
+    if not field:
+        if min_opp_len == 1:
+            multi = [m for m in use_valid if len(m) >= 2]
+            if multi:
+                multi.sort(key=lambda m: (len(m), -m[0].strength(eff_rev)), reverse=True)
+                return multi[0]
+
+        triples = [m for m in use_valid if len(m) == 3]
+        if triples:
+            triples.sort(key=lambda m: m[0].strength(eff_rev))
+            return triples[0]
+        pairs = [m for m in use_valid if len(m) == 2]
+        if pairs:
+            pairs.sort(key=lambda m: m[0].strength(eff_rev))
+            return pairs[0]
+
+    scores = get_nn_scores(hand, field, rev, eb, cleared, model_choice='gilgamesh')
+    cands = [m for m in use_valid if not (len(m) == 1 and not m[0].is_joker and len(groups[m[0].display]) >= 2 and hand_len > 2)]
+    if not cands: cands = use_valid
+
+    best_m, best_s = None, -float('inf')
+    for m in cands:
+        card_sc = [scores[card_to_idx(c)] for c in m if 0 <= card_to_idx(c) < 53]
+        s = sum(card_sc) / max(1, len(card_sc))
+        m_len = len(m)
+        disp = m[0].display if not m[0].is_joker else 'JOKER'
+
+        if m_len >= 4: s += 60.0
+        elif m_len == 3: s += 28.0
+        elif m_len == 2: s += 18.0
+        elif m_len == 1:
+            if disp in groups and len(groups[disp]) >= 2: s -= 45.0
+            if (m[0].is_joker or (m[0].val() <= 4 if eff_rev else m[0].val() >= 13)) and hand_len >= 4 and min_opp_len >= 3:
+                s -= 45.0
+            elif m[0].strength(eff_rev) <= 8: s += 8.0
+
+        if is_joker_waste_move(m, hand): s -= 50.0
+
+        s += evaluate_eight_bridge(m, hand, min_opp_len, is_opp_reach, is_field_empty, profile, eff_rev)
+        s += evaluate_eleven_back_balance(m, hand, eff_rev, profile)
+
+        if s > best_s: best_s, best_m = s, m
+
+    chosen = best_m or use_valid[0]
+    if should_strategic_pass_on_high_card(chosen, hand, field, eff_rev, min_opp_len, profile):
+        return None
+    return chosen
+
+# [8] 🤴 新王 (BEGINNER_AI)
+def decide_young_king(seat, hand, field, valid, rev, eb, cleared, all_hands, finished, last_p, pass_cnt):
+    hand = [parse_card_obj(c) for c in hand]
+    field = [parse_card_obj(c) for c in field]
+    if not valid: return None
+
+    profile = get_tactical_profile('BEGINNER_AI')
+    eff_rev = (rev != eb)
+
+    instant_win = next((m for m in valid if len(m) == len(hand) and not is_forbidden_finish_move(m, eff_rev)), None)
+    if instant_win: return instant_win
+
+    unrevealed = get_unrevealed_cards(hand, field, cleared)
+    endgame_m = solve_endgame_winning_sequence(hand, field, unrevealed, eff_rev, max_depth=4)
+    if endgame_m: return endgame_m
+
+    hand_len = len(hand)
+    is_field_empty = (len(field) == 0)
+    other_lens = [len(all_hands[s]) for s in range(4) if s != seat and s not in finished]
+    min_opp_len = min(other_lens) if other_lens else 99
+
+    safe_valid = [m for m in valid if not (len(m) == hand_len and is_forbidden_finish_move(m, eff_rev))]
+    use_valid = safe_valid if safe_valid else valid
+
+    if hand_len <= 6 or min_opp_len <= 3:
+        base_sim = SimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
+        win, exact_m = king_solve_exact(base_sim, seat, depth=0, max_depth=5)
+        if win and exact_m: return exact_m
+
+    groups = defaultdict(list)
+    for c in hand:
+        if not c.is_joker: groups[c.display].append(c)
+
+    if not field:
+        quads = [m for m in use_valid if len(m) >= 4]
+        if quads: return quads[0]
+        triples = [m for m in use_valid if len(m) == 3]
+        if triples:
+            triples.sort(key=lambda m: m[0].val())
+            return triples[0]
+        pairs = [m for m in use_valid if len(m) == 2]
+        if pairs:
+            pairs.sort(key=lambda m: m[0].val())
+            return pairs[0]
+
+    scores = get_nn_scores(hand, field, rev, eb, cleared, model_choice='hi2')
+    exit_ticket = identify_exit_ticket(hand)
+
+    cands = [m for m in use_valid if not (len(m) == 1 and not m[0].is_joker and len(groups[m[0].display]) >= 2 and hand_len > 2)]
+    if not cands: cands = use_valid
+
+    best_m, best_s = None, -float('inf')
+    for m in cands:
+        card_sc = [scores[card_to_idx(c)] for c in m if 0 <= card_to_idx(c) < 53]
+        s = sum(card_sc) / max(1, len(card_sc))
+        m_len = len(m)
+        disp = m[0].display if not m[0].is_joker else 'JOKER'
+
+        if m_len >= 4: s += 50.0
+        elif m_len == 3: s += 22.0
+        elif m_len == 2: s += 16.0
+        elif m_len == 1:
+            if disp in groups and len(groups[disp]) >= 2: s -= 40.0
+            if exit_ticket is not None and exit_ticket in m:
+                if hand_len >= 4: s -= 40.0
+            elif m[0].val() <= 8: s += 6.0
+
+        if is_joker_waste_move(m, hand):
+            s -= 40.0
+
+        if is_field_empty and any(c.display == '8' for c in m) and hand_len > m_len:
+            s -= 40.0
+        elif not is_field_empty and any(c.display == '8' for c in m) and (min_opp_len <= 3 or hand_len <= 4):
+            s += 18.0
+
+        s += evaluate_hand_formation(m, hand, eff_rev, min_opp_len) * 0.6
+
+        if s > best_s: best_s, best_m = s, m
+
+    chosen = best_m or use_valid[0]
+    if should_strategic_pass_on_high_card(chosen, hand, field, eff_rev, min_opp_len, profile):
+        return None
+    return chosen
 
 # ----------------------------------------------------
-# 6. Web API エンドポイント
+# 6. Web API エンドポイント ＆ セキュリティ防壁
 # ----------------------------------------------------
 app = Flask(__name__)
 CORS(app)
+
+ALLOWED_STATIC_EXTENSIONS = {
+    '.html', '.htm', '.js', '.css', '.png', '.jpg', '.jpeg', '.gif',
+    '.svg', '.ico', '.mp3', '.wav', '.ogg', '.json', '.woff', '.woff2', '.ttf'
+}
+
+FORBIDDEN_KEYWORDS = {
+    'server.py', '.pth', '.pt', '.py', '.env', '.git', '.sh',
+    'logs', '__pycache__', 'simulate_league'
+}
 
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({
         "status": "ok",
-        "model_hi_loaded": model_hi_loaded,
-        "model_hi_name": hi_model_name,
-        "model_super_loaded": model_super_loaded,
-        "model_super_name": super_model_name,
-        "super_in_dim": super_in_dim,
-        "cached_episodes": len(latest_batch_data["episodes"]),
-        "cached_steps": len(latest_batch_data["steps"])
+        "model_hi2_loaded": model_hi2_loaded,
+        "hi2_name": hi2_name,
+        "model_gilgamesh_loaded": model_gilgamesh_loaded,
+        "gilgamesh_name": gilgamesh_name,
+        "model_apex_loaded": model_apex_loaded,
+        "apex_name": apex_name,
+        "active_characters": list(CHARACTER_NAMES.keys())
     })
 
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
-        data = request.get_json()
-        hand_cards = data.get('hand', [])
-        field_cards = data.get('field', [])
-        cleared_cards = data.get('clearedCards', [])
-        valid_moves = data.get('validMoves', [])
-        model_type = data.get('modelType', 'hi')
+        data = request.get_json() or {}
+        hand_raw = data.get('hand', [])
+        field_raw = data.get('field', [])
+        cleared_raw = data.get('clearedCards', [])
+        valid_moves_raw = data.get('validMoves', [])
+        char_id = data.get('charId') or data.get('character') or data.get('modelType', 'SUPER_AI')
         is_rev = data.get('isRevolution', False)
         is_eb = data.get('isElevenBack', False)
+        all_hands_raw = data.get('allHands') or {0: hand_raw, 1: [], 2: [], 3: []}
+        finished = data.get('finishedPlayers', [])
+        played_history = data.get('playedHistory', [])
+        last_seat = data.get('lastSeat', 0)
+        pass_cnt = data.get('passCount', 0)
+        my_seat = int(data.get('seat', data.get('mySeat', 0)))
+
+        hand = [parse_card_obj(c) for c in hand_raw]
+        field = [parse_card_obj(c) for c in field_raw]
+        cleared = [parse_card_obj(c) for c in cleared_raw]
+        all_hands = {int(k): [parse_card_obj(c) for c in v] for k, v in all_hands_raw.items()}
+
+        if my_seat not in all_hands or not all_hands[my_seat]:
+            all_hands[my_seat] = hand
+
+        eff_rev = (is_rev != is_eb)
+
+        valid_moves = [[parse_card_obj(c) for c in m] for m in valid_moves_raw]
+        if not valid_moves:
+            valid_moves = get_all_valid_moves(hand, field, eff_rev)
 
         if not valid_moves:
             return jsonify({"chosenMove": None, "reason": "no_valid_moves"})
 
-        is_super_request = (model_type in ['super', 'mid', 'SUPER_AI', 'MID_AI'])
-        target_model = model_super if is_super_request else model_hi
-        is_loaded = model_super_loaded if is_super_request else model_hi_loaded
-        m_name = super_model_name if is_super_request else hi_model_name
-        req_dim = super_in_dim if is_super_request else hi_in_dim
-        role_name = "超級AI" if is_super_request else "上級AI"
+        char_key = str(char_id).upper()
+        role_name = CHARACTER_NAMES.get(char_key, '超級AI')
+        profile = get_tactical_profile(char_key)
 
-        best_move, best_score = select_best_neural_move(
-            target_model=target_model,
-            is_loaded=is_loaded,
-            required_dim=req_dim,
-            hand=hand_cards,
-            field=field_cards,
-            valid_moves=valid_moves,
-            is_rev=is_rev,
-            is_eb=is_eb,
-            cleared_cards=cleared_cards,
-            is_super=is_super_request
-        )
+        if char_key == 'GILGAMESH':
+            best_move = decide_gilgamesh(my_seat, hand, field, valid_moves, is_rev, is_eb, cleared, all_hands, finished, last_seat, pass_cnt)
+        elif char_key in ['AWAKENED_KING', 'AWAKENED_YOUNG_KING']:
+            best_move = decide_awakened_young_king(my_seat, hand, field, valid_moves, is_rev, is_eb, cleared, all_hands, finished, last_seat, pass_cnt)
+        elif char_key == 'SUPER_AI':
+            best_move = decide_queen_mcts_fair(my_seat, hand, field, is_rev, is_eb, cleared, all_hands, finished, last_seat, pass_cnt)
+        elif char_key == 'KING':
+            best_move = decide_king_apex_direct(my_seat, hand, field, valid_moves, is_rev, is_eb, cleared, all_hands, finished, last_seat, pass_cnt)
+        elif char_key == 'NOBUNAGA':
+            best_move = decide_nobunaga(my_seat, hand, field, valid_moves, is_rev, is_eb, cleared, all_hands, finished, last_seat, pass_cnt)
+        elif char_key == 'SHI_HUANGDI':
+            best_move = decide_shi_huangdi(my_seat, hand, field, valid_moves, is_rev, is_eb, cleared, all_hands, finished, last_seat, pass_cnt)
+        elif char_key == 'SHOTOKU':
+            other_lens = [len(all_hands[s]) for s in range(4) if s != my_seat and s not in finished]
+            best_move = decide_shotoku(my_seat, hand, field, eff_rev, all_hands, finished, played_history, other_lens, last_seat, pass_cnt, cleared)
+        elif char_key == 'ALEXANDER':
+            best_move = decide_alexander_hybrid(my_seat, hand, field, is_rev, is_eb, cleared, all_hands, finished, played_history, last_seat, pass_cnt)
+        elif char_key in ['BEGINNER_AI', 'YOUNG_KING']:
+            best_move = decide_young_king(my_seat, hand, field, valid_moves, is_rev, is_eb, cleared, all_hands, finished, last_seat, pass_cnt)
+        else:
+            unrevealed = get_unrevealed_cards(hand, field, cleared)
+            safe_valid = [m for m in valid_moves if not (len(m) == len(hand) and is_forbidden_finish_move(m, eff_rev))]
+            cands = safe_valid if safe_valid else valid_moves
 
-        ai_name = f"{role_name} ({m_name} / {req_dim}次元)"
-        move_str = ' '.join([f"{c.get('suit', c.get('suitSymbol', ''))}{c.get('rank', c.get('display', ''))}" for c in (best_move or [])])
-        print(f"[推論] {ai_name} -> 出した手: {move_str} (スコア: {best_score:.3f})", flush=True)
+            if profile.get('R14_endgameSolverDepth', 0.5) >= 0.3:
+                endgame_m = solve_endgame_winning_sequence(hand, field, unrevealed, eff_rev, max_depth=4)
+                if endgame_m:
+                    best_move = endgame_m
+                else:
+                    sc = get_nn_scores(hand, field, is_rev, is_eb, cleared, model_choice='hi2')
+                    cand = max(cands, key=lambda m: sum([sc[card_to_idx(c)] for c in m if 0 <= card_to_idx(c) < 53]))
+                    other_lens = [len(all_hands[s]) for s in range(4) if s != my_seat and s not in finished]
+                    min_opp = min(other_lens) if other_lens else 99
+                    if should_strategic_pass_on_high_card(cand, hand, field, eff_rev, min_opp, profile):
+                        best_move = None
+                    else:
+                        best_move = cand
+            else:
+                sc = get_nn_scores(hand, field, is_rev, is_eb, cleared, model_choice='hi2')
+                cand = max(cands, key=lambda m: sum([sc[card_to_idx(c)] for c in m if 0 <= card_to_idx(c) < 53]))
+                other_lens = [len(all_hands[s]) for s in range(4) if s != my_seat and s not in finished]
+                min_opp = min(other_lens) if other_lens else 99
+                if should_strategic_pass_on_high_card(cand, hand, field, eff_rev, min_opp, profile):
+                    best_move = None
+                else:
+                    best_move = cand
+
+        # 親番フォールバック
+        if not field and not best_move and valid_moves:
+            safe_lead = [m for m in valid_moves if not (len(m) == len(hand) and is_forbidden_finish_move(m, eff_rev))]
+            best_move = safe_lead[0] if safe_lead else valid_moves[0]
+
+        res_move = serialize_cards(best_move) if best_move else None
+        move_str = ' '.join([f"{c.suit}{c.display}" for c in (best_move or [])]) if best_move else 'パス'
+        print(f"[推論] {role_name} (席{my_seat}) -> 選択: {move_str}", flush=True)
 
         return jsonify({
-            "chosenMove": best_move,
-            "bestScore": best_score,
-            "modelType": "super" if is_super_request else "hi",
+            "chosenMove": res_move,
+            "charId": char_key,
+            "charName": role_name,
+            "seat": my_seat,
             "status": "success"
         })
     except Exception as e:
         print(f"⚠️ 推論エラー: {e}", flush=True)
-        fallback = valid_moves[0] if valid_moves else None
-        return jsonify({"chosenMove": fallback, "status": "error", "message": str(e)})
+        return jsonify({"chosenMove": None, "status": "error", "message": str(e)})
 
-@app.route('/simulate_batch', methods=['POST'])
-def simulate_batch():
-    data = request.get_json() or {}
-    pattern = data.get('pattern', 'PATTERN_A')
-
-    # パターンごとの標準試合数設定
-    if pattern == 'PATTERN_A':
-        default_games = 1500
-    elif pattern == 'PATTERN_B':
-        default_games = 1000
-    elif pattern == 'PATTERN_C':
-        default_games = 500
-    elif pattern == 'PATTERN_D':
-        default_games = 500
-    else:
-        default_games = 500
-
-    total_games = int(data.get('totalGames', default_games))
-
-    def generate_progress():
-        global latest_batch_data
-        print(f"\n🚀 [シミュレーション開始] パターン: {pattern} ({total_games}試合・毎試合完全シャッフル)...", flush=True)
-        print(f"   使用モデル状況: 超級={'OK (' + str(super_model_name) + ' / ' + str(super_in_dim) + '次元)' if model_super_loaded else '未ロード'} / 上級={'OK (' + str(hi_model_name) + ')' if model_hi_loaded else '未ロード'}", flush=True)
-        start_t = time.time()
-
-        # 出場キャラクターのサマリー枠
-        if pattern == 'PATTERN_A':
-            expected_chars = ['SUPER_AI', 'KING']
-        elif pattern == 'PATTERN_B':
-            expected_chars = ['SUPER_AI', 'BEGINNER_AI', 'KING', 'MERCHANT']
-        elif pattern == 'PATTERN_C':
-            expected_chars = ['SUPER_AI', 'DUKE', 'MARQUIS', 'COUNT', 'KNIGHT']
-        elif pattern == 'PATTERN_D':
-            expected_chars = ALL_12_CHARACTERS
-        else:
-            expected_chars = ['SUPER_AI']
-
-        stats = {
-            cid: {
-                'name': CHARACTER_NAMES.get(cid, cid),
-                'icon': CHARACTER_ICONS.get(cid, '👤'),
-                'games': 0, 'df': 0, 'f': 0, 'h': 0, 'dh': 0, 'rankSum': 0
-            }
-            for cid in expected_chars
-        }
-
-        latest_batch_data = {
-            "episodes": [],
-            "steps": []
-        }
-
-        update_interval = 25
-
-        # パターンD用：12キャラ完全均等プール（各キャラがほぼ同数になるよう制御）
-        char_pool = []
-
-        try:
-            for g in range(1, total_games + 1):
-                if pattern == 'PATTERN_A':
-                    # パターンA（最重要：1,500試合）: 超級AI × 2 ＋ 王 × 2
-                    seat_chars = ['SUPER_AI', 'SUPER_AI', 'KING', 'KING']
-
-                elif pattern == 'PATTERN_B':
-                    # パターンB（混戦実戦：1,000試合）: 超級AI ＋ 上級AI ＋ 王 ＋ 商人
-                    seat_chars = ['SUPER_AI', 'BEGINNER_AI', 'KING', 'MERCHANT']
-
-                elif pattern == 'PATTERN_C':
-                    # パターンC（汎用戦：500試合）: 超級AI × 2 ＋ 公爵・侯爵・伯爵・騎士からランダム2人
-                    picked_two = random.sample(['DUKE', 'MARQUIS', 'COUNT', 'KNIGHT'], 2)
-                    seat_chars = ['SUPER_AI', 'SUPER_AI', picked_two[0], picked_two[1]]
-
-                elif pattern == 'PATTERN_D':
-                    # パターンD（練習試合：500試合）: 全12人から均等選出
-                    if len(char_pool) < 4:
-                        new_block = list(ALL_12_CHARACTERS)
-                        random.shuffle(new_block)
-                        char_pool.extend(new_block)
-                    seat_chars = [char_pool.pop(0) for _ in range(4)]
-
-                else:
-                    seat_chars = ['SUPER_AI', 'SUPER_AI', 'SUPER_AI', 'SUPER_AI']
-
-                # すべての座席を毎試合完全にランダムシャッフル
-                random.shuffle(seat_chars)
-
-                seat_results, episode_rec, game_steps = run_single_game_fast(seat_chars, pattern_name=pattern, collect_steps=True)
-
-                latest_batch_data["episodes"].append(episode_rec)
-                latest_batch_data["steps"].extend(game_steps)
-
-                for item in seat_results:
-                    cid = item['charId']
-                    r = item['finalRank']
-                    if cid not in stats:
-                        stats[cid] = {
-                            'name': CHARACTER_NAMES.get(cid, cid),
-                            'icon': CHARACTER_ICONS.get(cid, '👤'),
-                            'games': 0, 'df': 0, 'f': 0, 'h': 0, 'dh': 0, 'rankSum': 0
-                        }
-                    stats[cid]['games'] += 1
-                    if r == 1: stats[cid]['df'] += 1
-                    elif r == 2: stats[cid]['f'] += 1
-                    elif r == 3: stats[cid]['h'] += 1
-                    elif r == 4: stats[cid]['dh'] += 1
-                    stats[cid]['rankSum'] += r
-
-                if g % update_interval == 0 or g == total_games:
-                    pct = round((g / total_games) * 100, 1)
-                    now_elapsed = round(time.time() - start_t, 1)
-                    progress_payload = json.dumps({
-                        "type": "progress",
-                        "current": g,
-                        "total": total_games,
-                        "pct": pct,
-                        "elapsed": now_elapsed,
-                        "superModel": f"{super_model_name} ({super_in_dim}次元)",
-                        "hiModel": f"{hi_model_name} ({hi_in_dim}次元)"
-                    })
-                    yield f"{progress_payload}\n"
-
-            elapsed = time.time() - start_t
-            filtered_stats = {k: v for k, v in stats.items() if v['games'] > 0}
-            print(f"🎉 [シミュレーション完了] 所要時間: {elapsed:.2f}秒 (総ステップ数: {len(latest_batch_data['steps'])}手)", flush=True)
-
-            complete_payload = json.dumps({
-                "type": "complete",
-                "status": "success",
-                "pattern": pattern,
-                "totalGames": total_games,
-                "totalSteps": len(latest_batch_data['steps']),
-                "elapsedSeconds": round(elapsed, 2),
-                "superModel": f"{super_model_name} ({super_in_dim}次元)",
-                "hiModel": f"{hi_model_name} ({hi_in_dim}次元)",
-                "results": filtered_stats,
-                "isFixedSeats": False
-            })
-            yield f"{complete_payload}\n"
-
-        except Exception as sim_err:
-            print(f"❌ [シミュレーション例外発生]: {sim_err}", flush=True)
-            err_payload = json.dumps({"type": "error", "message": str(sim_err)})
-            yield f"{err_payload}\n"
-
-    return Response(stream_with_context(generate_progress()), mimetype='application/x-ndjson')
-
-@app.route('/download_json', methods=['GET'])
-def download_json():
+@app.route('/save_practice_log', methods=['POST'])
+def save_practice_log():
     try:
-        content = json.dumps(latest_batch_data, ensure_ascii=False, indent=2)
-        filename = f"royal_daifugo_batch_{int(time.time())}.json"
-        return Response(
-            content,
-            mimetype="application/json",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
-        )
+        data = request.get_json() or {}
+        filename = data.get('filename')
+        content = data.get('content')
+        if not filename or content is None:
+            return jsonify({"status": "error", "message": "パラメータ不足"}), 400
+
+        safe_filename = os.path.basename(filename)
+        _, ext = os.path.splitext(safe_filename)
+        ext_lower = ext.lower()
+
+        if ext_lower not in {'.jsonl', '.csv', '.json'}:
+            return jsonify({"status": "error", "message": "無効なファイル形式です（.jsonl, .csv, .json のみ許可）"}), 400
+
+        if len(content) > 10 * 1024 * 1024:
+            return jsonify({"status": "error", "message": "ファイルサイズ上限（10MB）を超過しています"}), 413
+
+        logs_dir = os.path.join(BASE_DIR, 'logs')
+        os.makedirs(logs_dir, exist_ok=True)
+        save_path = os.path.join(logs_dir, safe_filename)
+        with open(save_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        print(f"💾 [PC直接保存成功] {safe_filename} ({len(content)} bytes)", flush=True)
+        return jsonify({"status": "success", "filename": safe_filename})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/download_jsonl', methods=['GET'])
-def download_jsonl():
-    try:
-        lines = [json.dumps(s, ensure_ascii=False) for s in latest_batch_data["steps"]]
-        content = "\n".join(lines)
-        filename = f"royal_daifugo_steps_{int(time.time())}.jsonl"
-        return Response(
-            content,
-            mimetype="application/x-ndjson",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
-        )
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-@app.route('/latest_simulation_data', methods=['GET'])
-def latest_simulation_data():
-    try:
-        recent_episodes = latest_batch_data["episodes"][-100:]
-        recent_game_ids = set(ep["gameId"] for ep in recent_episodes)
-        recent_steps = [s for s in latest_batch_data["steps"] if s["gameId"] in recent_game_ids]
-        return jsonify({
-            "status": "success",
-            "totalEpisodes": len(latest_batch_data["episodes"]),
-            "totalSteps": len(latest_batch_data["steps"]),
-            "episodes": recent_episodes,
-            "steps": recent_steps
-        })
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-# ----------------------------------------------------
-# 7. 静的Web配信ルート（APIルートの後に配置）
-# ----------------------------------------------------
 @app.route('/', methods=['GET'])
 def serve_index():
     return send_from_directory(BASE_DIR, 'index.html')
 
 @app.route('/<path:path>', methods=['GET'])
 def serve_static(path):
-    return send_from_directory(BASE_DIR, path)
+    normalized = path.replace('\\', '/').strip('/')
+    parts = normalized.split('/')
+    for part in parts:
+        part_lower = part.lower()
+        if any(fk in part_lower for fk in FORBIDDEN_KEYWORDS):
+            abort(403)
+        if part_lower.startswith('.'):
+            abort(403)
+
+    _, ext = os.path.splitext(normalized)
+    ext_lower = ext.lower()
+    
+    if ext_lower and ext_lower not in ALLOWED_STATIC_EXTENSIONS:
+        abort(403)
+
+    full_target = os.path.abspath(os.path.join(BASE_DIR, normalized))
+    if not full_target.startswith(BASE_DIR):
+        abort(403)
+
+    if not os.path.exists(full_target) or os.path.isdir(full_target):
+        abort(404)
+
+    return send_from_directory(BASE_DIR, normalized)
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     print("=======================================================", flush=True)
-    print("🚀 大富豪 上級AI(110次元)・超級AI(163次元 完全体・シミュレーターETA追跡版 v2.2.2)推論 ＆ シミュレーションサーバー", flush=True)
-    print(f"   ポート: {port} / 稼働開始", flush=True)
+    print("👑 大富豪 ROYAL CARD GAME サーバー (本格競技ルール ＆ APEX-v3対応版)", flush=True)
+    print(f"   ポート: {port} で稼働開始", flush=True)
+    print(f"   👑 ギルガメッシュ: 【全知全能透視 15,000回MCTS ＆ 終盤確定詰み】", flush=True)
+    print(f"   🤴 覚醒新王    : 【APEX-v3直感 × 7,500回MCTS ＆ 手札形成フル ＆ 確定詰み】", flush=True)
+    print(f"   🏰 王          : 【APEX-v3直感 × 深さ5詰み ＆ 手札形成0.8 ＆ リーチ絶対防衛動員】", flush=True)
+    print(f"   🤴 新王        : 【俊英マルチ × 手札形成0.6 ＆ 深さ5詰み】", flush=True)
+    print(f"   ⚔️ 織田信長    : 【親番三段撃ち電撃速攻 ＆ 8架け橋キルコンボ】", flush=True)
+    print(f"   👸 女王        : 【正統派不完全情報 5,000回MCTS ＆ 終盤確定詰み】", flush=True)
+    print(f"   🔮 聖徳太子    : 【真・完全傾聴 ＆ 大調和11バック活用 ＆ 確定詰み】", flush=True)
+    print(f"   🏛️ 秦の始皇帝  : 【法家統制手札圧縮 ＆ 11自滅抑制 ＆ 深さ6確定詰み】", flush=True)
+    print(f"   🛡️ アレク王    : 【ファランクス重装突撃 ＆ 8架け橋 ＆ 深さ7確定詰み】", flush=True)
+    print(f"   ⚙️ 制御基盤    : 【全18キャラ CHARACTER_TACTICAL_PROFILES 完全同期】", flush=True)
     print("=======================================================", flush=True)
     app.run(host='0.0.0.0', port=port, debug=False)
-

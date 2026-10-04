@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>大富豪王 2026 - ROYAL CARD GAME PROLOGUE</title>
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-style" content="black-translucent">
+  <meta name="theme-color" content="#03060c">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Noto+Serif+JP:wght@400;600;700;900&family=Playfair+Display:ital,wght@1,700;1,900&display=swap" rel="stylesheet">
+
+  <style>
+    /* ============================================================
+     * ROYAL CARD GAME - CINEMATIC HIGH LUXURY PROLOGUE STYLES
+     * [Royal Velvet & 3D Carousel Edition]
+     * ============================================================ */
+    :root {
+      --gold-primary: #d4af37;
+      --gold-bright: #ffd700;
+      --gold-light: #fff5b8;
+      --gold-deep: #9a781b;
+      --crimson-royal: #6b0c16;
+      --crimson-dark: #2b0307;
+      --ink-black: #111418;
+      --ink-red: #ab1515;
+      --letterbox-h: clamp(24px, 4.8vh, 42px);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+      background: #020408;
+      color: #f1f5f9;
+      font-family: 'Cinzel', 'Noto Serif JP', serif;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+      touch-action: manipulation;
+    }
+
+    /* 上下シネマスコープ・ブラックレターボックス */
+    .cinema-letterbox {
+      width: 100%;
+      height: var(--letterbox-h);
+      background: linear-gradient(180deg, #000000 0%, #060910 100%);
+      z-index: 1000;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 clamp(12px, 3vw, 24px);
+      box-sizing: border-box;
+      border-bottom: 1.2px solid rgba(212, 175, 55, 0.4);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.9);
+    }
+    footer.cinema-letterbox {
+      border-bottom: none;
+      border-top: 1.2px solid rgba(212, 175, 55, 0.4);
+      background: linear-gradient(0deg, #000000 0%, #060910 100%);
+    }
+
+    .letterbox-brand {
+      font-size: clamp(10px, 1.8vw, 12px);
+      letter-spacing: 3px;
+      color: var(--gold-bright);
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+    }
+    .letterbox-brand .fleur-icon {
+      font-size: 14px;
+      color: var(--gold-light);
+      filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.9));
+    }
+
+    .btn-skip-top {
+      background: linear-gradient(180deg, rgba(38, 54, 82, 0.85) 0%, rgba(16, 24, 38, 0.95) 100%);
+      border: 1.2px solid rgba(212, 175, 55, 0.7);
+      color: var(--gold-light);
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      letter-spacing: 1.5px;
+      outline: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), inset 0 0 6px rgba(212, 175, 55, 0.2);
+    }
+    .btn-skip-top:hover {
+      background: linear-gradient(180deg, rgba(54, 78, 118, 0.95) 0%, rgba(24, 38, 62, 1) 100%);
+      border-color: #ffffff;
+      color: #ffffff;
+      box-shadow: 0 0 16px rgba(255, 215, 0, 0.9);
+      transform: translateY(-1px);
+    }
+
+    /* 映画的ステージキャンバス */
+    .cinema-stage {
+      flex: 1 1 auto;
+      width: 100%;
+      max-width: 920px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      padding: 4px 16px;
+      box-sizing: border-box;
+    }
+
+    /* 重厚な王宮ビロード（漆黒・深紅・金箔オーラ）背景レイヤー */
+    .royal-velvet-backdrop {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 50% 28%, rgba(145, 16, 28, 0.58) 0%, transparent 68%),
+        radial-gradient(circle at 50% 75%, rgba(15, 28, 52, 0.75) 0%, transparent 75%),
+        radial-gradient(ellipse at center, #070d18 0%, #020408 100%);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* 背景を彩る大富豪のリアル特殊役・シネマティック光彩バナー */
+    .bg-gimmick-shimmer {
+      position: absolute;
+      font-family: 'Cinzel', serif;
+      font-size: clamp(40px, 8vw, 72px);
+      font-weight: 900;
+      letter-spacing: 6px;
+      color: rgba(255, 215, 0, 0.045);
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 2;
+      animation: gimmickSlide 16s linear infinite;
+    }
+    @keyframes gimmickSlide {
+      0% { transform: translateY(-40px) translateX(-20%); opacity: 0; }
+      20% { opacity: 0.8; }
+      80% { opacity: 0.8; }
+      100% { transform: translateY(40px) translateX(20%); opacity: 0; }
+    }
+
+    /* 各幕（ACT）コンテナ */
+    .act-scene {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 16px;
+      opacity: 0;
+      visibility: hidden;
+      transform: scale(0.95) translateY(10px);
+      transition: opacity 0.85s cubic-bezier(0.2, 0.85, 0.25, 1), transform 0.85s cubic-bezier(0.2, 0.85, 0.25, 1);
+      z-index: 10;
+      box-sizing: border-box;
+      pointer-events: none;
+      text-align: center;
+    }
+
+    .act-scene.active {
+      opacity: 1;
+      visibility: visible;
+      transform: scale(1) translateY(0);
+      pointer-events: auto;
+    }
+
+    /* ============================================================
+     * ACT 0: 荘厳なる創生（最高峰テキストロゴ ＆ 3Dリアルファン）
+     * ============================================================ */
+    .emperor-crest-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .emperor-crown-glyph {
+      font-size: clamp(36px, 6vh, 48px);
+      color: #ffd700;
+      line-height: 1;
+      filter: drop-shadow(0 0 20px rgba(255, 215, 0, 1)) drop-shadow(0 0 35px rgba(255, 243, 168, 0.8));
+      animation: crestFloat 3.2s infinite alternate ease-in-out;
+    }
+    @keyframes crestFloat {
+      0% { transform: translateY(0) scale(0.96); filter: drop-shadow(0 0 16px rgba(212, 175, 55, 0.8)); }
+      100% { transform: translateY(-6px) scale(1.05); filter: drop-shadow(0 0 32px rgba(255, 215, 0, 1)); }
+    }
+
+    .grand-title-typography {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      margin-bottom: 8px;
+    }
+    .grand-title-sub {
+      font-size: clamp(9.5px, 1.6vw, 12px);
+      letter-spacing: 8px;
+      font-weight: 800;
+      color: #cbd5e1;
+      text-transform: uppercase;
+      opacity: 0.85;
+      text-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+    }
+    .grand-title-main {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(28px, 5.8vw, 50px);
+      font-weight: 900;
+      letter-spacing: 4px;
+      background: linear-gradient(180deg, #ffffff 0%, #fff6bf 35%, #ffd700 65%, #b38612 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 25px rgba(212, 175, 55, 0.75));
+      line-height: 1.1;
+      text-align: center;
+    }
+    .grand-title-kanji {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(13px, 2.4vw, 17px);
+      font-weight: 900;
+      letter-spacing: 12px;
+      color: #fffadb;
+      margin-top: -2px;
+      text-shadow: 0 0 12px rgba(255, 215, 0, 0.8), 0 2px 6px rgba(0,0,0,0.9);
+      padding-left: 12px;
+    }
+
+    .cards-fan-3d {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 120px;
+      margin: 4px 0 10px 0;
+      perspective: 1000px;
+      position: relative;
+    }
+
+    .pure-royal-card {
+      width: 64px;
+      height: 92px;
+      background: radial-gradient(ellipse at 50% 45%, #fffdf6 0%, #f7f2e5 75%, #ece3ce 100%);
+      border-radius: 5px;
+      border: 1.2px solid rgba(180, 145, 45, 0.85);
+      box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.9),
+        0 0 14px rgba(212, 175, 55, 0.4),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.95),
+        inset 0 0 0 2px rgba(212, 175, 55, 0.35);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 3px 4px;
+      user-select: none;
+      position: absolute;
+      transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+      box-sizing: border-box;
+    }
+    .pure-royal-card .card-corner {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      line-height: 0.95;
+      font-weight: 900;
+    }
+    .pure-royal-card .corner-suit { font-size: 11px; }
+    .pure-royal-card .corner-rank { font-family: 'Cinzel', serif; font-size: 13px; letter-spacing: -0.5px; }
+    .pure-royal-card .card-watermark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 26px;
+      color: rgba(180, 145, 45, 0.15);
+      line-height: 1;
+      pointer-events: none;
+    }
+
+    .pure-royal-card.spade, .pure-royal-card.club { color: var(--ink-black); }
+    .pure-royal-card.heart, .pure-royal-card.diamond { color: var(--ink-red); }
+
+    .pure-royal-card.joker-sun {
+      background: radial-gradient(ellipse at center, #fffdf2 0%, #f9f1d2 60%, #eedaa2 100%);
+      border: 1.5px solid #d4af37;
+      color: #9a6f11;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.9), 0 0 25px rgba(255, 215, 0, 0.7);
+    }
+    .pure-royal-card.joker-sun .corner-rank { font-size: 7px; }
+    .pure-royal-card.joker-sun .card-center-symbol {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 22px;
+      color: #c4951a;
+      filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.9));
+    }
+
+    .pure-royal-card.joker-moon {
+      background: radial-gradient(ellipse at center, #f8f6fc 0%, #e8ddf5 60%, #cfc0e3 100%);
+      border: 1.5px solid #9c7bba;
+      color: #5c3c7e;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.9), 0 0 25px rgba(186, 104, 200, 0.7);
+    }
+    .pure-royal-card.joker-moon .corner-rank { font-size: 7px; }
+    .pure-royal-card.joker-moon .card-center-symbol {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 22px;
+      color: #7b4397;
+      filter: drop-shadow(0 0 6px rgba(186, 104, 200, 0.9));
+    }
+
+    .fan-card-1 { transform: translateX(-95px) translateY(12px) rotate(-22deg); z-index: 1; }
+    .fan-card-2 { transform: translateX(-48px) translateY(2px) rotate(-11deg); z-index: 2; }
+    .fan-card-3 { transform: translateX(0px) translateY(-8px) rotate(0deg) scale(1.08); z-index: 5; }
+    .fan-card-4 { transform: translateX(48px) translateY(2px) rotate(11deg); z-index: 3; }
+    .fan-card-5 { transform: translateX(95px) translateY(12px) rotate(22deg); z-index: 1; }
+
+    /* ============================================================
+     * ACT 1〜3 共通ヘッダー ＆ モード特色エンブレムバッジ
+     * ============================================================ */
+    .act-header-tag {
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      color: var(--gold-bright);
+      padding: 3px 16px;
+      border: 1.5px solid rgba(212, 175, 55, 0.7);
+      border-radius: 20px;
+      background: linear-gradient(180deg, rgba(32, 20, 10, 0.95) 0%, rgba(10, 16, 28, 0.98) 100%);
+      margin-bottom: 6px;
+      box-shadow: 0 0 16px rgba(212, 175, 55, 0.45), inset 0 0 8px rgba(255, 215, 0, 0.25);
+    }
+
+    .act-title {
+      font-size: clamp(19px, 3.4vw, 26px);
+      font-weight: 900;
+      color: #fffadb;
+      letter-spacing: 1.5px;
+      margin-bottom: 6px;
+      text-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 2px 8px rgba(0, 0, 0, 0.95);
+      line-height: 1.25;
+    }
+
+    /* 各モードの象徴ギミック・ハイライトバッジ */
+    .mode-feature-highlight-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: clamp(10.5px, 1.8vw, 12px);
+      font-weight: 800;
+      color: #ffffff;
+      background: linear-gradient(90deg, rgba(212, 175, 55, 0.25) 0%, rgba(212, 175, 55, 0.05) 100%);
+      border: 1.2px solid var(--gold-bright);
+      border-radius: 4px;
+      padding: 3px 12px;
+      margin-bottom: 6px;
+      box-shadow: 0 0 12px rgba(212, 175, 55, 0.4);
+    }
+    .badge-icon { font-size: 13px; }
+
+    /* ============================================================
+     * 3D円軌道・回転カルーセルステージ（順繰りローテーション）
+     * ============================================================ */
+    .carousel-3d-stage {
+      width: 100%;
+      max-width: 520px;
+      height: clamp(135px, 22vh, 165px);
+      position: relative;
+      margin: 4px 0 6px 0;
+      perspective: 1000px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .carousel-track {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 3D座席ポジション（左・中央主役・右・奥待機） */
+    .carousel-card-node {
+      position: absolute;
+      width: clamp(80px, 15vw, 108px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: linear-gradient(180deg, rgba(38, 28, 14, 0.96) 0%, rgba(12, 16, 26, 0.98) 100%);
+      border: 2px solid var(--gold-bright);
+      border-radius: 8px;
+      padding: 4px;
+      box-shadow:
+        0 10px 28px rgba(0, 0, 0, 0.95),
+        0 0 18px rgba(212, 175, 55, 0.55),
+        inset 0 0 10px rgba(255, 215, 0, 0.25);
+      transition: transform 0.75s cubic-bezier(0.2, 0.85, 0.25, 1), opacity 0.75s ease, border-color 0.75s ease;
+      cursor: pointer;
+      box-sizing: border-box;
+      will-change: transform, opacity;
+    }
+
+    .carousel-card-node.seat-left {
+      transform: translateX(-120px) translateZ(-40px) rotateY(20deg) scale(0.88);
+      opacity: 0.65;
+      z-index: 5;
+    }
+    .carousel-card-node.seat-center {
+      transform: translateX(0px) translateZ(50px) rotateY(0deg) scale(1.08);
+      opacity: 1;
+      z-index: 10;
+      border-color: #ffffff;
+      box-shadow:
+        0 14px 35px rgba(0, 0, 0, 0.95),
+        0 0 30px rgba(255, 215, 0, 0.95),
+        inset 0 0 14px rgba(255, 243, 168, 0.5);
+    }
+    .carousel-card-node.seat-right {
+      transform: translateX(120px) translateZ(-40px) rotateY(-20deg) scale(0.88);
+      opacity: 0.65;
+      z-index: 5;
+    }
+    .carousel-card-node.seat-back {
+      transform: translateX(0px) translateZ(-140px) scale(0.65);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .node-portrait {
+      width: 100%;
+      height: clamp(88px, 14.5vh, 116px);
+      aspect-ratio: 2 / 3;
+      object-fit: cover;
+      border-radius: 4px;
+      border: 1.2px solid rgba(212, 175, 55, 0.8);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.85);
+      background: #0d1522;
+      display: block;
+    }
+
+    .node-name-bar {
+      font-size: clamp(9px, 1.7vw, 10.5px);
+      font-weight: 900;
+      color: #fffadb;
+      margin-top: 3px;
+      white-space: nowrap;
+      letter-spacing: 0.5px;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+    }
+
+    /* ============================================================
+     * 主役キャラの「特徴がひと目で伝わる」戦術名台詞ポップアップ
+     * ============================================================ */
+    .character-tactics-plate {
+      width: 100%;
+      max-width: 580px;
+      background: linear-gradient(90deg, rgba(20, 10, 5, 0.92) 0%, rgba(45, 28, 12, 0.95) 50%, rgba(20, 10, 5, 0.92) 100%);
+      border: 1.5px solid var(--gold-bright);
+      border-radius: 6px;
+      padding: 6px 14px;
+      margin-bottom: 6px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.85), inset 0 0 10px rgba(255, 215, 0, 0.2);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      transition: all 0.35s ease;
+      min-height: 48px;
+      justify-content: center;
+    }
+
+    .tactics-role-ribbon {
+      font-size: 10px;
+      font-weight: 900;
+      color: #ffd700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      text-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
+    }
+    .tactics-quote-text {
+      font-size: clamp(12px, 2.1vw, 14px);
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: 0.5px;
+      line-height: 1.35;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
+    }
+    .tactics-quote-text::before { content: "「"; color: var(--gold-light); }
+    .tactics-quote-text::after { content: "」"; color: var(--gold-light); }
+
+    /* キャプション枠（羊皮紙×金箔装飾） */
+    .act-caption-box {
+      max-width: 600px;
+      background: linear-gradient(180deg, rgba(18, 28, 48, 0.95) 0%, rgba(8, 14, 24, 0.98) 100%);
+      border: 1.5px solid rgba(212, 175, 55, 0.55);
+      border-radius: 8px;
+      padding: 8px 18px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.9), inset 0 0 14px rgba(212, 175, 55, 0.16);
+      margin-bottom: 4px;
+    }
+    .act-quote {
+      font-size: clamp(12.5px, 2.1vw, 14px);
+      color: #f8fafc;
+      line-height: 1.5;
+      font-weight: 600;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
+    }
+    .act-quote strong {
+      color: var(--gold-bright);
+      font-weight: 900;
+      text-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+    }
+    .act-sub-feature {
+      font-size: 11px;
+      color: #cbd5e1;
+      margin-top: 5px;
+      letter-spacing: 0.5px;
+      border-top: 1px dashed rgba(212, 175, 55, 0.35);
+      padding-top: 4px;
+    }
+
+    /* ============================================================
+     * ACT 4: エピローグ＆出陣
+     * ============================================================ */
+    .grand-gate-plate {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      max-width: 560px;
+    }
+    .gate-fleur-emblem {
+      font-size: clamp(48px, 9vh, 72px);
+      color: var(--gold-bright);
+      filter: drop-shadow(0 0 35px rgba(255, 215, 0, 1)) drop-shadow(0 0 50px rgba(255, 243, 168, 0.8));
+      animation: gatePulse 2.0s infinite alternate ease-in-out;
+      line-height: 1;
+    }
+    @keyframes gatePulse {
+      0% { transform: scale(0.95); filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.8)); }
+      100% { transform: scale(1.08); filter: drop-shadow(0 0 45px rgba(255, 215, 0, 1)); }
+    }
+
+    /* 黄金入城ボタン */
+    .btn-enter-palace {
+      background: linear-gradient(180deg, #ffffff 0%, #fff2a3 30%, #d4af37 70%, #8c6812 100%);
+      color: #06090f;
+      font-family: 'Cinzel', 'Noto Serif JP', serif;
+      font-size: clamp(16px, 2.9vw, 19px);
+      font-weight: 900;
+      letter-spacing: 3px;
+      padding: 13px 44px;
+      border: 2px solid #ffffff;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 0 35px rgba(255, 215, 0, 1), 0 8px 24px rgba(0, 0, 0, 0.95);
+      transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+      outline: none;
+      animation: enterBtnGlow 1.6s infinite alternate ease-in-out;
+      margin-top: 6px;
+    }
+    @keyframes enterBtnGlow {
+      0% { box-shadow: 0 0 20px rgba(212, 175, 55, 0.8), 0 4px 14px rgba(0,0,0,0.8); }
+      100% { box-shadow: 0 0 45px rgba(255, 215, 0, 1), 0 0 60px rgba(255, 243, 168, 0.9), 0 8px 24px rgba(0,0,0,0.9); transform: scale(1.03); }
+    }
+    .btn-enter-palace:hover {
+      background: linear-gradient(180deg, #ffffff 0%, #ffe480 50%, #b8860b 100%);
+      transform: translateY(-2px) scale(1.06);
+    }
+    .btn-enter-palace:active {
+      transform: translateY(1px) scale(0.98);
+    }
+
+    /* 下部シネマコントローラー */
+    .cinema-controls-bottom {
+      width: 100%;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      box-sizing: border-box;
+      z-index: 100;
+      max-width: 920px;
+    }
+
+    .step-dots-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .step-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: rgba(212, 175, 55, 0.25);
+      border: 1.2px solid rgba(212, 175, 55, 0.65);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .step-dot.active {
+      width: 24px;
+      border-radius: 5px;
+      background: var(--gold-bright);
+      box-shadow: 0 0 14px var(--gold-bright);
+      border-color: #ffffff;
+    }
+
+    .tap-guide-prompt {
+      font-size: 11.5px;
+      color: rgba(255, 243, 168, 0.85);
+      letter-spacing: 1.5px;
+      animation: promptBlink 1.8s infinite alternate ease-in-out;
+    }
+    @keyframes promptBlink {
+      0% { opacity: 0.35; }
+      100% { opacity: 1; }
+    }
+
+    /* 金粉パーティクル */
+    .gold-particle {
+      position: absolute;
+      top: -10px;
+      background: radial-gradient(circle, #fffadb 0%, #ffd700 70%, transparent 100%);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 4;
+      animation: particleFall linear infinite;
+    }
+    @keyframes particleFall {
+      0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+      20% { opacity: 1; }
+      80% { opacity: 0.9; }
+      100% { transform: translateY(105vh) rotate(360deg); opacity: 0; }
+    }
+
+    @media (max-width: 600px) {
+      .act-title { font-size: 17.5px; }
+      .act-quote { font-size: 11.5px; }
+      .act-caption-box { padding: 6px 12px; }
+      .carousel-3d-stage { height: 130px; }
+      .carousel-card-node { width: 72px; }
+      .node-portrait { height: 86px; }
+      .btn-enter-palace { padding: 11px 28px; font-size: 14.5px; }
+      .pure-royal-card { width: 54px; height: 78px; }
+      .fan-card-1 { transform: translateX(-70px) translateY(10px) rotate(-22deg); }
+      .fan-card-2 { transform: translateX(-35px) translateY(2px) rotate(-11deg); }
+      .fan-card-4 { transform: translateX(35px) translateY(2px) rotate(11deg); }
+      .fan-card-5 { transform: translateX(70px) translateY(10px) rotate(22deg); }
+      .carousel-card-node.seat-left { transform: translateX(-85px) translateZ(-35px) scale(0.85); }
+      .carousel-card-node.seat-right { transform: translateX(85px) translateZ(-35px) scale(0.85); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 上部レターボックス -->
+  <header class="cinema-letterbox">
+    <div class="letterbox-brand">
+      <span class="fleur-icon">⚜</span>
+      <span>ROYAL CARD GAME</span>
+    </div>
+    <button type="button" class="btn-skip-top" id="btn-skip" title="スキップして本編へ">SKIP ▶▶</button>
+  </header>
+
+  <!-- 映画的ステージキャンバス -->
+  <main class="cinema-stage" id="cinema-stage">
+    <div class="royal-velvet-backdrop"></div>
+    <div class="bg-gimmick-shimmer">REVOLUTION ◆ EIGHT STOP ◆ SPADE 3 COUNTER</div>
+
+    <!-- ======================================================== -->
+    <!-- ACT 0: プロローグ（漆黒からの創生・独自立体碑文ロゴ）      -->
+    <!-- ======================================================== -->
+    <section class="act-scene active" id="act-0">
+      <div class="emperor-crest-box">
+        <div class="emperor-crown-glyph">⚜</div>
+      </div>
+
+      <div class="grand-title-typography">
+        <div class="grand-title-sub">The Imperial Palace of Strategy</div>
+        <h1 class="grand-title-main">ROYAL CARD GAME</h1>
+        <div class="grand-title-kanji">大富豪王 2026</div>
+      </div>
+
+      <!-- 本編高品位リアル・トランプの扇状3Dファン展開 -->
+      <div class="cards-fan-3d">
+        <!-- 1: スペードA -->
+        <div class="pure-royal-card spade fan-card-1">
+          <div class="card-corner"><span class="corner-suit">♠</span><span class="corner-rank">A</span></div>
+          <div class="card-watermark">♠</div>
+        </div>
+        <!-- 2: ダイヤ3（最初の親） -->
+        <div class="pure-royal-card diamond fan-card-2">
+          <div class="card-corner"><span class="corner-suit">♦</span><span class="corner-rank">3</span></div>
+          <div class="card-watermark">♦</div>
+        </div>
+        <!-- 3: JOKER 太陽（最強単騎） -->
+        <div class="pure-royal-card joker-sun fan-card-3">
+          <div class="card-corner"><span class="corner-suit">✦</span><span class="corner-rank">JOKER</span></div>
+          <div class="card-center-symbol">☀</div>
+        </div>
+        <!-- 4: JOKER 月 -->
+        <div class="pure-royal-card joker-moon fan-card-4">
+          <div class="card-corner"><span class="corner-suit">✦</span><span class="corner-rank">JOKER</span></div>
+          <div class="card-center-symbol">☽</div>
+        </div>
+        <!-- 5: ハート2（最強数字） -->
+        <div class="pure-royal-card heart fan-card-5">
+          <div class="card-corner"><span class="corner-suit">♥</span><span class="corner-rank">2</span></div>
+          <div class="card-watermark">♥</div>
+        </div>
+      </div>
+
+      <div class="act-caption-box">
+        <p class="act-quote">
+          富と栄光、知謀と階位が交錯する王宮の扉が今、開かれる。<br>
+          ここでは、<strong>カードの一手一手が己の運命と階位を決する</strong>──
+        </p>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- ACT 1: 【秩序と鍛錬の扉】⚔️ 練習モード（初期貴族順繰り） -->
+    <!-- ======================================================== -->
+    <section class="act-scene" id="act-1">
+      <div class="act-header-tag">ACT I : THE TRAINING OF NOBLES</div>
+      <h2 class="act-title">⚔️ 練習モード（手動対戦 ＆ 思考学習）</h2>
+      
+      <!-- 特色ハイライト -->
+      <div class="mode-feature-highlight-badge">
+        <span class="badge-icon">🤖</span>
+        <span>AI代行: ON 搭載 ｜ 選択貴族の知謀・打ち筋を完全トレース</span>
+      </div>
+
+      <!-- 3D円軌道・回転カルーセルステージ -->
+      <div class="carousel-3d-stage">
+        <div class="carousel-track" id="track-act-1">
+          <!-- 0: 公爵 -->
+          <div class="carousel-card-node seat-left" data-index="0">
+            <img src="fugo-絵柄/duke.png" onerror="this.src='duke.png';" class="node-portrait" alt="公爵">
+            <div class="node-name-bar">👑 公爵</div>
+          </div>
+          <!-- 1: 国王（初期主役） -->
+          <div class="carousel-card-node seat-center" data-index="1">
+            <img src="fugo-絵柄/king.png" onerror="this.src='king.png';" class="node-portrait" alt="王">
+            <div class="node-name-bar">🏰 国王</div>
+          </div>
+          <!-- 2: 騎士 -->
+          <div class="carousel-card-node seat-right" data-index="2">
+            <img src="fugo-絵柄/knight.png" onerror="this.src='knight.png';" class="node-portrait" alt="騎士">
+            <div class="node-name-bar">⚔️ 騎士</div>
+          </div>
+          <!-- 3: 侯爵（待機） -->
+          <div class="carousel-card-node seat-back" data-index="3">
+            <img src="fugo-絵柄/marquis.png" onerror="this.src='marquis.png';" class="node-portrait" alt="侯爵">
+            <div class="node-name-bar">🍷 侯爵</div>
+          </div>
+          <!-- 4: 商人（待機） -->
+          <div class="carousel-card-node seat-back" data-index="4">
+            <img src="fugo-絵柄/merchant.png" onerror="this.src='merchant.png';" class="node-portrait" alt="商人">
+            <div class="node-name-bar">⚖️ 商人</div>
+          </div>
+          <!-- 5: 革命家（待機） -->
+          <div class="carousel-card-node seat-back" data-index="5">
+            <img src="fugo-絵柄/revolutionary.png" onerror="this.src='revolutionary.png';" class="node-portrait" alt="革命家">
+            <div class="node-name-bar">🔥 革命家</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 主役キャラの戦術＆名台詞ポップアップ -->
+      <div class="character-tactics-plate" id="tactics-act-1">
+        <div class="tactics-role-ribbon" id="role-act-1">王者の威厳・冷徹なる盤面支配</div>
+        <div class="tactics-quote-text" id="quote-act-1">我が宮廷の掟、容易く破れると思うなよ。</div>
+      </div>
+
+      <div class="act-caption-box">
+        <p class="act-quote">
+          自らの手で札を繰り、宮廷の猛者たちと鎬を削る正統の王道。<br>
+          迷いし時は<strong>「🤖 代行: ON」</strong>を灯せ──<br>
+          選択した宮廷貴族本来の知謀をその身に宿し、定石を極めよ。
+        </p>
+        <p class="act-sub-feature">◆ 試合数自由設定（1〜50戦） ｜ 階級カード交換 ｜ オートセーブ復元完備</p>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- ACT 2: 【深淵と知性の扉】🤖 観戦モード（王宮AI順繰り）   -->
+    <!-- ======================================================== -->
+    <section class="act-scene" id="act-2">
+      <div class="act-header-tag">ACT II : THE COLOSSEUM OF MIND</div>
+      <h2 class="act-title">🤖 観戦モード（AI自動 ＆ 高速観測）</h2>
+      
+      <!-- 特色ハイライト -->
+      <div class="mode-feature-highlight-badge">
+        <span class="badge-icon">📊</span>
+        <span>神速倍速観戦（1x〜3x） ｜ リアルタイム勝率予想 ＆ 終盤詰み探索</span>
+      </div>
+
+      <!-- 3D円軌道・回転カルーセルステージ -->
+      <div class="carousel-3d-stage">
+        <div class="carousel-track" id="track-act-2">
+          <!-- 0: 新王 -->
+          <div class="carousel-card-node seat-left" data-index="0">
+            <img src="fugo-絵柄/young_king.png" onerror="this.src='young_king.png';" class="node-portrait" alt="新王">
+            <div class="node-name-bar">🤴 新王</div>
+          </div>
+          <!-- 1: 女王（初期主役） -->
+          <div class="carousel-card-node seat-center" data-index="1">
+            <img src="fugo-絵柄/queen.png" onerror="this.src='queen.png';" class="node-portrait" alt="女王">
+            <div class="node-name-bar">👸 女王</div>
+          </div>
+          <!-- 2: 学者 -->
+          <div class="carousel-card-node seat-right" data-index="2">
+            <img src="fugo-絵柄/scholar.png" onerror="this.src='scholar.png';" class="node-portrait" alt="学者">
+            <div class="node-name-bar">📖 学者</div>
+          </div>
+          <!-- 3: 覚醒新王（待機） -->
+          <div class="carousel-card-node seat-back" data-index="3">
+            <img src="fugo-絵柄/awakened_king.png" onerror="this.src='awakened_king.png';" class="node-portrait" alt="覚醒新王">
+            <div class="node-name-bar">👑 覚醒新王</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 主役キャラの戦術＆名台詞ポップアップ -->
+      <div class="character-tactics-plate" id="tactics-act-2">
+        <div class="tactics-role-ribbon" id="role-act-2">宮廷政治の真髄・冷徹な手札管理</div>
+        <div class="tactics-quote-text" id="quote-act-2">あなたの手札、すべてお見通しよ。無駄なあがきはおやめなさい。</div>
+      </div>
+
+      <div class="act-caption-box">
+        <p class="act-quote">
+          鍛え抜かれたAIたちが織りなす極限の知能コロシアム。<br>
+          <strong>倍速切り替え（1x〜3x）</strong>や<strong>一時停止</strong>を自在に操り、<br>
+          四人の君主・英傑が繰り広げる盤上の覇権争いを高みより観測せよ。
+        </p>
+        <p class="act-sub-feature">◆ リアルタイム勝率メーター ｜ 思考可視化ランプ ｜ 終盤確定詰み探索</p>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- ACT 3: 【覇道と神話の扉】📜 シナリオモード（英傑順繰り） -->
+    <!-- ======================================================== -->
+    <section class="act-scene" id="act-3">
+      <div class="act-header-tag">ACT III : THE THRONE OF LEGENDS</div>
+      <h2 class="act-title">📜 シナリオモード（物語出陣 ＆ 英雄決戦）</h2>
+      
+      <!-- 特色ハイライト -->
+      <div class="mode-feature-highlight-badge">
+        <span class="badge-icon">👑</span>
+        <span>完全自力勝負 ｜ マップ制覇ツリー ＆ 歴史の覇王たちを永続解放！</span>
+      </div>
+
+      <!-- 3D円軌道・回転カルーセルステージ -->
+      <div class="carousel-3d-stage">
+        <div class="carousel-track" id="track-act-3">
+          <!-- 0: 始皇帝 -->
+          <div class="carousel-card-node seat-left" data-index="0">
+            <img src="fugo-絵柄/shi_huangdi.png" onerror="this.src='shi_huangdi.png';" class="node-portrait" alt="始皇帝">
+            <div class="node-name-bar">🏛️ 始皇帝</div>
+          </div>
+          <!-- 1: 織田信長（初期主役） -->
+          <div class="carousel-card-node seat-center" data-index="1">
+            <img src="fugo-絵柄/nobunaga.png" onerror="this.src='nobunaga.png';" class="node-portrait" alt="信長">
+            <div class="node-name-bar">⚔️ 織田信長</div>
+          </div>
+          <!-- 2: ギルガメッシュ -->
+          <div class="carousel-card-node seat-right" data-index="2">
+            <img src="fugo-絵柄/gilgamesh.png" onerror="this.src='gilgamesh.png';" class="node-portrait" alt="ギルガメッシュ">
+            <div class="node-name-bar">👑 ギルガメッシュ</div>
+          </div>
+          <!-- 3: 聖徳太子（待機） -->
+          <div class="carousel-card-node seat-back" data-index="3">
+            <img src="fugo-絵柄/shotoku.png" onerror="this.src='shotoku.png';" class="node-portrait" alt="聖徳太子">
+            <div class="node-name-bar">🔮 聖徳太子</div>
+          </div>
+          <!-- 4: アレクサンダー（待機） -->
+          <div class="carousel-card-node seat-back" data-index="4">
+            <img src="fugo-絵柄/alexander.png" onerror="this.src='alexander.png';" class="node-portrait" alt="アレクサンダー">
+            <div class="node-name-bar">🛡️ アレク王</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 主役キャラの戦術＆名台詞ポップアップ -->
+      <div class="character-tactics-plate" id="tactics-act-3">
+        <div class="tactics-role-ribbon" id="role-act-3">電光石火の覇道・天下布武の連打</div>
+        <div class="tactics-quote-text" id="quote-act-3">8切りで親を奪い、一気に畳み掛ける！天下を獲る札は揃うた！</div>
+      </div>
+
+      <div class="act-caption-box">
+        <p class="act-quote">
+          己の分身を選び、予選、王宮の頂点、そして時空を超えて顕現せし<br>
+          <strong>歴史の英雄・神話の覇王</strong>へ挑む壮大な旅路。<br>
+          AI代行を排した<strong>完全自力勝負</strong>で、真の『大富豪王』へ君臨せよ──
+        </p>
+        <p class="act-sub-feature">◆ シネマティック会話劇（ADV） ｜ マップ制覇ツリー ｜ キャラクター永続解放</p>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- ACT 4: エピローグ（大門開放 ＆ 宮廷入城）                 -->
+    <!-- ======================================================== -->
+    <section class="act-scene" id="act-4">
+      <div class="grand-gate-plate">
+        <div class="gate-fleur-emblem">⚜</div>
+        <div class="act-header-tag">EPILOGUE : THE GATEWAY OPENS</div>
+        <h2 class="act-title">運命のカードは配られた</h2>
+        <div class="act-caption-box">
+          <p class="act-quote">
+            汝のカードは、秩序を護る盾となるか──<br>
+            それとも、世界を覆す<strong>革命の刃</strong>となるか。<br>
+            門は開かれた。貴殿の知謀を、今こそ示されよ。
+          </p>
+        </div>
+
+        <button type="button" class="btn-enter-palace" id="btn-enter">
+          👑 宮廷へ入城する (ENTER)
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 下部シネマコントローラー -->
+  <footer class="cinema-letterbox" style="justify-content: center;">
+    <div class="cinema-controls-bottom">
+      <div class="step-dots-row" id="step-dots">
+        <span class="step-dot active" data-step="0"></span>
+        <span class="step-dot" data-step="1"></span>
+        <span class="step-dot" data-step="2"></span>
+        <span class="step-dot" data-step="3"></span>
+        <span class="step-dot" data-step="4"></span>
+      </div>
+      <div class="tap-guide-prompt" id="tap-prompt">TAP / クリックで進む ▼</div>
+    </div>
+  </footer>
+
+  <!-- オープニング専用制御スクリプト（3D円軌道回転＆セリフ完全同期＆安全音響） -->
+  <script>
+    (function() {
+      const STORAGE_KEY = 'royalLastOpeningSeenTime';
+      let currentStep = 0;
+      const totalSteps = 5;
+      let autoTimer = null;
+      let carouselTimer = null;
+      let audioCtx = null;
+      let bgmAudio = null;
+      let hasRequestedFullscreen = false;
+
+      // 各ACTごとのキャラクター戦術＆名セリフ辞書
+      const ACT_DATA = {
+        1: [
+          { role: "勝機まで牙を隠す、重鎮の温存術", quote: "焦るな……最強の札は、最後に切るものだ。" },
+          { role: "王者の威厳・冷徹なる盤面支配", quote: "我が宮廷の掟、容易く破れると思うなよ。" },
+          { role: "愚直一徹・最弱札からの正攻法", quote: "小細工はいらぬ！弱い札から正々堂々と攻めるのみ！" },
+          { role: "優雅なるパス・無駄な消耗の回避", quote: "無理な小競り合いは美しくない。ここは引かせていただくよ。" },
+          { role: "算盤の駆け引き・鉄壁のペア構築", quote: "札は単発で捨てちゃ損。ペアで揃えてこそ価値が出るのさ！" },
+          { role: "天地逆転・一撃必殺の革命魔", quote: "強者が勝つ時代は終わりだ……すべてをひっくり返してやる！" }
+        ],
+        2: [
+          { role: "次代を担う俊英・電光石火の読み", quote: "父上の時代は終わった。この盤面、僕が支配してみせる！" },
+          { role: "宮廷政治の真髄・冷徹な手札管理", quote: "あなたの手札、すべてお見通しよ。無駄なあがきはおやめなさい。" },
+          { role: "深謀遠慮・場に出た札の完全記録", quote: "あの札がもう出尽くしたなら……私の勝ち筋はここにある。" },
+          { role: "絶望を超越せし、王族最強の到達点", quote: "幾多の敗北を越えてきた。貴様の次の一手、すべて看破したぞ。" }
+        ],
+        3: [
+          { role: "中華統一の法・無駄を許さぬ絶対統制", quote: "法に従い整然と札を刈り取る。天下統一の盤面を見よ。" },
+          { role: "電光石火の覇道・天下布武の連打", quote: "8切りで親を奪い、一気に畳み掛ける！天下を獲る札は揃うた！" },
+          { role: "人類最古の英雄王・全知全能の裁定", quote: "上がりを狙うなど片腹痛い！王の宝物庫の前にひれ伏すがよい！" },
+          { role: "十人の声を聴く賢人・静かなる調和", quote: "和を以て貴しと為す……だがジョーカー単騎には容赦せぬ。" },
+          { role: "世界帝国の覇気・不敗の重装進軍", quote: "我が進軍を遮る壁などない！最短の手数で駆け抜けてみせよう！" }
+        ]
+      };
+
+      // 各ACTの現在の中央フォーカスインデックス
+      const actCarouselIndices = { 1: 1, 2: 1, 3: 1 };
+
+      // 音響初期化（三重安全フォールバック構成）
+      function initAudio() {
+        if (!bgmAudio) {
+          bgmAudio = new Audio();
+          bgmAudio.loop = true;
+          bgmAudio.volume = 0.5;
+
+          const candidates = ['bgm-opening.mp3', 'bgm_opening.mp3', 'bgm_normal.mp3'];
+          let candIdx = 0;
+
+          function tryPlayCandidate() {
+            if (candIdx >= candidates.length) return;
+            bgmAudio.src = candidates[candIdx];
+            bgmAudio.play().catch(function() {
+              candIdx++;
+              tryPlayCandidate();
+            });
+          }
+
+          bgmAudio.addEventListener('error', function() {
+            candIdx++;
+            tryPlayCandidate();
+          });
+
+          tryPlayCandidate();
+        }
+      }
+
+      // フルスクリーン自動リクエスト（ユーザー操作契機）
+      function tryRequestFullscreen() {
+        if (hasRequestedFullscreen) return;
+        hasRequestedFullscreen = true;
+        try {
+          const docEl = document.documentElement;
+          if (docEl.requestFullscreen) docEl.requestFullscreen().catch(function() {});
+          else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
+          else if (docEl.mozRequestFullScreen) docEl.mozRequestFullScreen();
+          else if (docEl.msRequestFullscreen) docEl.msRequestFullscreen();
+        } catch (e) {}
+      }
+
+      function playSoundTone(freq, dur = 0.15) {
+        try {
+          if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          if (audioCtx.state === 'suspended') audioCtx.resume();
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+          gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + dur);
+        } catch (e) {}
+      }
+
+      // 金粉パーティクル生成
+      function createGoldParticles() {
+        const stage = document.getElementById('cinema-stage');
+        if (!stage) return;
+        for (let i = 0; i < 34; i++) {
+          const p = document.createElement('div');
+          p.className = 'gold-particle';
+          const size = Math.floor(Math.random() * 5) + 3;
+          p.style.width = size + 'px';
+          p.style.height = size + 'px';
+          p.style.left = Math.random() * 98 + '%';
+          p.style.animationDuration = (Math.random() * 3 + 3.2) + 's';
+          p.style.animationDelay = (Math.random() * 4) + 's';
+          stage.appendChild(p);
+        }
+      }
+
+      // 3D円軌道・回転カルーセル実行ロジック
+      function rotateCarousel(actNum) {
+        const track = document.getElementById('track-act-' + actNum);
+        if (!track) return;
+        const nodes = track.querySelectorAll('.carousel-card-node');
+        const count = nodes.length;
+        if (count < 3) return;
+
+        // 次の中央主役インデックス
+        actCarouselIndices[actNum] = (actCarouselIndices[actNum] + 1) % count;
+        const centerIdx = actCarouselIndices[actNum];
+        const leftIdx = (centerIdx - 1 + count) % count;
+        const rightIdx = (centerIdx + 1) % count;
+
+        // 座席クラスを再配置
+        nodes.forEach(function(node, idx) {
+          node.classList.remove('seat-left', 'seat-center', 'seat-right', 'seat-back');
+          if (idx === centerIdx) node.classList.add('seat-center');
+          else if (idx === leftIdx) node.classList.add('seat-left');
+          else if (idx === rightIdx) node.classList.add('seat-right');
+          else node.classList.add('seat-back');
+        });
+
+        // セリフ＆戦術の同期更新
+        const tacticsData = ACT_DATA[actNum];
+        if (tacticsData && tacticsData[centerIdx]) {
+          const roleEl = document.getElementById('role-act-' + actNum);
+          const quoteEl = document.getElementById('quote-act-' + actNum);
+          if (roleEl && quoteEl) {
+            roleEl.style.opacity = '0';
+            quoteEl.style.opacity = '0';
+            setTimeout(function() {
+              roleEl.textContent = tacticsData[centerIdx].role;
+              quoteEl.textContent = tacticsData[centerIdx].quote;
+              roleEl.style.opacity = '1';
+              quoteEl.style.opacity = '1';
+            }, 200);
+          }
+        }
+
+        playSoundTone(520, 0.1);
+      }
+
+      function setupCarouselTimer(actNum) {
+        clearCarouselTimer();
+        if (actNum < 1 || actNum > 3) return;
+        // 3.2秒間隔で美しくクルッと1席ずつ回転
+        carouselTimer = setInterval(function() {
+          rotateCarousel(actNum);
+        }, 3200);
+      }
+
+      function clearCarouselTimer() {
+        if (carouselTimer) {
+          clearInterval(carouselTimer);
+          carouselTimer = null;
+        }
+      }
+
+      function showStep(index) {
+        if (index < 0 || index >= totalSteps) return;
+        currentStep = index;
+
+        // 全シーン切り替え
+        for (let i = 0; i < totalSteps; i++) {
+          const sc = document.getElementById('act-' + i);
+          if (sc) sc.classList.toggle('active', i === currentStep);
+        }
+
+        // インジケータードット更新
+        const dots = document.querySelectorAll('.step-dot');
+        dots.forEach(function(dot, idx) {
+          dot.classList.toggle('active', idx === currentStep);
+        });
+
+        // 効果音
+        if (currentStep === 0) playSoundTone(330, 0.3);
+        else if (currentStep === 1) playSoundTone(440, 0.2);
+        else if (currentStep === 2) playSoundTone(550, 0.2);
+        else if (currentStep === 3) playSoundTone(660, 0.2);
+        else if (currentStep === 4) playSoundTone(880, 0.4);
+
+        // カルーセルタイマー起動
+        if (currentStep >= 1 && currentStep <= 3) {
+          setupCarouselTimer(currentStep);
+        } else {
+          clearCarouselTimer();
+        }
+
+        // 案内テキストの更新
+        const prompt = document.getElementById('tap-prompt');
+        if (prompt) {
+          prompt.textContent = (currentStep === 4) ? '👑 入城するかタップで最初へ ↺' : 'TAP / クリックで進む ▼';
+        }
+
+        resetAutoAdvance();
+      }
+
+      // 次のステップ（開始ボタンが押されるまで永久ループ）
+      function nextStep() {
+        initAudio();
+        tryRequestFullscreen();
+        if (currentStep < totalSteps - 1) {
+          showStep(currentStep + 1);
+        } else {
+          showStep(0);
+        }
+      }
+
+      function resetAutoAdvance() {
+        if (autoTimer) clearTimeout(autoTimer);
+        // 各幕の滞在時間を1.5倍に延長（第0幕: 8.0秒、第1〜3幕: 10.5秒、第4幕: 11.0秒）
+        let delay = 10500;
+        if (currentStep === 0) delay = 8000;
+        else if (currentStep === 4) delay = 11000;
+
+        autoTimer = setTimeout(nextStep, delay);
+      }
+
+      // 入城処理（本編へ遷移）
+      function enterPalace() {
+        if (autoTimer) clearTimeout(autoTimer);
+        clearCarouselTimer();
+        try {
+          localStorage.setItem(STORAGE_KEY, String(Date.now()));
+        } catch (e) {}
+
+        if (bgmAudio) {
+          try { bgmAudio.pause(); } catch (e) {}
+        }
+        window.location.replace('index.html');
+      }
+
+      // イベントリスナー紐付け
+      window.addEventListener('DOMContentLoaded', function() {
+        createGoldParticles();
+
+        const stage = document.getElementById('cinema-stage');
+        if (stage) {
+          stage.addEventListener('click', function(e) {
+            if (e.target && (e.target.id === 'btn-enter' || e.target.closest('#btn-enter'))) return;
+            // カルーセルカードが直接クリックされた場合はそのACT内で即時回転
+            if (e.target.closest('.carousel-card-node')) {
+              e.stopPropagation();
+              initAudio();
+              tryRequestFullscreen();
+              if (currentStep >= 1 && currentStep <= 3) {
+                rotateCarousel(currentStep);
+                setupCarouselTimer(currentStep);
+              }
+              return;
+            }
+            nextStep();
+          });
+        }
+
+        const btnSkip = document.getElementById('btn-skip');
+        if (btnSkip) {
+          btnSkip.addEventListener('click', function(e) {
+            e.stopPropagation();
+            enterPalace();
+          });
+        }
+
+        const btnEnter = document.getElementById('btn-enter');
+        if (btnEnter) {
+          btnEnter.addEventListener('click', function(e) {
+            e.stopPropagation();
+            enterPalace();
+          });
+        }
+
+        const dots = document.querySelectorAll('.step-dot');
+        dots.forEach(function(dot) {
+          dot.addEventListener('click', function(e) {
+            e.stopPropagation();
+            initAudio();
+            tryRequestFullscreen();
+            const targetStep = parseInt(dot.getAttribute('data-step'), 10);
+            showStep(targetStep);
+          });
+        });
+
+        // ページ非表示・バックグラウンド時の安全制御
+        document.addEventListener('visibilitychange', function() {
+          if (document.hidden) {
+            if (autoTimer) clearTimeout(autoTimer);
+            clearCarouselTimer();
+            if (bgmAudio) { try { bgmAudio.pause(); } catch (e) {} }
+          } else {
+            resetAutoAdvance();
+            if (currentStep >= 1 && currentStep <= 3) setupCarouselTimer(currentStep);
+            if (bgmAudio) { try { bgmAudio.play(); } catch (e) {} }
+          }
+        });
+
+        resetAutoAdvance();
+      });
+    })();
+  </script>
+</body>
+</html>
