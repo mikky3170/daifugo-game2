@@ -1007,6 +1007,7 @@ function evaluateMoveDefault(move, hand = null, isFieldEmpty = false, rev = fals
 }
 
 function shouldStrategicPassOnHighCard(move, hand, field, rev, minOppLen, charProfile = null) {
+  // ★親番（場が空＝field.length === 0）では絶対にパスできないため false を返す
   if (!field || field.length === 0) return false;
   if (!move || move.length === 0) return false;
 
@@ -1171,7 +1172,7 @@ function decideGilgameshClient(cpuKey, hand, field, rev, allHands, finished, pla
   }
 
   const chosen = bestM || cands[0];
-  if (shouldStrategicPassOnHighCard(chosen, hand, field, rev, minOppLen, profile)) {
+  if (!isFieldEmpty && shouldStrategicPassOnHighCard(chosen, hand, field, rev, minOppLen, profile)) {
     return null;
   }
 
@@ -1230,7 +1231,7 @@ function decideAwakenedYoungKingClient(cpuKey, hand, field, rev, allHands, finis
   }
 
   const chosenMove = bestMove || poolMoves[0];
-  if (shouldStrategicPassOnHighCard(chosenMove, hand, field, rev, minOppLen, profile)) {
+  if (!isFieldEmpty && shouldStrategicPassOnHighCard(chosenMove, hand, field, rev, minOppLen, profile)) {
     return null;
   }
 
@@ -1288,7 +1289,7 @@ function decideQueenClient(cpuKey, hand, field, rev, allHands, finished, played,
   }
 
   const chosen = bestMove || poolMoves[0];
-  if (shouldStrategicPassOnHighCard(chosen, hand, field, rev, minOppLen, profile)) {
+  if (!isFieldEmpty && shouldStrategicPassOnHighCard(chosen, hand, field, rev, minOppLen, profile)) {
     return null;
   }
   return chosen;
@@ -1391,7 +1392,7 @@ function decideKingClient(cpuKey, hand, field, rev, allHands, finished, played, 
   }
 
   const chosen = bestM || poolMoves[0];
-  if (shouldStrategicPassOnHighCard(chosen, hand, field, rev, minOppLen, profile)) {
+  if (!isFieldEmpty && shouldStrategicPassOnHighCard(chosen, hand, field, rev, minOppLen, profile)) {
     return null;
   }
   return chosen;
@@ -1614,7 +1615,7 @@ function decideShiHuangdiClient(cpuKey, hand, field, rev, allHands, finished, pl
   }
 
   const chosenMove = bestMove || poolMoves[0];
-  if (shouldStrategicPassOnHighCard(chosenMove, hand, field, rev, minOppLen, profile)) {
+  if (!isFieldEmpty && shouldStrategicPassOnHighCard(chosenMove, hand, field, rev, minOppLen, profile)) {
     return null;
   }
 
@@ -1831,7 +1832,7 @@ function decideAlexanderHybridClient(cpuKey, hand, field, rev, allHands, finishe
   }
 
   const chosenMove = bestMove || poolMoves[0];
-  if (shouldStrategicPassOnHighCard(chosenMove, hand, field, rev, minOppLen, profile)) {
+  if (!isFieldEmpty && shouldStrategicPassOnHighCard(chosenMove, hand, field, rev, minOppLen, profile)) {
     return null;
   }
 
@@ -1882,10 +1883,10 @@ function selectMoveByCharacterDef(charDef, hand, currentField, rev, otherCounts,
       }
 
       const cand = bestMove || poolMoves[0];
-      if (shouldStrategicPassOnHighCard(cand, hand, currentField, rev, minOpp, profile)) {
+      if (!isFieldEmpty && shouldStrategicPassOnHighCard(cand, hand, currentField, rev, minOpp, profile)) {
         return null;
       }
-      return (canPass && bestScore < -8 && !isOpponentsDangerous) ? null : cand;
+      return (!isFieldEmpty && canPass && bestScore < -8 && !isOpponentsDangerous) ? null : cand;
     }
 
     case 'DUKE': {
@@ -1924,11 +1925,11 @@ function selectMoveByCharacterDef(charDef, hand, currentField, rev, otherCounts,
       }
 
       if (filtered.length === 0) {
-        return canPass && !isOpponentsDangerous ? null : useMoves[0];
+        return (!isFieldEmpty && canPass && !isOpponentsDangerous) ? null : useMoves[0];
       }
       filtered.sort((a, b) => evaluateMoveDefault(b, hand, isFieldEmpty, rev, minOpp, rules, playedHistory, profile) - evaluateMoveDefault(a, hand, isFieldEmpty, rev, minOpp, rules, playedHistory, profile));
       const chosen = filtered[0] || useMoves[0];
-      if (canPass && shouldStrategicPassOnHighCard(chosen, hand, currentField, rev, minOpp, profile)) {
+      if (!isFieldEmpty && canPass && shouldStrategicPassOnHighCard(chosen, hand, currentField, rev, minOpp, profile)) {
         return null;
       }
       return chosen;
@@ -1952,7 +1953,7 @@ function selectMoveByCharacterDef(charDef, hand, currentField, rev, otherCounts,
         if (s > bestScore) { bestScore = s; bestMove = move; }
       }
       const chosen = bestMove || useMoves[0];
-      if (canPass && (bestScore < -6 || shouldStrategicPassOnHighCard(chosen, hand, currentField, rev, minOpp, profile)) && !isOpponentsDangerous) {
+      if (!isFieldEmpty && canPass && (bestScore < -6 || shouldStrategicPassOnHighCard(chosen, hand, currentField, rev, minOpp, profile)) && !isOpponentsDangerous) {
         return null;
       }
       return chosen;
@@ -1982,7 +1983,7 @@ function selectMoveByCharacterDef(charDef, hand, currentField, rev, otherCounts,
         if (s > bestScore) { bestScore = s; bestMove = move; }
       }
       const chosen = bestMove || useMoves[0];
-      if (canPass && !isLate && !isOpponentsDangerous && (bestScore < -15 || shouldStrategicPassOnHighCard(chosen, hand, currentField, rev, minOpp, profile))) {
+      if (!isFieldEmpty && canPass && !isLate && !isOpponentsDangerous && (bestScore < -15 || shouldStrategicPassOnHighCard(chosen, hand, currentField, rev, minOpp, profile))) {
         return null;
       }
       return chosen;
@@ -2020,7 +2021,7 @@ function selectMoveByCharacterDef(charDef, hand, currentField, rev, otherCounts,
 
       const candidate = scoredMoves[0] ? scoredMoves[0].move : pool[0];
 
-      if (canPass && shouldStrategicPassOnHighCard(candidate, hand, currentField, rev, minOpp, profile)) {
+      if (!isFieldEmpty && canPass && shouldStrategicPassOnHighCard(candidate, hand, currentField, rev, minOpp, profile)) {
         return null;
       }
       return candidate || poolMoves[0];
@@ -2045,7 +2046,7 @@ function selectMoveByCharacterDef(charDef, hand, currentField, rev, otherCounts,
       }
 
       const chosen = bestMove || poolMoves[0];
-      if (canPass && shouldStrategicPassOnHighCard(chosen, hand, currentField, rev, minOpp, profile)) {
+      if (!isFieldEmpty && canPass && shouldStrategicPassOnHighCard(chosen, hand, currentField, rev, minOpp, profile)) {
         return null;
       }
       return chosen;
@@ -2074,7 +2075,7 @@ function selectMoveByCharacterDef(charDef, hand, currentField, rev, otherCounts,
       }
 
       let filtered = useMoves;
-      if (isEarlyOrMid && !isOpponentsDangerous && canPass) {
+      if (isEarlyOrMid && !isOpponentsDangerous && canPass && !isFieldEmpty) {
         const nonSuper = useMoves.filter(m => !m.some(c => c.isJoker || (c.display === '2' || c.rank === '2')));
         if (nonSuper.length > 0) {
           filtered = nonSuper;
@@ -2086,7 +2087,7 @@ function selectMoveByCharacterDef(charDef, hand, currentField, rev, otherCounts,
       if (!filtered || filtered.length === 0) filtered = useMoves;
       filtered.sort((a, b) => evaluateMoveDefault(b, hand, isFieldEmpty, rev, minOpp, rules, playedHistory, profile) - evaluateMoveDefault(a, hand, isFieldEmpty, rev, minOpp, rules, playedHistory, profile));
       const chosen = filtered[0] || useMoves[0];
-      if (canPass && shouldStrategicPassOnHighCard(chosen, hand, currentField, rev, minOpp, profile)) {
+      if (!isFieldEmpty && canPass && shouldStrategicPassOnHighCard(chosen, hand, currentField, rev, minOpp, profile)) {
         return null;
       }
       return chosen;
@@ -2142,10 +2143,10 @@ function selectMoveByCharacterDef(charDef, hand, currentField, rev, otherCounts,
         if (s > bestScore) { bestScore = s; bestMove = move; }
       }
       const chosen = bestMove || useMoves[0];
-      if (canPass && shouldStrategicPassOnHighCard(chosen, hand, currentField, rev, minOpp, profile)) {
+      if (!isFieldEmpty && canPass && shouldStrategicPassOnHighCard(chosen, hand, currentField, rev, minOpp, profile)) {
         return null;
       }
-      if (!isOpponentsDangerous && canPass && bestScore < 0) return null;
+      if (!isFieldEmpty && !isOpponentsDangerous && canPass && bestScore < 0) return null;
       return chosen;
     }
 
@@ -2174,7 +2175,7 @@ function selectMoveByCharacterDef(charDef, hand, currentField, rev, otherCounts,
         if (s > bestScore) { bestScore = s; bestMove = move; }
       }
       const chosen = bestMove || poolMoves[0];
-      if (canPass && shouldStrategicPassOnHighCard(chosen, hand, currentField, rev, minOpp, profile)) {
+      if (!isFieldEmpty && canPass && shouldStrategicPassOnHighCard(chosen, hand, currentField, rev, minOpp, profile)) {
         return null;
       }
       return chosen;
@@ -2185,7 +2186,7 @@ function selectMoveByCharacterDef(charDef, hand, currentField, rev, otherCounts,
       if (sixCardMove && RandomManager.random() < 0.85) return sixCardMove;
 
       if (RandomManager.random() < 0.35) {
-        if (canPass && RandomManager.random() < 0.45) return null;
+        if (!isFieldEmpty && canPass && RandomManager.random() < 0.45) return null;
         const move2 = poolMoves.find(m => m.some(c => (c.display === '2' || c.rank === '2')));
         if (move2 && !isEarlyOrMid) return move2;
         return poolMoves[Math.floor(RandomManager.random() * poolMoves.length)] || poolMoves[0];
@@ -2223,7 +2224,8 @@ function decideCpuMove(cpu, explicitContext = null) {
   const rev = ctx.rev;
   const rawMoves = getAllValidMoves(hand, field, rev);
   const validMoves = filterCpuMovesForCharacter(charDef.id, rawMoves);
-  const canPass = field.length > 0;
+  const isFieldEmpty = (field.length === 0);
+  const canPass = !isFieldEmpty;
 
   if (validMoves.length === 0) return null;
 
@@ -2254,13 +2256,13 @@ function decideCpuMove(cpu, explicitContext = null) {
     chosen = selectMoveByCharacterDef(charDef, hand, field, rev, otherCounts, canPass, unrevealed, nextCount, rules, ctx.playedHistory);
   }
 
-  // 親番フォールバック
-  if (field.length === 0 && (!chosen || chosen.length === 0)) {
+  // ★親番（isFieldEmpty）の絶対着手保証：null（パス）の返却を構造的に100%禁止
+  if (isFieldEmpty && (!chosen || chosen.length === 0)) {
     const safeInstant = validMoves.filter(m => !isForbiddenFinishMove(m, hand, rules, rev));
     chosen = safeInstant.length > 0 ? safeInstant[0] : validMoves[0];
   }
 
-  return chosen !== undefined ? chosen : validMoves[0];
+  return chosen !== undefined ? chosen : (isFieldEmpty ? validMoves[0] : null);
 }
 
 /* ----------------------------------------------------
@@ -2325,3 +2327,4 @@ function calculateRealtimeWinRates() {
 
   return { rates, topPlayer, topPct: rates[topPlayer], diffFromSecond: topPct - secondPct, isFinished: false };
 }
+

@@ -260,7 +260,7 @@ function isForbiddenFinish(cards, reverse = false) {
     return true;
   }
 
-  // ※平時（!reverse）において、3（♠3含む）でのあがりは完全な合法手とする（理不尽な反則化を完全撤廃）
+  // ※平時（!reverse）において、3（♠3含む）でのあがりは完全な合法手とする
   return false;
 }
 
@@ -297,10 +297,9 @@ function willLeaveOnlyForbiddenCards(selectedCards, hand, reverse = false) {
   if (remainingHand.length === 0) return false;
 
   // 残り手札に含まれるすべてのカードが単体で禁止あがり対象であるか検証
-  // （平時なら2, 8, JOKER、革命時なら3, 8, JOKERのみで構成されているか）
   const allCardsForbidden = remainingHand.every(card => isForbiddenFinish([card], reverse));
   if (!allCardsForbidden) {
-    return false; // 1枚でも通常あがり可能なカード（平時なら3〜A等）が残るなら詰みではない
+    return false; // 1枚でも通常あがり可能なカードが残るなら詰みではない
   }
 
   return true;
@@ -375,7 +374,9 @@ function getAllValidMoves(hand, currentField, reverse = false, filterForbidden =
     groups[key].push(c);
   });
 
-  if (!currentField || currentField.length === 0) {
+  const isFieldEmpty = (!currentField || currentField.length === 0);
+
+  if (isFieldEmpty) {
     // 親番（場が空）
     for (let disp in groups) {
       const cards = groups[disp];
@@ -423,10 +424,20 @@ function getAllValidMoves(hand, currentField, reverse = false, filterForbidden =
     }
   }
 
+  // ★親番（isFieldEmpty）の絶対安全保証：どんな状況でも手札から出せる手が必ず1つ以上生成される
+  if (isFieldEmpty && moves.length === 0 && hand.length > 0) {
+    moves.push([hand[0]]);
+  }
+
   if (filterForbidden) {
     const activeRules = getActiveGameRules(rules);
     if (activeRules.forbiddenFinish) {
-      return moves.filter(m => !isForbiddenFinishMove(m, hand, activeRules, reverse));
+      const filtered = moves.filter(m => !isForbiddenFinishMove(m, hand, activeRules, reverse));
+      // 親番において、仮に全ての手が禁止あがりであっても親番パス（無限ループ）を防ぐため生の手を返す
+      if (isFieldEmpty && filtered.length === 0) {
+        return moves;
+      }
+      return filtered;
     }
   }
 
@@ -821,3 +832,5 @@ function findDynamicBossCardsJS(myHand, unrevealed, rev = false) {
 
   return { bossSingles, bossPairs };
 }
+
+

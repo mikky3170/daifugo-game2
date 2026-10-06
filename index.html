@@ -5,24 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>大富豪王 2026</title>
 
-  <!-- 初回起動 ＆ 1週間経過時のオープニング自動分岐スクリプト -->
-  <script>
-    (function() {
-      try {
-        var STORAGE_KEY = 'royalLastOpeningSeenTime';
-        var ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-        var lastSeen = localStorage.getItem(STORAGE_KEY);
-        var now = Date.now();
-        if (!lastSeen || (now - parseInt(lastSeen, 10) > ONE_WEEK_MS)) {
-          if (!sessionStorage.getItem('royalOpeningRedirected')) {
-            sessionStorage.setItem('royalOpeningRedirected', '1');
-            window.location.replace('opening.html');
-          }
-        }
-      } catch (e) {}
-    })();
-  </script>
-
   <!-- Webアプリ設定 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-style" content="black-translucent">
@@ -31,12 +13,274 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#05080e">
 
+  <!-- フォント事前読み込み -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Noto+Serif+JP:wght@400;600;700;900&display=swap" rel="stylesheet">
+
   <!-- CSSモジュール分割読み込み（依存順序保証） -->
   <link rel="stylesheet" href="common.css">
   <link rel="stylesheet" href="game.css">
   <link rel="stylesheet" href="story.css">
 </head>
 <body>
+
+  <!-- ========================================================= -->
+  <!-- 統合オープニング画面（単一ページ化・全画面モード完全維持構造） -->
+  <!-- ========================================================= -->
+  <div id="screen-opening" class="opening-screen-overlay is-hidden">
+    <header class="opening-top-bar">
+      <div class="opening-brand-title">
+        <span>⚜</span>
+        <span>ROYAL CARD GAME</span>
+      </div>
+      <button type="button" class="btn-skip" id="btn-skip-gate">SKIP ▶▶</button>
+    </header>
+
+    <main class="opening-stage-container" id="opening-stage-box">
+      <div class="opening-velvet-layer"></div>
+      <div class="opening-gimmick-marquee">REVOLUTION ◆ EIGHT STOP ◆ SPADE 3 COUNTER</div>
+
+      <!-- ACT 0: プロローグ -->
+      <section class="opening-scene-view active" id="opening-act-0">
+        <div class="opening-crest-icon">⚜</div>
+        <div class="grand-logo-block">
+          <div class="logo-sub">The Imperial Palace of Strategy</div>
+          <h1 class="logo-main">ROYAL CARD GAME</h1>
+          <div class="logo-kanji">大富豪王 2026</div>
+        </div>
+
+        <div class="fan-area">
+          <div class="mini-card black card-pos-1">
+            <div><div class="suit-mark">♠</div><div class="rank-mark">A</div></div>
+            <div class="watermark">♠</div>
+          </div>
+          <div class="mini-card red card-pos-2">
+            <div><div class="suit-mark">♦</div><div class="rank-mark">3</div></div>
+            <div class="watermark">♦</div>
+          </div>
+          <div class="mini-card joker-gold card-pos-3">
+            <div><div class="suit-mark">✦</div><div class="rank-mark">JOKER</div></div>
+            <div style="font-size:22px;text-align:center;">☀</div>
+          </div>
+          <div class="mini-card red card-pos-4">
+            <div><div class="suit-mark">♥</div><div class="rank-mark">2</div></div>
+            <div class="watermark">♥</div>
+          </div>
+          <div class="mini-card black card-pos-5">
+            <div><div class="suit-mark">♣</div><div class="rank-mark">K</div></div>
+            <div class="watermark">♣</div>
+          </div>
+        </div>
+
+        <div class="opening-start-prompt" id="opening-start-prompt">
+          <span class="prompt-icon">▶</span>
+          <span class="prompt-text">タップして開宴（音楽と物語を開始）</span>
+        </div>
+
+        <div class="caption-card">
+          <p class="caption-main">
+            富と栄光、知謀と階位が交錯する王宮の扉が今、開かれる。<br>
+            ここでは、<strong>カードの一手一手が己の運命と階位を決する</strong>──
+          </p>
+        </div>
+      </section>
+
+      <!-- ACT 1: 練習モード -->
+      <section class="opening-scene-view" id="opening-act-1">
+        <div class="tag-ribbon">ACT I : THE TRAINING OF NOBLES</div>
+        <h2 class="scene-title">⚔️ 練習モード（手動対戦 ＆ 思考学習）</h2>
+        
+        <div class="feature-pill">
+          <span>🤖</span>
+          <span>AI代行: ON 搭載 ｜ 選択貴族の知謀・打ち筋を完全トレース</span>
+        </div>
+
+        <div class="carousel-view">
+          <div class="carousel-rail" id="rail-act-1">
+            <div class="plaque-box pos-left" data-slot="0">
+              <img src="fugo-絵柄/duke.png" onerror="this.onerror=null;" class="plaque-pic" alt="公爵">
+              <div class="plaque-name">👑 公爵</div>
+            </div>
+            <div class="plaque-box pos-center" data-slot="1">
+              <img src="fugo-絵柄/king.png" onerror="this.onerror=null;" class="plaque-pic" alt="国王">
+              <div class="plaque-name">🏰 国王</div>
+            </div>
+            <div class="plaque-box pos-right" data-slot="2">
+              <img src="fugo-絵柄/knight.png" onerror="this.onerror=null;" class="plaque-pic" alt="騎士">
+              <div class="plaque-name">⚔️ 騎士</div>
+            </div>
+            <div class="plaque-box pos-back" data-slot="3">
+              <img src="fugo-絵柄/marquis.png" onerror="this.onerror=null;" class="plaque-pic" alt="侯爵">
+              <div class="plaque-name">🍷 侯爵</div>
+            </div>
+            <div class="plaque-box pos-back" data-slot="4">
+              <img src="fugo-絵柄/merchant.png" onerror="this.onerror=null;" class="plaque-pic" alt="商人">
+              <div class="plaque-name">⚖️ 商人</div>
+            </div>
+            <div class="plaque-box pos-back" data-slot="5">
+              <img src="fugo-絵柄/revolutionary.png" onerror="this.onerror=null;" class="plaque-pic" alt="革命家">
+              <div class="plaque-name">🔥 革命家</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="voice-plate">
+          <div class="voice-badge" id="role-act-1">王者の威厳・冷徹なる盤面支配</div>
+          <div class="voice-text" id="quote-act-1">我が宮廷の掟、容易く破れると思うなよ。</div>
+        </div>
+
+        <div class="caption-card">
+          <p class="caption-main">
+            自らの手で札を繰り、宮廷の猛者たちと鎬を削る正統の王道。<br>
+            迷いし時は<strong>「🤖 代行: ON」</strong>を灯せ──<br>
+            選択した宮廷貴族本来の知謀をその身に宿し、定石を極めよ。
+          </p>
+          <p class="caption-sub">◆ 試合数自由設定（1〜50戦） ｜ 階級カード交換 ｜ オートセーブ復元完備</p>
+        </div>
+      </section>
+
+      <!-- ACT 2: 観戦モード -->
+      <section class="opening-scene-view" id="opening-act-2">
+        <div class="tag-ribbon">ACT II : THE COLOSSEUM OF MIND</div>
+        <h2 class="scene-title">🤖 観戦モード（AI自動 ＆ 高速観測）</h2>
+        
+        <div class="feature-pill">
+          <span>📊</span>
+          <span>神速倍速観戦（1x〜3x） ｜ リアルタイム勝率予想 ＆ 終盤詰み探索</span>
+        </div>
+
+        <div class="carousel-view">
+          <div class="carousel-rail" id="rail-act-2">
+            <div class="plaque-box pos-left" data-slot="0">
+              <img src="fugo-絵柄/young_king.png" onerror="this.onerror=null;" class="plaque-pic" alt="新王">
+              <div class="plaque-name">🤴 新王</div>
+            </div>
+            <div class="plaque-box pos-center" data-slot="1">
+              <img src="fugo-絵柄/queen.png" onerror="this.onerror=null;" class="plaque-pic" alt="女王">
+              <div class="plaque-name">👸 女王</div>
+            </div>
+            <div class="plaque-box pos-right" data-slot="2">
+              <img src="fugo-絵柄/scholar.png" onerror="this.onerror=null;" class="plaque-pic" alt="学者">
+              <div class="plaque-name">📖 学者</div>
+            </div>
+            <div class="plaque-box pos-back" data-slot="3">
+              <img src="fugo-絵柄/awakened_king.png" onerror="this.onerror=null;" class="plaque-pic" alt="覚醒新王">
+              <div class="plaque-name">👑 覚醒新王</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="voice-plate">
+          <div class="voice-badge" id="role-act-2">宮廷政治の真髄・冷徹な手札管理</div>
+          <div class="voice-text" id="quote-act-2">あなたの手札、すべてお見通しよ。無駄なあがきはおやめなさい。</div>
+        </div>
+
+        <div class="caption-card">
+          <p class="caption-main">
+            鍛え抜かれたAIたちが織りなす極限の知能コロシアム。<br>
+            <strong>倍速切り替え（1x〜3x）</strong>や<strong>一時停止</strong>を自在に操り、<br>
+            四人の君主・英傑が繰り広げる盤上の覇権争いを高みより観測せよ。
+          </p>
+          <p class="caption-sub">◆ リアルタイム勝率メーター ｜ 思考可視化ランプ ｜ 終盤確定詰み探索</p>
+        </div>
+      </section>
+
+      <!-- ACT 3: シナリオモード -->
+      <section class="opening-scene-view" id="opening-act-3">
+        <div class="tag-ribbon">ACT III : THE THRONE OF LEGENDS</div>
+        <h2 class="scene-title">📜 シナリオモード（物語出陣 ＆ 英雄決戦）</h2>
+        
+        <div class="feature-pill">
+          <span>👑</span>
+          <span>完全自力勝負 ｜ マップ制覇ツリー ＆ 歴史の覇王たちを永続解放！</span>
+        </div>
+
+        <div class="carousel-view">
+          <div class="carousel-rail" id="rail-act-3">
+            <div class="plaque-box pos-left" data-slot="0">
+              <img src="fugo-絵柄/lady.png" onerror="this.onerror=null;" class="plaque-pic" alt="麗人">
+              <div class="plaque-name">💃 麗人</div>
+            </div>
+            <div class="plaque-box pos-center" data-slot="1">
+              <img src="fugo-絵柄/boy.png" onerror="this.onerror=null;" class="plaque-pic" alt="少年">
+              <div class="plaque-name">👦 少年</div>
+            </div>
+            <div class="plaque-box pos-right" data-slot="2">
+              <img src="fugo-絵柄/girl.png" onerror="this.onerror=null;" class="plaque-pic" alt="少女">
+              <div class="plaque-name">👧 少女</div>
+            </div>
+            <div class="plaque-box pos-back" data-slot="3">
+              <img src="fugo-絵柄/guy.png" onerror="this.onerror=null;" class="plaque-pic" alt="歴戦の男">
+              <div class="plaque-name">🧔 歴戦男</div>
+            </div>
+            <div class="plaque-box pos-back" data-slot="4">
+              <img src="fugo-絵柄/nobunaga.png" onerror="this.onerror=null;" class="plaque-pic" alt="織田信長">
+              <div class="plaque-name">⚔️ 信長</div>
+            </div>
+            <div class="plaque-box pos-back" data-slot="5">
+              <img src="fugo-絵柄/gilgamesh.png" onerror="this.onerror=null;" class="plaque-pic" alt="ギルガメッシュ">
+              <div class="plaque-name">👑 ギルガメ</div>
+            </div>
+            <div class="plaque-box pos-back" data-slot="6">
+              <img src="fugo-絵柄/shi_huangdi.png" onerror="this.onerror=null;" class="plaque-pic" alt="始皇帝">
+              <div class="plaque-name">🏛️ 始皇帝</div>
+            </div>
+            <div class="plaque-box pos-back" data-slot="7">
+              <img src="fugo-絵柄/shotoku.png" onerror="this.onerror=null;" class="plaque-pic" alt="聖徳太子">
+              <div class="plaque-name">🔮 聖徳太子</div>
+            </div>
+            <div class="plaque-box pos-back" data-slot="8">
+              <img src="fugo-絵柄/alexander.png" onerror="this.onerror=null;" class="plaque-pic" alt="アレクサンダー">
+              <div class="plaque-name">🛡️ アレク王</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="voice-plate">
+          <div class="voice-badge" id="role-act-3">あなたの分身・若き知性</div>
+          <div class="voice-text" id="quote-act-3">盤面を支配する理は、僕の手の中にある。</div>
+        </div>
+
+        <div class="caption-card">
+          <p class="caption-main">
+            己の分身を選び、予選トーナメント、王宮の頂点、<br>
+            そして時空を超えて顕現せし<strong>歴史の英雄・神話の覇王</strong>へ挑む壮大な旅路。<br>
+            AI代行を排した<strong>完全自力勝負</strong>で、真の『大富豪王』へ君臨せよ──
+          </p>
+          <p class="caption-sub">◆ シネマティック会話劇（ADV） ｜ マップ制覇ツリー ｜ キャラクター永続解放</p>
+        </div>
+      </section>
+
+      <!-- ACT 4: エピローグ -->
+      <section class="opening-scene-view" id="opening-act-4">
+        <div style="font-size:clamp(48px,9vh,72px);color:#ffd700;line-height:1;margin-bottom:8px;">⚜</div>
+        <div class="tag-ribbon">EPILOGUE : THE GATEWAY OPENS</div>
+        <h2 class="scene-title">運命のカードは配られた</h2>
+        <div class="caption-card">
+          <p class="caption-main">
+            汝のカードは、秩序を護る盾となるか──<br>
+            それとも、世界を覆す<strong>革命の刃</strong>となるか。<br>
+            門は開かれた。貴殿の知謀を、今こそ示されよ。
+          </p>
+        </div>
+        <button type="button" class="btn-palace" id="btn-enter-palace">👑 宮廷へ入城する (ENTER)</button>
+      </section>
+    </main>
+
+    <footer class="opening-bottom-bar">
+      <div style="width:100%;max-width:920px;display:flex;align-items:center;justify-content:space-between;">
+        <div class="opening-dot-box">
+          <span class="opening-dot-item active" data-step="0"></span>
+          <span class="opening-dot-item" data-step="1"></span>
+          <span class="opening-dot-item" data-step="2"></span>
+          <span class="opening-dot-item" data-step="3"></span>
+          <span class="opening-dot-item" data-step="4"></span>
+        </div>
+        <div class="opening-guide-prompt" id="opening-guide-text">TAP / クリックで進む ▼</div>
+      </div>
+    </footer>
+  </div>
 
   <!-- ゲーム表示フレーム（外枠ボーダー撤廃・シームレス王宮謁見の間） -->
   <div id="app-viewport">
@@ -55,7 +299,7 @@
         <!-- 宮廷ヘッダープレート（タイトルロゴ ＆ 4大ヘルパーボタンの一体型飾り額縁） -->
         <div class="char-select-header-plate">
           <div class="title-logo-wrap char-select-main-title">
-            <img src="title_logo.png" alt="ROYAL CARD GAME" class="title-logo-img">
+            <img src="title_logo.png" onerror="this.onerror=null;" alt="ROYAL CARD GAME" class="title-logo-img">
           </div>
           <div class="header-plate-divider"></div>
           <div class="char-select-helper-btns">
@@ -154,9 +398,7 @@
                 <span>③ 試合数</span>
                 <span class="setup-sub-note" id="setup-games-label">全 10 試合の連続対戦</span>
               </div>
-              <div class="practice-games-cards-grid" id="setup-games-cards-grid">
-                <!-- JSで動的生成 (1, 5, 10, 20, 50) -->
-              </div>
+              <div class="practice-games-cards-grid" id="setup-games-cards-grid"></div>
             </div>
 
             <!-- ④ あなたのキャラクター選択（シナリオ解放連動） -->
@@ -165,9 +407,7 @@
                 <span>④ 操作キャラクター（あなたの分身）</span>
                 <span class="setup-selected-badge" id="setup-player-badge">未選択</span>
               </div>
-              <div class="char-picker-compact-grid" id="setup-player-char-grid">
-                <!-- JSで動的生成（解放状況に応じて鍵付き/オープン） -->
-              </div>
+              <div class="char-picker-compact-grid" id="setup-player-char-grid"></div>
             </div>
 
             <!-- ⑤ 対戦相手CPU（3人）選択（シナリオ解放連動） -->
@@ -179,9 +419,7 @@
                   <span class="setup-selected-badge" id="setup-opponents-badge">0 / 3人</span>
                 </div>
               </div>
-              <div class="char-picker-compact-grid" id="setup-opponents-char-grid">
-                <!-- JSで動的生成（解放状況に応じて鍵付き/オープン） -->
-              </div>
+              <div class="char-picker-compact-grid" id="setup-opponents-char-grid"></div>
             </div>
 
             <!-- ⑥ 禁止あがり警告アシスト -->
@@ -213,7 +451,7 @@
 
         <!-- キャラ選択画面の最下部フッター（控えめなプロローグ再鑑賞ボタン配置） -->
         <div class="char-select-footer-bar">
-          <button type="button" class="btn-prologue-mini" id="btn-open-prologue" onclick="window.location.href='opening.html'" title="オープニング（世界観とモード解説）を再生">🎬 プロローグ</button>
+          <button type="button" class="btn-prologue-mini" id="btn-open-prologue" title="オープニング（世界観とモード解説）を再生">🎬 プロローグ</button>
           <span class="footer-brand">👑 ROYAL CARD GAME</span>
           <span class="char-select-version-badge" id="char-select-version-badge" title="クリックで更新履歴を表示"></span>
         </div>
@@ -229,7 +467,7 @@
         <!-- 宮廷ヘッダープレート -->
         <div class="battle-header-plate scenario-top-header">
           <div class="title-logo-wrap battle-logo-wrap">
-            <img src="title_logo.png" alt="ROYAL CARD GAME" class="title-logo-img battle-logo-img">
+            <img src="title_logo.png" onerror="this.onerror=null;" alt="ROYAL CARD GAME" class="title-logo-img battle-logo-img">
           </div>
           <div class="header-plate-divider battle-plate-divider"></div>
           <div class="rules-header">
@@ -255,7 +493,7 @@
           <!-- ① 少年 -->
           <div class="avatar-card-large" data-avatar-id="boy">
             <div class="avatar-large-img-wrap">
-              <img src="fugo-絵柄/boy.png" onerror="this.onerror=null; this.src='boy.png';" alt="若き天才勝負師">
+              <img src="fugo-絵柄/boy.png" onerror="this.onerror=null;" alt="若き天才勝負師">
               <span class="avatar-type-tag">若き天才系</span>
             </div>
             <div class="avatar-large-info">
@@ -272,7 +510,7 @@
           <!-- ② 少女 -->
           <div class="avatar-card-large" data-avatar-id="girl">
             <div class="avatar-large-img-wrap">
-              <img src="fugo-絵柄/girl.png" onerror="this.onerror=null; this.src='girl.png';" alt="ミステリアスな少女">
+              <img src="fugo-絵柄/girl.png" onerror="this.onerror=null;" alt="ミステリアスな少女">
               <span class="avatar-type-tag">ミステリアス系</span>
             </div>
             <div class="avatar-large-info">
@@ -289,7 +527,7 @@
           <!-- ③ 歴戦の男 -->
           <div class="avatar-card-large" data-avatar-id="guy">
             <div class="avatar-large-img-wrap">
-              <img src="fugo-絵柄/guy.png" onerror="this.onerror=null; this.src='guy.png';" alt="熟練の勝負師">
+              <img src="fugo-絵柄/guy.png" onerror="this.onerror=null;" alt="熟練の勝負師">
               <span class="avatar-type-tag">歴戦の勝負師系</span>
             </div>
             <div class="avatar-large-info">
@@ -306,7 +544,7 @@
           <!-- ④ 麗人 -->
           <div class="avatar-card-large" data-avatar-id="lady">
             <div class="avatar-large-img-wrap">
-              <img src="fugo-絵柄/lady.png" onerror="this.onerror=null; this.src='lady.png';" alt="妖艶なギャンブラー">
+              <img src="fugo-絵柄/lady.png" onerror="this.onerror=null;" alt="妖艶なギャンブラー">
               <span class="avatar-type-tag">妖艶ギャンブラー系</span>
             </div>
             <div class="avatar-large-info">
@@ -324,8 +562,6 @@
 
         <!-- 条件設定バー（①規定対戦数 ＆ ②カード交換有無） -->
         <div class="scenario-settings-row-group">
-          
-          <!-- 試合数選択バー（1試合, 2試合, 5試合, 10試合） -->
           <div class="scenario-games-select-container">
             <div class="scenario-games-select-title">
               <span>⚔️ 規定対戦数</span>
@@ -347,7 +583,6 @@
             </div>
           </div>
 
-          <!-- カード交換の有無選択バー -->
           <div class="scenario-exchange-select-container">
             <div class="scenario-exchange-select-title">
               <span>👑 カード交換</span>
@@ -364,7 +599,6 @@
               </button>
             </div>
           </div>
-
         </div>
 
         <!-- 決定ボタン -->
@@ -392,7 +626,7 @@
         <!-- 宮廷ヘッダープレート -->
         <div class="battle-header-plate scenario-top-header">
           <div class="title-logo-wrap battle-logo-wrap">
-            <img src="title_logo.png" alt="ROYAL CARD GAME" class="title-logo-img battle-logo-img">
+            <img src="title_logo.png" onerror="this.onerror=null;" alt="ROYAL CARD GAME" class="title-logo-img battle-logo-img">
           </div>
           <div class="header-plate-divider battle-plate-divider"></div>
           <div class="rules-header">
@@ -408,7 +642,7 @@
         <!-- プレイヤー情報 ＆ タイトルへ戻る / リセットバー -->
         <div class="map-user-profile-bar">
           <div class="map-user-profile">
-            <img id="map-user-portrait" src="fugo-絵柄/boy.png" onerror="this.onerror=null; this.src='boy.png';" alt="Player">
+            <img id="map-user-portrait" src="fugo-絵柄/boy.png" onerror="this.onerror=null;" alt="Player">
             <div class="map-user-details">
               <div class="map-user-name" id="map-user-name">少年</div>
               <div class="map-user-status" id="map-user-status">第1章：宮廷予選（進捗 0 / 3 制圧）</div>
@@ -434,9 +668,7 @@
               <div class="stage-sub">初期9人の貴族・戦略家がA/B/Cチームに分かれて立ちはだかる（クリックで選択可能）</div>
             </div>
 
-            <div class="map-groups-grid" id="map-stage-1-groups">
-              <!-- JSで動的生成 -->
-            </div>
+            <div class="map-groups-grid" id="map-stage-1-groups"></div>
           </div>
 
           <!-- Stage 2: 王宮四連戦（新王 ➔ 王 ➔ 女王 ➔ 覚醒新王） -->
@@ -451,40 +683,36 @@
             </div>
 
             <div class="map-boss-row" id="map-stage-2-boss-row">
-              <!-- ① 新王 (YOUNG_KING) -->
               <div class="map-boss-card" id="boss-card-young-king">
                 <div class="boss-card-img-wrap">
-                  <img id="boss-img-young-king" src="fugo-絵柄/young_king.png" onerror="this.onerror=null; this.src='young_king.png';" alt="新王">
+                  <img id="boss-img-young-king" src="fugo-絵柄/young_king.png" onerror="this.onerror=null;" alt="新王">
                   <span class="boss-status-tag" id="boss-tag-young-king">未到達</span>
                 </div>
                 <div class="boss-card-name" id="boss-name-young-king">🤴 新王 (Young King)</div>
                 <div class="boss-card-role" id="boss-role-young-king">若き俊英・第一の門番</div>
               </div>
 
-              <!-- ② 王 (KING) -->
               <div class="map-boss-card locked" id="boss-card-king">
                 <div class="boss-card-img-wrap">
-                  <img id="boss-img-king" src="fugo-絵柄/king.png" onerror="this.onerror=null; this.src='king.png';" alt="王">
+                  <img id="boss-img-king" src="fugo-絵柄/king.png" onerror="this.onerror=null;" alt="王">
                   <span class="boss-status-tag" id="boss-tag-king">未到達</span>
                 </div>
                 <div class="boss-card-name" id="boss-name-king">🏰 王 (King)</div>
                 <div class="boss-card-role" id="boss-role-king">宮廷の絶対君主・父</div>
               </div>
 
-              <!-- ③ 女王（シークレット） -->
               <div class="map-boss-card locked" id="boss-card-queen">
                 <div class="boss-card-img-wrap">
-                  <img id="boss-img-queen" src="fugo-絵柄/queen_bl.png" onerror="this.onerror=null; this.src='queen_bl.png';" alt="？？？">
+                  <img id="boss-img-queen" src="fugo-絵柄/queen_bl.png" onerror="this.onerror=null;" alt="？？？">
                   <span class="boss-status-tag" id="boss-tag-queen">シークレット</span>
                 </div>
                 <div class="boss-card-name" id="boss-name-queen">？？？</div>
                 <div class="boss-card-role" id="boss-role-queen">？？？</div>
               </div>
 
-              <!-- ④ 覚醒新王（シークレット） -->
               <div class="map-boss-card locked" id="boss-card-awakened-king">
                 <div class="boss-card-img-wrap">
-                  <img id="boss-img-awakened-king" src="fugo-絵柄/young_bl.png" onerror="this.onerror=null; this.src='young_bl.png';" alt="？？？">
+                  <img id="boss-img-awakened-king" src="fugo-絵柄/young_bl.png" onerror="this.onerror=null;" alt="？？？">
                   <span class="boss-status-tag" id="boss-tag-awakened-king">シークレット</span>
                 </div>
                 <div class="boss-card-name" id="boss-name-awakened-king">？？？</div>
@@ -504,9 +732,7 @@
               <div class="stage-sub">王宮制圧後、時空を超えて顕現した人類最強の覇王たち</div>
             </div>
 
-            <div class="map-boss-row heroes-boss-row" id="map-stage-3-boss-row">
-              <!-- JSで順次生成 -->
-            </div>
+            <div class="map-boss-row heroes-boss-row" id="map-stage-3-boss-row"></div>
           </div>
 
         </div>
@@ -536,17 +762,14 @@
     <!-- ========================================================= -->
     <div class="scenario-adv-overlay is-hidden" id="adv-overlay">
       <div class="adv-visual-stage">
-        <!-- 左側：プレイヤー立ち絵 -->
         <div class="adv-actor-col actor-left" id="adv-player-actor">
-          <img id="adv-player-img" src="fugo-絵柄/boy.png" onerror="this.onerror=null; this.src='boy.png';" alt="Player">
+          <img id="adv-player-img" src="fugo-絵柄/boy.png" onerror="this.onerror=null;" alt="Player">
         </div>
         
-        <!-- 右側：ボス立ち絵 -->
         <div class="adv-actor-col actor-right" id="adv-boss-actor">
-          <img id="adv-boss-img" src="fugo-絵柄/young_king.png" onerror="this.onerror=null; this.src='young_king.png';" alt="Boss">
+          <img id="adv-boss-img" src="fugo-絵柄/young_king.png" onerror="this.onerror=null;" alt="Boss">
         </div>
 
-        <!-- 右側：宮廷案内役（侍従長）専用独立ビジュアル枠 -->
         <div class="adv-actor-col actor-right adv-guide-actor-plate is-hidden" id="adv-guide-actor">
           <div class="guide-portrait-inner">
             <div class="guide-emblem-icon">🏛️</div>
@@ -565,7 +788,6 @@
         <button class="adv-btn-skip" id="adv-btn-skip">SKIP ▶▶</button>
       </div>
 
-      <!-- ADV画面装飾フッター -->
       <div class="adv-footer-decor">
         <div class="adv-footer-logo-wrap">
           <span class="footer-brand">👑 ROYAL CARD GAME</span>
@@ -579,7 +801,7 @@
     <!-- 勝利演出ポップアップ -->
     <div class="victory-popup-overlay" id="victory-popup">
       <div class="victory-popup-content">
-        <img id="victory-portrait" src="" onerror="this.onerror=null; this.src='king.png';" alt="">
+        <img id="victory-portrait" src="" onerror="this.onerror=null;" alt="">
         <div class="victory-popup-label">🏆 WINNER 🏆</div>
         <div class="victory-popup-name" id="victory-name"></div>
       </div>
@@ -589,7 +811,7 @@
     <div id="header-area">
       <div class="battle-header-plate">
         <div class="title-logo-wrap battle-logo-wrap">
-          <img src="title_logo.png" alt="ROYAL CARD GAME" class="title-logo-img battle-logo-img">
+          <img src="title_logo.png" onerror="this.onerror=null;" alt="ROYAL CARD GAME" class="title-logo-img battle-logo-img">
         </div>
         <div class="header-plate-divider battle-plate-divider"></div>
         <div class="rules-header">
@@ -648,63 +870,63 @@
         </div>
         <div class="modal-body">
           <div class="char-intro-item" data-char-id="DUKE">
-            <img class="char-intro-portrait" data-char-img="DUKE" src="" onerror="this.onerror=null; this.src='duke.png';" alt="">
+            <img class="char-intro-portrait" data-char-img="DUKE" src="" onerror="this.onerror=null;" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">👑 公爵 (Duke) - 温存型</div>
               <div>強力なカード（Aや2）を温存し、手札後半で一気に勝負をかけます。</div>
             </div>
           </div>
           <div class="char-intro-item" data-char-id="MARQUIS">
-            <img class="char-intro-portrait" data-char-img="MARQUIS" src="" onerror="this.onerror=null; this.src='marquis.png';" alt="">
+            <img class="char-intro-portrait" data-char-img="MARQUIS" src="" onerror="this.onerror=null;" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">🍷 侯爵 (Marquis) - スマートパス・スコア重視</div>
               <div>一枚ごとの価値と手札バランスを計算し、不利な小競り合いはスマートにパスして手札を守るエレガント派。</div>
             </div>
           </div>
           <div class="char-intro-item" data-char-id="COUNT">
-            <img class="char-intro-portrait" data-char-img="COUNT" src="" onerror="this.onerror=null; this.src='count.png';" alt="">
+            <img class="char-intro-portrait" data-char-img="COUNT" src="" onerror="this.onerror=null;" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">📜 伯爵 (Count) - 変則展開</div>
               <div>序盤は温存し、手札が5枚以下になると強力なカードを積極的に使い始めます。</div>
             </div>
           </div>
           <div class="char-intro-item" data-char-id="KNIGHT">
-            <img class="char-intro-portrait" data-char-img="KNIGHT" src="" onerror="this.onerror=null; this.src='knight.png';" alt="">
+            <img class="char-intro-portrait" data-char-img="KNIGHT" src="" onerror="this.onerror=null;" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">⚔️ 騎士 (Knight) - 愚直・最弱順</div>
               <div>駆け引きをせず、常に「今出せる中で最も弱いカード」を愚直に出していきます。</div>
             </div>
           </div>
           <div class="char-intro-item" data-char-id="MERCHANT">
-            <img class="char-intro-portrait" data-char-img="MERCHANT" src="" onerror="this.onerror=null; this.src='merchant.png';" alt="">
+            <img class="char-intro-portrait" data-char-img="MERCHANT" src="" onerror="this.onerror=null;" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">⚖️ 商人 (Merchant) - ペア重視</div>
               <div>ペア（2枚出し）やセットの構築を好み、同じ数字のカードを単発で出すことを嫌います。</div>
             </div>
           </div>
           <div class="char-intro-item" data-char-id="SCHOLAR">
-            <img class="char-intro-portrait" data-char-img="SCHOLAR" src="" onerror="this.onerror=null; this.src='scholar.png';" alt="">
+            <img class="char-intro-portrait" data-char-img="SCHOLAR" src="" onerror="this.onerror=null;" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">📖 学者 (Scholar) - 慎重・観察</div>
               <div>残存カードを分析し、相手が複数出しをしてきた場合に合わせてカウンターを狙います。</div>
             </div>
           </div>
           <div class="char-intro-item" data-char-id="STRATEGIST">
-            <img class="char-intro-portrait" data-char-img="STRATEGIST" src="" onerror="this.onerror=null; this.src='strategist.png';" alt="">
+            <img class="char-intro-portrait" data-char-img="STRATEGIST" src="" onerror="this.onerror=null;" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">♟️ 軍師 (Strategist) - 妨害・コントロール</div>
               <div>他プレイヤーの手札が残り少なくなると「8切り」や強カードで親権を奪い、あがりを阻止します。</div>
             </div>
           </div>
           <div class="char-intro-item" data-char-id="REVOLUTIONARY">
-            <img class="char-intro-portrait" data-char-img="REVOLUTIONARY" src="" onerror="this.onerror=null; this.src='revolutionary.png';" alt="">
+            <img class="char-intro-portrait" data-char-img="REVOLUTIONARY" src="" onerror="this.onerror=null;" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">🔥 革命家 (Revolutionary) - 革命特化</div>
               <div>4枚以上のペアがあれば最優先で「革命」を狙い、さらに「8切り」を多用します。</div>
             </div>
           </div>
           <div class="char-intro-item" data-char-id="JESTER">
-            <img class="char-intro-portrait" data-char-img="JESTER" src="" onerror="this.onerror=null; this.src='jester.png';" alt="">
+            <img class="char-intro-portrait" data-char-img="JESTER" src="" onerror="this.onerror=null;" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">🤡 道化師 (Jester) - 予測不能</div>
               <div>気まぐれに強カードを出したりパスしたりと、読めないトリッキーな動きをします。</div>
@@ -712,28 +934,28 @@
           </div>
 
           <div class="char-intro-item" data-char-id="KING">
-            <img class="char-intro-portrait" data-char-img="KING" src="" onerror="this.onerror=null; this.src='king.png';" alt="">
+            <img class="char-intro-portrait" data-char-img="KING" src="" onerror="this.onerror=null;" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">🏰 王 (King) - 163次元APEX完全直感 ＆ 深さ5詰み</div>
               <div>宮廷の君主にして新王の父。鍛え抜かれた163次元深層学習モデルによる完全直感と、深さ5完全読み切り探索で王者の威厳を振るう絶対者です。</div>
             </div>
           </div>
           <div class="char-intro-item is-locked-char" data-char-id="BEGINNER_AI">
-            <img class="char-intro-portrait" data-char-img="BEGINNER_AI" src="" onerror="this.onerror=null; this.src='young_king.png';" alt="">
+            <img class="char-intro-portrait" data-char-img="BEGINNER_AI" src="" onerror="this.onerror=null;" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">🤴 新王 (Young King) - 王宮の第一の門番・俊英</div>
               <div>現国王の一人息子（30歳）。母の直感と父の先読みを受け継ぐ若きエリート。王宮決戦の先陣として立ちはだかる俊英AI。</div>
             </div>
           </div>
           <div class="char-intro-item is-locked-char" data-char-id="SUPER_AI">
-            <img class="char-intro-portrait" data-char-img="SUPER_AI" src="" onerror="this.onerror=null; this.src='queen.png';" alt="">
+            <img class="char-intro-portrait" data-char-img="SUPER_AI" src="" onerror="this.onerror=null;" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">👸 女王 (Queen) - 正統派5,000回MCTS・宮廷政治の真の実力者</div>
               <div>現国王の妃にして新王の母（52歳）。不完全情報モンテカルロ木探索（5,000回MCTS）を駆使し、隙のないセット保持と冷徹な手札管理で挑戦者を迎え撃つ最高峰の母。</div>
             </div>
           </div>
           <div class="char-intro-item is-locked-char" data-char-id="AWAKENED_KING">
-            <img class="char-intro-portrait" data-char-img="AWAKENED_KING" src="" onerror="this.onerror=null; this.src='awakened_king.png';" alt="">
+            <img class="char-intro-portrait" data-char-img="AWAKENED_KING" src="" onerror="this.onerror=null;" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">👑 覚醒新王 (Awakened King) - 苦難の末覚醒・7,500回MCTS絶対覇王</div>
               <div>父と母の敗北という絶望を背負い、幾年月もの過酷な修練を経て髭を蓄え真の王として覚醒した姿。7,500回MCTSと深さ7完全詰み探索を完全融合させた王族最強の到達点。</div>
@@ -741,35 +963,35 @@
           </div>
 
           <div class="char-intro-item is-locked-char" data-char-id="NOBUNAGA">
-            <img class="char-intro-portrait" data-char-img="NOBUNAGA" src="" onerror="this.onerror=null; this.src='nobunaga.png';" alt="">
+            <img class="char-intro-portrait" data-char-img="NOBUNAGA" src="" onerror="this.onerror=null;" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">⚔️ 織田信長 (Nobunaga) - 親番速攻・三段撃ちキルコンボ</div>
               <div>戦国の覇王。無駄な8切り暴発を排し、勝機にのみ8切りを叩き込んで親番を強奪。親番から低位ペア連打（三段撃ち）で一気にゲームを終わらせる電光石火の速攻AI。</div>
             </div>
           </div>
           <div class="char-intro-item is-locked-char" data-char-id="SHOTOKU">
-            <img class="char-intro-portrait" data-char-img="SHOTOKU" src="" onerror="this.onerror=null; this.src='shotoku.png';" alt="">
+            <img class="char-intro-portrait" data-char-img="SHOTOKU" src="" onerror="this.onerror=null;" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">🔮 聖徳太子 (Shotoku) - 完全傾聴・大調和カウンター</div>
               <div>古代日本の大賢人。場のカードと全員のパス履歴から手札を完全逆算。算術的最弱順消化と革命返しによる大調和、ジョーカー単騎への♠3返しで物理的に上がりを遮断する読心型AI。</div>
             </div>
           </div>
           <div class="char-intro-item is-locked-char" data-char-id="SHI_HUANGDI">
-            <img class="char-intro-portrait" data-char-img="SHI_HUANGDI" src="" onerror="this.onerror=null; this.src='shi_huangdi.png';" alt="">
+            <img class="char-intro-portrait" data-char-img="SHI_HUANGDI" src="" onerror="this.onerror=null;" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">🏛️ 秦の始皇帝 (Shi Huangdi) - 法家統制・マルチセット手札圧縮</div>
               <div>中華統一を果たした始皇帝。手札4枚以上でのチケット（2/JOKER）単騎出しを法で厳格禁止し、規格通りのマルチセット圧縮で大貧民率を激減させて最後に刈り取る統制型AI。</div>
             </div>
           </div>
           <div class="char-intro-item is-locked-char" data-char-id="ALEXANDER">
-            <img class="char-intro-portrait" data-char-img="ALEXANDER" src="" onerror="this.onerror=null; this.src='alexander.png';" alt="">
+            <img class="char-intro-portrait" data-char-img="ALEXANDER" src="" onerror="this.onerror=null;" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">🛡️ アレク王 (Alexander) - 不敗の電撃戦・ファランクス重装突撃</div>
               <div>世界帝国を築いた軍事の天才。複数出し火力ボーナス（4枚+60、3枚+28、2枚+18）を環境の強さに完全連動させ、手札6枚からの深さ5読み切り探索で最短手数で駆け抜ける不敗AI。</div>
             </div>
           </div>
           <div class="char-intro-item is-locked-char" data-char-id="GILGAMESH">
-            <img class="char-intro-portrait" data-char-img="GILGAMESH" src="" onerror="this.onerror=null; this.src='gilgamesh.png';" alt="">
+            <img class="char-intro-portrait" data-char-img="GILGAMESH" src="" onerror="this.onerror=null;" alt="">
             <div class="char-intro-text">
               <div class="rule-item-title">👑 ギルガメッシュ (Gilgamesh) - 原初の覇王・神話の頂点</div>
               <div>最古の神話に座す原初の覇王。相手の手札を完全把握し、最高峰15,000回MCTSと天の戒め（リーチ者完全封殺）、深さ8詰み探索でノーミスで刈り取る絶対者。</div>
@@ -783,7 +1005,7 @@
       </div>
     </div>
 
-    <!-- ルール解説モーダル（初心者向け体系的再編・本格競技仕様版） -->
+    <!-- ルール解説モーダル -->
     <div class="modal-overlay" id="rule-modal">
       <div class="modal-content">
         <div class="modal-header">
@@ -791,8 +1013,6 @@
           <button class="modal-close" id="modal-close-x">&times;</button>
         </div>
         <div class="modal-body">
-          
-          <!-- ① 基本ルールとゲームの流れ -->
           <div class="rule-item">
             <div class="rule-item-title">① 基本ルールとカードの強さ (Card Strength)</div>
             <div>
@@ -822,7 +1042,6 @@
             </div>
           </div>
 
-          <!-- ④ 特殊役・戦術ギミック -->
           <div class="rule-item">
             <div class="rule-item-title">④ 宮廷の特殊役 (Special Rules)</div>
             <div>
@@ -834,7 +1053,6 @@
             </div>
           </div>
 
-          <!-- ⑤ 本格競技ルール：禁止あがり -->
           <div class="rule-item rule-item-highlight">
             <div class="rule-item-title">⑤ ⚠️ 禁止あがり（反則負け・最下位確定）</div>
             <div>
@@ -844,11 +1062,10 @@
               ・<strong>8</strong>（単騎・ペア・8切りを含む全て）<br>
               ・<strong>最強数字</strong>（通常時は「2」、革命時は「3」）<br>
               ・<strong>♠3単騎</strong>（通常時のジョーカーキラー札）<br>
-              ※プレイヤーの手番中、<strong>「今選択しているカードを出すと、残りの手札がすべて禁止カードのみになり次回あがれなくなる詰み状態」</strong>になる場合は、手番バッジの右隣に赤い警告バッジが表示されます。
+              ※プレイヤーの手番中、<strong>「今選択しているカードを出すと、残りの手札がすべて禁止カードのみになり次回あがれなくなる詰み状態」</strong>になる場合は、画面中央に特大の警告バッジが表示されます。
             </div>
           </div>
 
-          <!-- ⑥ 本格競技ルール：都落ち -->
           <div class="rule-item rule-item-highlight">
             <div class="rule-item-title">⑥ 👑 都落ち（みやこおち・前大富豪即失格）</div>
             <div>
@@ -857,14 +1074,13 @@
             </div>
           </div>
 
-          <!-- ⑦ 3つのプレイモード -->
           <div class="rule-item rule-item-highlight">
             <div class="rule-item-title">⑦ 👑 3つのプレイモードについて</div>
             <div style="margin-bottom: 6px;">本作には、プレイスタイルに合わせた3つの独立した対戦モードが搭載されています。</div>
             <ul class="scenario-rule-list" style="margin-top: 4px;">
               <li>
                 <strong>⚔️ 練習モード (手動対戦 ＆ キャラインサイト):</strong><br>
-                あなた自身が手札を選んで戦うメインモードです。対戦中、「🤖 代行: ON」に切り替えることで、あなたが選択したキャラクター本来の固有AI（公爵、商人、信長、ギルガメッシュ等）が打牌を担当し、AIの思考法を学習できます。
+                あなた自身が手札を選んで戦うメインモードです。対戦中、「🤖 代行: ON」に切り替えることで、あなたが選択したキャラクター本来の固有AIが打牌を担当し、AIの思考法を学習できます。
               </li>
               <li>
                 <strong>🤖 観戦モード (AI自動 ＆ 高速観察):</strong><br>
@@ -872,12 +1088,11 @@
               </li>
               <li>
                 <strong>📜 シナリオモード (物語出陣 ＆ 完全自力勝負):</strong><br>
-                4人の勝負師から分身を選び、予選から王族、歴史の英雄たちを打ち倒して真の【大富豪王】を目指す物語モードです。公平な実力勝負のため「AI代行」は完全禁止（自力勝負）となっています。
+                4人の勝負師から分身を選び、予選から王族、歴史の英雄たちを打ち倒して真の【大富豪王】を目指す物語モードです。公平な実力勝負のため「AI代行」は完全禁止となっています。
               </li>
             </ul>
           </div>
 
-          <!-- ⑧ セーブ機能と再開の仕様 -->
           <div class="rule-item">
             <div class="rule-item-title">⑧ 💾 オートセーブ（AUTO SAVE）と再開の仕様</div>
             <div style="margin-bottom: 4px;">モードによってセーブと再開の仕組みが異なります：</div>
@@ -956,7 +1171,7 @@
       <div class="modal-content modal-wide modal-clear-gorgeous">
         <div class="modal-winner-plate is-champion-plate is-tier2-champion" id="practice-finish-winner-plate">
           <div class="champion-crown-overlay">👑</div>
-          <img class="modal-winner-img" id="practice-finish-winner-img" src="fugo-絵柄/king.png" onerror="this.onerror=null; this.src='king.png';" alt="Champion">
+          <img class="modal-winner-img" id="practice-finish-winner-img" src="fugo-絵柄/king.png" onerror="this.onerror=null;" alt="Champion">
           <div class="modal-winner-info-col">
             <div class="modal-winner-title" id="practice-finish-winner-title">👑 TOURNAMENT CHAMPION 👑</div>
             <div class="modal-winner-name" id="practice-finish-winner-name">王 (King)</div>
@@ -1087,32 +1302,47 @@
       </div>
     </div>
 
-    <!-- ゲーム終了ダイアログ（通常対局用） -->
+    <!-- 途中決着ダイアログ -->
     <div class="modal-overlay" id="next-game-modal">
-      <div class="modal-content modal-next-game-compact">
-        <div class="modal-header">
-          <div class="modal-title">ゲーム終了・宮廷清算</div>
+      <div class="modal-content modal-next-game-compact modal-wide">
+        <div class="modal-winner-plate">
+          <img id="modal-winner-portrait" class="modal-winner-img" src="fugo-絵柄/king.png" onerror="this.onerror=null;" alt="Winner">
+          <div class="modal-winner-info-col">
+            <div class="modal-winner-title">👑 MATCH WINNER 👑</div>
+            <div class="modal-winner-name" id="modal-winner-name">---</div>
+          </div>
         </div>
+
+        <div class="modal-header" style="margin-top: 14px;">
+          <div class="modal-title" id="next-game-modal-header-title">試合決着・途中成績集計</div>
+        </div>
+
         <div class="modal-body modal-body-next-game">
-          <div class="modal-winner-plate">
-            <img id="modal-winner-portrait" class="modal-winner-img" src="fugo-絵柄/king.png" onerror="this.onerror=null; this.src='king.png';" alt="Winner">
-            <div class="modal-winner-info-col">
-              <div class="modal-winner-title">👑 WINNER 👑</div>
-              <div class="modal-winner-name" id="modal-winner-name">---</div>
+          <div class="interim-match-status-banner" id="next-game-match-banner">
+            第 1 / 10 試合 終了
+          </div>
+
+          <div class="practice-chart-wrapper" id="next-game-chart-wrapper">
+            <div class="practice-chart-header">
+              <span class="practice-chart-title">📈 各参加者の順位推移グラフ (1位〜4位)</span>
+              <div class="practice-chart-legend" id="next-game-chart-legend"></div>
+            </div>
+            <div class="practice-canvas-container">
+              <canvas id="next-game-chart" width="600" height="150"></canvas>
             </div>
           </div>
 
-          <div class="final-ranking-list" id="final-ranking-list"></div>
+          <div class="ranking-table-container" id="next-game-ranking-wrap"></div>
           <p class="next-game-prompt" id="next-game-prompt-text">次の試合へ進みます：</p>
         </div>
+
         <div class="modal-footer next-game-footer">
-          <button class="btn btn-sub btn-next-game-stats" id="btn-open-replay-normal" style="border-color: #ffd700; color: #ffd700;">
-            📜 対局リプレイ ＆ 勝敗因分析を見る
+          <button class="btn btn-sub btn-next-game-stats" id="btn-open-replay-normal" style="border-color: #ffd700; color: #ffd700; width: 100%; height: 32px; font-weight: 800;">
+            📜 直前対局のリプレイ ＆ 勝敗因分析を見る
           </button>
-          <button class="btn btn-sub btn-next-game-stats" id="btn-next-game-stats">📊 途中成績を確認</button>
           
-          <div class="next-game-action-row" id="match-next-game-actions">
-            <button class="btn btn-gold btn-next-match-seat" id="btn-next-match-proceed">
+          <div class="next-game-action-row" id="match-next-game-actions" style="width: 100%;">
+            <button class="btn btn-gold btn-next-match-seat" id="btn-next-match-proceed" style="width: 100%;">
               <span class="btn-icon" id="next-match-btn-icon">⚔️</span>
               <span class="btn-text" id="next-match-btn-text">次の試合へ進む</span>
             </button>
@@ -1121,16 +1351,12 @@
       </div>
     </div>
 
-    <!-- ========================================================= -->
-    <!-- シナリオモーダル①：ステージ制覇 / 敗北決着リザルト          -->
-    <!-- ========================================================= -->
+    <!-- シナリオモーダル①：ステージ制覇 / 敗北決着リザルト -->
     <div class="modal-overlay" id="modal-stage-clear">
       <div class="modal-content modal-next-game-compact modal-clear-gorgeous">
-        
-        <!-- 大判勝者肖像画プレート -->
         <div class="modal-winner-plate" id="stage-clear-winner-plate">
           <div class="champion-crown-overlay">👑</div>
-          <img class="modal-winner-img" id="stage-clear-winner-img" src="fugo-絵柄/boy.png" onerror="this.onerror=null; this.src='boy.png';" alt="Winner">
+          <img class="modal-winner-img" id="stage-clear-winner-img" src="fugo-絵柄/boy.png" onerror="this.onerror=null;" alt="Winner">
           <div class="modal-winner-info-col">
             <div class="modal-winner-title">👑 CHAMPION 👑</div>
             <div class="modal-winner-name" id="stage-clear-winner-name">少年</div>
@@ -1143,9 +1369,19 @@
         <div class="modal-body modal-body-next-game">
           <div class="clear-crown-icon" id="clear-result-icon">👑</div>
           <div class="clear-sub-msg" id="clear-result-msg">見事、規定条件を達成して次の試練への道が開かれました。</div>
+
+          <div class="practice-chart-wrapper" id="stage-clear-chart-wrapper">
+            <div class="practice-chart-header">
+              <span class="practice-chart-title">📈 関門内全試合の順位推移チャート (1位〜4位)</span>
+              <div class="practice-chart-legend" id="stage-clear-chart-legend"></div>
+            </div>
+            <div class="practice-canvas-container">
+              <canvas id="stage-clear-chart" width="600" height="150"></canvas>
+            </div>
+          </div>
+
           <div class="clear-scores-table" id="clear-scores-table"></div>
 
-          <!-- グランドエンディング時専用 英雄の軌跡ログ保存枠 -->
           <div class="scenario-grand-save-box is-hidden" id="scenario-grand-save-box" style="margin-top: 10px; width: 100%;">
             <button class="btn btn-gold btn-practice-download-gold" id="btn-scenario-download-jsonl" style="width: 100%; height: 42px; font-size: 13.5px;">
               📥 英雄の全対戦ログを保存 (JSONL)
@@ -1176,7 +1412,7 @@
     <div class="modal-overlay" id="modal-scenario-next-match">
       <div class="modal-content modal-next-game-compact modal-clear-gorgeous">
         <div class="modal-winner-plate" id="next-match-winner-plate">
-          <img class="modal-winner-img" id="next-match-winner-img" src="fugo-絵柄/boy.png" onerror="this.onerror=null; this.src='boy.png';" alt="Winner">
+          <img class="modal-winner-img" id="next-match-winner-img" src="fugo-絵柄/boy.png" onerror="this.onerror=null;" alt="Winner">
           <div class="modal-winner-info-col">
             <div class="modal-winner-title">⚔️ WINNER ⚔️</div>
             <div class="modal-winner-name" id="next-match-winner-name">少年</div>
@@ -1271,12 +1507,9 @@
             <div>
               各関門（ステージ）の規定試合数をすべて戦い抜いた時点で、<strong>【最低1回以上の大富豪獲得（1勝以上）】を達成した上で</strong>、4名の参加者の中で<strong>「大富豪率（大富豪獲得回数）が第1位」または「平均順位が第1位」</strong>のいずれかを満たしていれば関門突破（CHAMPION）となります（※一度も大富豪を取れずに平均順位だけで通過することはできません）。
             </div>
-            <ul class="scenario-rule-list" id="scenario-rules-dynamic-stages" style="margin-top: 6px;">
-              <!-- JSで動的生成 -->
-            </ul>
+            <ul class="scenario-rule-list" id="scenario-rules-dynamic-stages" style="margin-top: 6px;"></ul>
           </div>
 
-          <!-- シナリオモード代行完全禁止に関する重要ルール -->
           <div class="rule-item rule-item-highlight">
             <div class="rule-item-title">🚫 AI代行機能の完全禁止について</div>
             <div>
@@ -1313,9 +1546,7 @@
       </div>
     </div>
 
-    <!-- ========================================================= -->
-    <!-- 対局リプレイ ＆ 勝敗因分析（振り返りモード）モーダル        -->
-    <!-- ========================================================= -->
+    <!-- 対局リプレイ ＆ 勝敗因分析モーダル -->
     <div class="modal-overlay" id="replay-modal">
       <div class="modal-content modal-extra-wide replay-modal-content">
         <div class="modal-header replay-header">
@@ -1324,7 +1555,6 @@
         </div>
 
         <div class="modal-body replay-modal-body">
-          <!-- 最上部：試合選択セレクター ＆ シリーズ対戦ナビゲーションバー -->
           <div class="replay-game-selector-bar">
             <div class="replay-game-nav-col">
               <span class="replay-game-label">⚔️ 対象試合:</span>
@@ -1338,7 +1568,6 @@
             </div>
           </div>
 
-          <!-- 上部：手番インジケーター ＆ 悪手・分岐点警告バー -->
           <div class="replay-status-bar">
             <div class="replay-turn-indicator">
               <span class="replay-turn-badge" id="replay-turn-badge">第 1 手</span>
@@ -1350,9 +1579,7 @@
             </div>
           </div>
 
-          <!-- ミニ盤面再現ステージ（宮廷美術調・4座席完全展開） -->
           <div class="replay-stage-board">
-            <!-- 上部：対面CPU座席 -->
             <div class="replay-seat replay-seat-top" id="replay-seat-top">
               <div class="replay-seat-header">
                 <span class="replay-seat-name" id="replay-name-top">対面</span>
@@ -1361,7 +1588,6 @@
               <div class="replay-seat-cards-row" id="replay-hand-top"></div>
             </div>
 
-            <!-- 中央：場のカード＆直前着手アクション大演出 -->
             <div class="replay-field-box">
               <div class="replay-field-top-row">
                 <span class="replay-field-label">現在の場</span>
@@ -1374,7 +1600,6 @@
               </div>
             </div>
 
-            <!-- 左側CPU座席 -->
             <div class="replay-seat replay-seat-left" id="replay-seat-left">
               <div class="replay-seat-header">
                 <span class="replay-seat-name" id="replay-name-left">左席</span>
@@ -1383,7 +1608,6 @@
               <div class="replay-seat-cards-row" id="replay-hand-left"></div>
             </div>
 
-            <!-- 右側CPU座席 -->
             <div class="replay-seat replay-seat-right" id="replay-seat-right">
               <div class="replay-seat-header">
                 <span class="replay-seat-name" id="replay-name-right">右席</span>
@@ -1392,7 +1616,6 @@
               <div class="replay-seat-cards-row" id="replay-hand-right"></div>
             </div>
 
-            <!-- 下部：手前（手番プレイヤー）座席手札 -->
             <div class="replay-seat replay-seat-bottom" id="replay-seat-bottom">
               <div class="replay-seat-header">
                 <span class="replay-seat-name" id="replay-name-bottom">手番プレイヤー</span>
@@ -1402,7 +1625,6 @@
             </div>
           </div>
 
-          <!-- 軍師AIの局面分析＆敗因アドバイスパネル -->
           <div class="replay-advisor-plate" id="replay-advisor-plate">
             <div class="advisor-plate-header">
               <span class="advisor-icon">🏛️</span>
@@ -1414,7 +1636,6 @@
             </div>
           </div>
 
-          <!-- リプレイ操作コントローラー（スライダー ＆ コントロールボタン） -->
           <div class="replay-controller-bar">
             <div class="replay-slider-wrap">
               <input type="range" class="replay-slider" id="replay-seek-slider" min="1" max="1" value="1">
@@ -1425,7 +1646,7 @@
               <button class="btn btn-gold btn-replay-ctrl btn-replay-play" id="btn-replay-play">▶ 再生</button>
               <button class="btn btn-sub btn-replay-ctrl" id="btn-replay-next" title="1手進む">1手進む ▶</button>
               <button class="btn btn-sub btn-replay-ctrl" id="btn-replay-last" title="最後へ">最後へ ⏭</button>
-              <button class="btn btn-sub btn-replay-ctrl btn-replay-branch" id="btn-replay-branch" title="分岐点へジャンプ">
+              <button class="btn btn-sub btn-replay-ctrl" id="btn-replay-branch" title="分岐点へジャンプ">
                 🎯 好手・反省手へ
               </button>
             </div>
@@ -1440,10 +1661,12 @@
 
     <!-- ゲーム盤面 -->
     <div id="game-board">
+      <div class="player-foul-alert is-hidden" id="player-foul-alert">⚠️ 残手札が禁止カードのみになります</div>
+
       <!-- CPU 2 (対面・上部) -->
       <div class="player-box" id="cpu2">
         <div class="cpu2-layout-plate">
-          <img class="char-portrait portrait-cpu-top" id="cpu2-portrait" src="fugo-絵柄/king.png" onerror="this.onerror=null; this.src='king.png';" alt="">
+          <img class="char-portrait portrait-cpu-top" id="cpu2-portrait" src="fugo-絵柄/king.png" onerror="this.onerror=null;" alt="">
           <div class="cpu2-info-col">
             <div class="turn-badge-container">
               <span class="ai-brain-dot" id="cpu2-brain-dot" title="AI推論中"></span>
@@ -1472,7 +1695,7 @@
             <div class="turn-badge" id="cpu1-badge">THINKING</div>
           </div>
           <div class="char-row fixed-char-row">
-            <img class="char-portrait fixed-cpu-portrait portrait-cpu-left" id="cpu1-portrait" src="fugo-絵柄/duke.png" onerror="this.onerror=null; this.src='duke.png';" alt="">
+            <img class="char-portrait fixed-cpu-portrait portrait-cpu-left" id="cpu1-portrait" src="fugo-絵柄/duke.png" onerror="this.onerror=null;" alt="">
             <div class="name-rank-stack">
               <div class="char-badge-container">
                 <div class="char-badge char-badge-prominent" id="cpu1-char-title">---</div>
@@ -1523,7 +1746,7 @@
             <div class="turn-badge" id="cpu3-badge">THINKING</div>
           </div>
           <div class="char-row fixed-char-row">
-            <img class="char-portrait fixed-cpu-portrait portrait-cpu-right" id="cpu3-portrait" src="fugo-絵柄/marquis.png" onerror="this.onerror=null; this.src='marquis.png';" alt="">
+            <img class="char-portrait fixed-cpu-portrait portrait-cpu-right" id="cpu3-portrait" src="fugo-絵柄/marquis.png" onerror="this.onerror=null;" alt="">
             <div class="name-rank-stack">
               <div class="char-badge-container">
                 <div class="char-badge char-badge-prominent" id="cpu3-char-title">---</div>
@@ -1542,14 +1765,12 @@
       <!-- プレイヤー (自分 / 席0) -->
       <div class="player-box" id="player-area">
         <div class="player-layout-plate fixed-player-anchor">
-          <img class="char-portrait" id="player-portrait" src="fugo-絵柄/boy.png" onerror="this.onerror=null; this.src='boy.png';" alt="">
+          <img class="char-portrait" id="player-portrait" src="fugo-絵柄/boy.png" onerror="this.onerror=null;" alt="">
           
           <div class="player-info-col fixed-player-info">
             <div class="turn-badge-container turn-badge-container-large">
               <span class="ai-brain-dot" id="player-brain-dot" title="AI推論中"></span>
               <div class="your-turn-badge" id="player-badge">あなたの順番です</div>
-              <!-- 禁止あがり詰み警告バッジ（美麗パルス発光インライン表示・情報集約版） -->
-              <div class="player-foul-alert is-hidden" id="player-foul-alert">⚠️ 残手札が禁止カードのみになります</div>
             </div>
             <div class="name-rank-stack">
               <div class="char-badge-container">

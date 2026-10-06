@@ -1,6 +1,6 @@
 /* ====================================================================
  * ROYAL DAIFUGO - main.js 【前半（安全完全版）】
- * [Version: v3.9.9 - 禁止あがり警告集約＆トランプ用語統一版]
+ * [Version: v4.0.0 - ウォッチドッグ外科手術・打牌即時応答＆都落ち直上警告根絶版]
  * ※ファイル先頭（1行目）から「7. DOM描画・手札アニメーション・UI同期」の終了までを出力します。
  * ==================================================================== */
 
@@ -305,7 +305,10 @@ function terminateCurrentSession() {
   });
 
   const foulAlert = document.getElementById('player-foul-alert');
-  if (foulAlert) foulAlert.classList.add('is-hidden');
+  if (foulAlert) {
+    foulAlert.className = 'player-foul-alert is-hidden';
+    foulAlert.textContent = '';
+  }
 
   const banner = document.getElementById('event-banner');
   if (banner) {
@@ -380,7 +383,9 @@ function clearReceivedCardHighlights() {
 }
 
 /* ============================================================
- * 完全自立型・常時ハートビート監視（手番スキップ・誤爆完全根絶版）
+ * ★ 完全自立型・常時ハートビート監視（外科手術版）
+ * 1. プレイヤーの手動手番は絶対に勝手にパスさせない（完全保護）
+ * 2. CPUの3.5秒以上停止時のみ救済し、親番でのパスは構造的に完全禁止
  * ============================================================ */
 setInterval(() => {
   if (typeof gameEnded === 'undefined' || gameEnded) return;
@@ -392,24 +397,22 @@ setInterval(() => {
   const now = Date.now();
   const curr = PLAYERS[currentTurnIndex];
 
-  if (!isAutoPlayMode && (curr === 'player' || isProcessing)) {
+  // ★【完全保護防壁】手動プレイ中のプレイヤー手番はウォッチドッグの介入を100%遮断
+  if (curr === 'player' && !isAutoPlayMode) {
     lastTurnActivityTimestamp = now;
     return;
   }
 
+  // アニメーション進行中もタイムスタンプを維持して誤爆を防止
   if (isProcessing) {
     lastTurnActivityTimestamp = now;
     return;
   }
 
-  const stallThreshold = Math.max(2600, 3200 / getSpeedMultiplier());
+  // CPU手番におけるスタック判定（3.5秒以上の硬直）
+  const stallThreshold = Math.max(3500, 4200 / getSpeedMultiplier());
   if (now - lastTurnActivityTimestamp > stallThreshold) {
-    if (!isAutoPlayMode && curr === 'player') {
-      lastTurnActivityTimestamp = now;
-      return;
-    }
-
-    console.warn(`[WATCHDOG ENGINE] CPU手番停滞(${curr})を検知！遅延タイマーを完全バイパスし同期直結で強制解決します。`);
+    console.warn(`[WATCHDOG ENGINE] CPU手番停滞(${curr})を検知！自動着手または正当なパスで解決します。`);
 
     document.querySelectorAll('.card-play-anim').forEach(c => c.remove());
     GameTimer.clearAll();
@@ -424,6 +427,7 @@ setInterval(() => {
     const charDef = assignedCharacters[curr] || CHARACTER_DEFS.KING;
     const validMoves = filterCpuMovesForCharacter(charDef.id, rawMoves);
 
+    // ★親番（場が空）の場合：パスは絶対に認められないため、最弱単騎を強制着手
     if (fieldCards.length === 0) {
       if (validMoves && validMoves.length > 0) {
         const fallbackMove = validMoves[0];
@@ -434,11 +438,11 @@ setInterval(() => {
       }
     }
 
+    // 子番で手がない、またはパス可能な場合のみパス処理
     const seatNum = PLAYERS.indexOf(curr) + 1;
-    const isManualActor = (curr === 'player' && !isAutoPlayMode);
     AIDataLogger.recordStep(
       curr, seatNum, charDef, hands[curr], fieldCards, isRevolution, isElevenBack,
-      consecutivePasses, hasPassedInRound, validMoves, null, null, isManualActor
+      consecutivePasses, hasPassedInRound, validMoves, null, null, false
     );
 
     playerPassCounts[curr]++;
@@ -831,7 +835,7 @@ function confirmExchange() {
 }
 
 /* ----------------------------------------------------
- * 6. プレイヤー操作 ＆ 打牌処理（自爆防止ガードレール統合）
+ * 6. プレイヤー操作 ＆ 打牌処理（即時応答＆自爆防止ガードレール統合）
  * ---------------------------------------------------- */
 function toggleSelectCardByCard(card) {
   const idx = hands.player.findIndex(c => isSameCard(c, card));
@@ -840,7 +844,14 @@ function toggleSelectCardByCard(card) {
 
 function toggleSelectCard(index) {
   if (isAutoPlayMode) return;
-  if (isProcessing && !isExchangePhase) return;
+  if (isProcessing && !isExchangePhase) {
+    // プレイヤー手番かつカード操作時は、前手番アニメーションの軽微な残留ロックを能動解除
+    if (PLAYERS[currentTurnIndex] === 'player') {
+      isProcessing = false;
+    } else {
+      return;
+    }
+  }
   if (isPreExchangePhase || isExchangeTransitioning) return;
   if (!isExchangePhase && PLAYERS[currentTurnIndex] !== 'player') return;
 
@@ -881,7 +892,13 @@ function toggleSelectCard(index) {
 }
 
 function playerPlayCard() {
-  if (isProcessing || PLAYERS[currentTurnIndex] !== 'player') return;
+  if (PLAYERS[currentTurnIndex] !== 'player') return;
+
+  // ★【即時応答最適化】プレイヤー手番中、前アニメの微小ディレイ残留によるロックを自動パージ
+  if (isProcessing) {
+    isProcessing = false;
+  }
+
   if (selectedIndices.length === 0) { setMessage('出したいカードを選択してください。'); return; }
 
   clearReceivedCardHighlights();
@@ -893,7 +910,7 @@ function playerPlayCard() {
     return;
   }
 
-  // ★【禁止あがり警告アシスト】ラスト1手での直接あがり、または次手以降詰み確定ルートの自爆防止
+  // ★【禁止あがり警告アシスト】盤面中央への特大警告バッジ連動
   const isLastMove = (cards.length === hands.player.length);
   const activeRules = getActiveGameRules(gameRules);
   const willTrapForbidden = willLeaveOnlyForbiddenCards(cards, hands.player, rev);
@@ -907,13 +924,15 @@ function playerPlayCard() {
       if (isLastMove && isForbiddenFinish(cards, rev)) {
         triggerEventBanner('⚠️ 禁止あがり警告 ⚠️', 'banner-foul');
         if (foulAlert) {
+          foulAlert.className = 'player-foul-alert';
           foulAlert.textContent = '⚠️ 反則負け（禁止あがり）になります！もう一度押すと強行';
           foulAlert.classList.remove('is-hidden');
         }
       } else if (willTrapForbidden) {
         triggerEventBanner('⚠️ 禁止カード詰み警告 ⚠️', 'banner-foul');
         if (foulAlert) {
-          foulAlert.textContent = '⚠️ 残手札が禁止カードのみになります！もう一度押すと強行';
+          foulAlert.className = 'player-foul-alert';
+          foulAlert.textContent = '⚠️ 残りが禁止カードのみになり詰みます！もう一度押すと強行';
           foulAlert.classList.remove('is-hidden');
         }
       }
@@ -924,7 +943,10 @@ function playerPlayCard() {
   pendingForbiddenConfirmation = false;
   lastTurnActivityTimestamp = Date.now();
 
-  if (foulAlert) foulAlert.classList.add('is-hidden');
+  // ★着手確定と同時に新規排他ロックを敷き、連打による不正な2重着手を完全遮断
+  isProcessing = true;
+
+  if (foulAlert && !foulPlayers.player) foulAlert.classList.add('is-hidden');
 
   const validMoves = getAllValidMoves(hands.player, fieldCards, rev, false, activeRules);
   AIDataLogger.recordStep(
@@ -940,14 +962,22 @@ function playerPlayCard() {
 }
 
 function playerPass() {
-  if (isProcessing || PLAYERS[currentTurnIndex] !== 'player') return;
-  if (fieldCards.length === 0) return;
+  if (PLAYERS[currentTurnIndex] !== 'player') return;
+  if (isProcessing) {
+    isProcessing = false;
+  }
+
+  // ★親番（場が空＝fieldCards.length === 0）では絶対にパスできない
+  if (fieldCards.length === 0) {
+    setMessage('親番（場にカードがない状態）ではパスできません。カードを選んで出してください。');
+    return;
+  }
 
   clearReceivedCardHighlights();
   pendingForbiddenConfirmation = false;
 
   const foulAlert = document.getElementById('player-foul-alert');
-  if (foulAlert) foulAlert.classList.add('is-hidden');
+  if (foulAlert && !foulPlayers.player) foulAlert.classList.add('is-hidden');
 
   if (selectedIndices.length > 0) {
     setMessage('💬 カードが選択されています。選択を解除するか「カードを出す」を押してください。');
@@ -1026,7 +1056,9 @@ function playCardSuccessDirect(player, cards) {
     finishedPlayers.push(player);
     playerStatusMap[player] = '大貧民';
     foulPlayers[player] = '反則負け';
-    triggerEventBanner('⚠️ 反則負け（禁止あがり） ⚠️', 'banner-foul');
+    if (player === 'player') {
+      triggerEventBanner('⚠️ 反則負け（禁止あがり） ⚠️', 'banner-foul');
+    }
   } else if (finishEvaluation.status === 'FINISH') {
     if (!finishedPlayers.includes(player)) {
       finishedPlayers.push(player);
@@ -1039,7 +1071,17 @@ function playCardSuccessDirect(player, cards) {
         finishedPlayers.push(victim);
         playerStatusMap[victim] = '大貧民';
         foulPlayers[victim] = '都落ち';
-        triggerEventBanner('🏛️ 都落ち発動！ 🏛️', 'banner-eight-cut');
+
+        // ★プレイヤーが都落ちした場合のみ全画面バナー＆警告バッジを表示
+        if (victim === 'player') {
+          triggerEventBanner('🏛️ 都落ち発動！ 🏛️', 'banner-eight-cut');
+          const foulAlert = document.getElementById('player-foul-alert');
+          if (foulAlert) {
+            foulAlert.className = 'player-foul-alert is-capital-fall';
+            foulAlert.textContent = '🏛️ 都落ち発動！ 他者が先にあがったため大貧民確定（離脱）';
+            foulAlert.classList.remove('is-hidden');
+          }
+        }
       }
     }
   }
@@ -1151,12 +1193,16 @@ function playCardSuccess(player, cards, needFullRedraw = false, playedIndices = 
     rules: gameRules
   });
 
+  let hasPlayerCapitalFallen = false;
+
   if (finishEvaluation.status === 'FORBIDDEN_FINISH') {
     finishedPlayers.push(player);
     playerStatusMap[player] = '大貧民';
     foulPlayers[player] = '反則負け';
     soundMgr.playTone(220, 110, 'sawtooth', 0.4, 0.3);
-    triggerEventBanner('⚠️ 反則負け（禁止あがり） ⚠️', 'banner-foul');
+    if (player === 'player') {
+      triggerEventBanner('⚠️ 反則負け（禁止あがり） ⚠️', 'banner-foul');
+    }
     actionText += `<br><span style="color:#ff6b6b; font-weight:bold;">⚠️ 【反則負け】${getPlayerDisplayName(player)}が禁止カードであがったため失格・大貧民確定！</span>`;
   } else if (finishEvaluation.status === 'FINISH') {
     if (!finishedPlayers.includes(player)) {
@@ -1174,9 +1220,20 @@ function playCardSuccess(player, cards, needFullRedraw = false, playedIndices = 
         finishedPlayers.push(victim);
         playerStatusMap[victim] = '大貧民';
         foulPlayers[victim] = '都落ち';
-        triggerEventBanner('🏛️ 都落ち発動！ 🏛️', 'banner-eight-cut');
         actionText += `<br><span style="color:#ffd700; font-weight:bold;">🏛️ 【都落ち】前大富豪（${getPlayerDisplayName(victim)}）が1位になれなかったため失格・大貧民転落！</span>`;
         if (victim !== 'player') checkAndTriggerDialogue(victim, 'LOSE');
+
+        // ★プレイヤーが都落ちした場合のみ全画面バナー＆警告バッジを表示
+        if (victim === 'player') {
+          hasPlayerCapitalFallen = true;
+          triggerEventBanner('🏛️ 都落ち発動！ 🏛️', 'banner-eight-cut');
+          const foulAlert = document.getElementById('player-foul-alert');
+          if (foulAlert) {
+            foulAlert.className = 'player-foul-alert is-capital-fall';
+            foulAlert.textContent = '🏛️ 都落ち発動！ 他者が先にあがったため大貧民確定（離脱）';
+            foulAlert.classList.remove('is-hidden');
+          }
+        }
       }
     }
   }
@@ -1198,6 +1255,20 @@ function playCardSuccess(player, cards, needFullRedraw = false, playedIndices = 
   else if (player === 'player') { syncPlayerHandAfterPlay(playedIndices); render(false); }
   else render(false);
 
+  // ★都落ち発動時の一時停止（プレイヤーが状況を目視できるディレイ）
+  if (hasPlayerCapitalFallen) {
+    isProcessing = true;
+    GameTimer.set(() => {
+      isProcessing = false;
+      if (isEight || isSpade3Return) {
+        clearFieldDirect(player);
+      } else {
+        nextTurn();
+      }
+    }, 1800 / getSpeedMultiplier());
+    return;
+  }
+
   if (isEight || isSpade3Return) {
     clearFieldDirect(player);
   } else {
@@ -1217,6 +1288,12 @@ function assignWinRank(player) {
 }
 
 function processPass(player) {
+  // ★親番（場が空＝fieldCards.length === 0）では絶対にパスできないガードレール
+  if (fieldCards.length === 0) {
+    console.warn(`[SAFETY] 親番でのパス要求(${player})を遮断しました。強制着手を促します。`);
+    return;
+  }
+
   clearReceivedCardHighlights();
   lastTurnActivityTimestamp = Date.now();
 
@@ -1246,7 +1323,7 @@ function nextTurn() {
   isProcessing = false;
 
   const foulAlert = document.getElementById('player-foul-alert');
-  if (foulAlert) foulAlert.classList.add('is-hidden');
+  if (foulAlert && !foulPlayers.player) foulAlert.classList.add('is-hidden');
 
   const active = PLAYERS.filter(p => !finishedPlayers.includes(p));
 
@@ -1283,7 +1360,6 @@ function nextTurn() {
 
     render(false);
 
-    // ★重要：直前の「反則負け」「都落ち」メッセージを上書き消去せず保持して決着アナウンスを結合★
     const msgBox = document.getElementById('message-text');
     const existingMsg = msgBox ? msgBox.innerHTML : '';
     const hasFoulOrCapital = Object.keys(foulPlayers).length > 0;
@@ -1293,7 +1369,6 @@ function nextTurn() {
       setMessage('ゲームセット！全員の順位が確定しました。');
     }
 
-    // ★【鑑賞ディレイ・余韻ウェイト】反則負け・都落ち・決着時のバナーとテキストをプレイヤーが見届ける時間を確保★
     const finishDelay = hasFoulOrCapital ? Math.max(1600, 2000 / getSpeedMultiplier()) : Math.max(700, 900 / getSpeedMultiplier());
     isProcessing = true;
 
@@ -1383,7 +1458,6 @@ function clearFieldDirect(nextPlayer = null) {
 
   const activeSurvivors = PLAYERS.filter(p => !finishedPlayers.includes(p));
   if (activeSurvivors.length <= 1) {
-    console.log('[CLEAR FIELD] 8切り／♠3返しによる決勝ゴールを検知。ゲーム終了ルーチンへ直結します。');
     nextTurn();
     return;
   }
@@ -1435,7 +1509,6 @@ function checkTurn() {
   let curr = PLAYERS[currentTurnIndex];
   
   if (!curr || finishedPlayers.includes(curr)) {
-    console.warn(`[TURN AUTO-CORRECTION] あがり済みプレイヤー(${curr})を検知。生存プレイヤーへ自動補正します。`);
     let searchCount = 0;
     let nextCandidate = currentTurnIndex;
     let foundActive = false;
@@ -1458,6 +1531,7 @@ function checkTurn() {
   const speed = getSpeedMultiplier();
 
   if (curr === 'player' && !isAutoPlayMode) {
+    // ★【完全即応保証】プレイヤーの手番が来たら直前の残留アニメ・ロックを確実にパージ
     isProcessing = false;
     currentSpeed = 1;
     AIStatusUI.restoreIdleState();
@@ -1535,6 +1609,7 @@ async function cpuPlayTurn(cpu) {
       move = decideCpuMove(cpu, explicitContext);
     }
 
+    // ★親番（場が空）での絶対フォールバック保証
     if (fieldCards.length === 0 && (!move || move.length === 0) && validMoves.length > 0) {
       move = validMoves[0];
     }
@@ -1580,6 +1655,15 @@ async function cpuPlayTurn(cpu) {
         playCardSuccess(cpu, move, false, playedIndices);
       });
     } else {
+      // 親番で万一手が出なかった場合は強制的に最弱手を着手してスタックを回避
+      if (fieldCards.length === 0 && hands[cpu] && hands[cpu].length > 0) {
+        const forcedMove = [hands[cpu][0]];
+        removeCardsFromHandSafe(hands[cpu], forcedMove);
+        if (cpu !== 'player') renderCpuStack(cpu, hands[cpu].length);
+        playCardSuccess(cpu, forcedMove, false, [0]);
+        return;
+      }
+
       AIStatusUI.clearBrainDot(cpu);
       AIStatusUI.restoreIdleState();
       isProcessing = false;
@@ -2023,7 +2107,7 @@ function updateControlsOnly() {
   }
 
   if (isPreExchangePhase) {
-    if (foulAlert) foulAlert.classList.add('is-hidden');
+    if (foulAlert && !foulPlayers.player) foulAlert.classList.add('is-hidden');
     if (playBtn) playBtn.classList.add('is-hidden');
     if (passBtn) passBtn.classList.add('is-hidden');
     if (goExBtn) {
@@ -2032,7 +2116,7 @@ function updateControlsOnly() {
     }
     if (exBtn) exBtn.classList.add('is-hidden');
   } else if (isExchangePhase) {
-    if (foulAlert) foulAlert.classList.add('is-hidden');
+    if (foulAlert && !foulPlayers.player) foulAlert.classList.add('is-hidden');
     if (playBtn) playBtn.classList.add('is-hidden');
     if (passBtn) passBtn.classList.add('is-hidden');
     if (goExBtn) goExBtn.classList.add('is-hidden');
@@ -2048,11 +2132,11 @@ function updateControlsOnly() {
     if (goExBtn) goExBtn.classList.add('is-hidden');
     if (exBtn) exBtn.classList.add('is-hidden');
 
-    const myTurn = (PLAYERS[currentTurnIndex] === 'player') && !isProcessing && !isExchangeTransitioning && !finishedPlayers.includes('player') && !gameEnded;
+    const myTurn = (PLAYERS[currentTurnIndex] === 'player') && !isExchangeTransitioning && !finishedPlayers.includes('player') && !gameEnded;
     const isLeadPlay = (fieldCards.length === 0);
 
     if (!myTurn || isAutoPlayMode) {
-      if (foulAlert) foulAlert.classList.add('is-hidden');
+      if (foulAlert && !foulPlayers.player) foulAlert.classList.add('is-hidden');
 
       if (playBtn) {
         playBtn.disabled = true;
@@ -2086,11 +2170,12 @@ function updateControlsOnly() {
         }
       }
 
-      if (foulAlert) {
+      if (foulAlert && !foulPlayers.player) {
         if (GAME_SETTINGS.forbiddenFinishAlert && (isDirectForbiddenFinish || isTrapForbidden)) {
+          foulAlert.className = 'player-foul-alert';
           foulAlert.textContent = isDirectForbiddenFinish
             ? '⚠️ この手であがると反則負け！'
-            : '⚠️ 残手札が禁止カードのみになります！';
+            : '⚠️ 残りが禁止カードのみになり詰みます！';
           foulAlert.classList.remove('is-hidden');
         } else {
           foulAlert.classList.add('is-hidden');
@@ -2265,13 +2350,17 @@ function getPlayerDisplayName(player, withIcon = false) {
     const isSpectate = (typeof MatchSeriesManager !== 'undefined' && MatchSeriesManager.isActive && MatchSeriesManager.mode === 'auto');
     const isAutoActive = (typeof isAutoPlayMode !== 'undefined' && isAutoPlayMode && !isSpectate);
     const hasUsedAuto = (typeof hasPlayerUsedAutoInMatch !== 'undefined' && hasPlayerUsedAutoInMatch && !isSpectate);
-    const assistBadge = (isAutoActive || hasUsedAuto) ? ' [🤖代行]' : '';
+    const isUsingAuto = (isAutoActive || hasUsedAuto);
 
     if (typeof ScenarioManager !== 'undefined' && ScenarioManager.isActive) {
       const a = ScenarioManager.getCurrentAvatar();
       const short = a ? (a.shortName || a.name.split(' ')[0]) : '自分';
+      if (isUsingAuto) {
+        return withIcon ? `👤 ${short} [🤖代行]` : `${short} [🤖代行]`;
+      }
       return withIcon ? `👤 ${short}（あなた）` : `${short}（あなた）`;
     }
+
     const def = assignedCharacters.player;
     const pName = def ? (def.name || '自分') : '自分';
 
@@ -2280,7 +2369,11 @@ function getPlayerDisplayName(player, withIcon = false) {
       return withIcon ? `${icon} ${pName}` : pName;
     }
 
-    return withIcon ? `👤 ${pName}（あなた）${assistBadge}` : `${pName}（あなた）${assistBadge}`;
+    if (isUsingAuto) {
+      return withIcon ? `👤 ${pName} [🤖代行]` : `${pName} [🤖代行]`;
+    }
+
+    return withIcon ? `👤 ${pName}（あなた）` : `${pName}（あなた）`;
   }
   const char = assignedCharacters[player];
   if (!char) return player;
@@ -2424,11 +2517,30 @@ function renderFinalRanking() {
       ? ScenarioManager.getCurrentAvatar().image
       : (CHAR_IMAGES[def.id] || 'fugo-絵柄/king.png');
     const foulNote = foulPlayers[p] ? ` <span class="foul-badge">(${foulPlayers[p]})</span>` : '';
+
+    // ★通算スコアの統合表示（誰が何勝して平均何位か）
+    let cumScoreHtml = '';
+    if (typeof MatchSeriesManager !== 'undefined' && MatchSeriesManager.isActive) {
+      const cid = (p === 'player' && MatchSeriesManager.mode === 'practice') ? MatchSeriesManager.playerCharId : def.id;
+      const s = MatchSeriesManager.historyStats[cid];
+      if (s && s.games > 0) {
+        cumScoreHtml = `<span class="final-rank-cum-score">通算: <strong>${s.df}勝</strong> (平均${(s.rankSum / s.games).toFixed(1)}位)</span>`;
+      }
+    } else if (typeof ScenarioManager !== 'undefined' && ScenarioManager.isActive) {
+      const isMe = (p === 'player');
+      const cid = isMe ? 'player' : def.id;
+      const st = ScenarioManager.data.stageMatchStats[cid];
+      if (st && st.games > 0) {
+        cumScoreHtml = `<span class="final-rank-cum-score">通算: <strong>${st.df}勝</strong> (平均${(st.rankSum / st.games).toFixed(1)}位)</span>`;
+      }
+    }
+
     return `
       <div class="final-rank-row${idx === 0 ? ' rank-1' : ''}">
         <div class="final-rank-position">${rankName}</div>
         <img src="${imgSrc}" onerror="this.onerror=null; this.src='king.png';" alt="">
         <div class="final-rank-name">${getPlayerDisplayName(p, true)}${foulNote}</div>
+        ${cumScoreHtml}
       </div>
     `;
   }).join('');
@@ -2481,12 +2593,14 @@ function updateCharIntroVisibility() {
 }
 
 /* ====================================================================
- * 【前半 終了】
- * ※次の「8. 各種モーダルUI・ビューア（新設ReplayManager含む）」からが【後半】となります。
+ * 【main.js 前半（安全完全版） 終了地点】
+ * 次の結合先：「8. 各種モーダルUI・ビューア（新設ReplayManager含む）」
  * ==================================================================== */
 /* ====================================================================
- * ROYAL DAIFUGO - main.js 【後半（安全完全版）】
- * ※【前半】の直下にそのまま貼り付けるだけで構文エラーなく結合可能です。
+ * ROYAL DAIFUGO - main.js 【後半（完全修復版・パート1）】
+ * [Version: v4.0.0 - 統合オープニング完全制御＆BGM調和・リプレイ客観表示版]
+ * ※「8. 各種モーダルUI・ビューア（新設ReplayManager含む）」の開始から
+ *   OpeningManager の定義終了までを出力します。
  * ==================================================================== */
 
 /* ============================================================
@@ -2658,22 +2772,287 @@ function showEvalModal() {
 }
 
 /* ============================================================
- * 8.1 対局リプレイ ＆ 勝敗因分析マネージャー (ReplayManager)
+ * 8.1 途中決着画面・折れ線グラフ ＆ 本格集計表 直接描画エンジン
+ * ============================================================ */
+function renderNextGameInterimDashboard() {
+  const isScenario = (typeof ScenarioManager !== 'undefined' && ScenarioManager.isActive);
+  const isMatchSeries = (typeof MatchSeriesManager !== 'undefined' && MatchSeriesManager.isActive);
+
+  const bannerEl = document.getElementById('next-game-match-banner');
+  const tableWrap = document.getElementById('next-game-ranking-wrap');
+  const chartCanvas = document.getElementById('next-game-chart');
+  const chartLegend = document.getElementById('next-game-chart-legend');
+
+  if (!tableWrap) return;
+
+  let curGame = 1;
+  let totGames = 1;
+  let resultsList = [];
+  let rankHistoryData = [];
+  let playerCharKey = 'player';
+  let opponentCharKeys = [];
+
+  if (isScenario) {
+    curGame = ScenarioManager.data.currentMatchIndex || 1;
+    totGames = ScenarioManager.data.matchesPerStage || 1;
+    const statsList = Object.values(ScenarioManager.data.stageMatchStats || {});
+    resultsList = statsList.map(st => {
+      const g = Math.max(1, st.games);
+      return {
+        id: st.charId,
+        name: st.name,
+        icon: st.icon || '👤',
+        isPlayer: st.isPlayer,
+        avg: (st.rankSum / g).toFixed(2),
+        winRate: ((st.df / g) * 100).toFixed(1),
+        df: st.df, f: st.f, h: st.h, dh: st.dh,
+        rankSum: st.rankSum,
+        games: st.games
+      };
+    }).sort((a, b) => parseFloat(a.avg) - parseFloat(b.avg));
+
+    rankHistoryData = ScenarioManager.data.stageRankHistory || [];
+    playerCharKey = 'player';
+    opponentCharKeys = ['cpu1', 'cpu2', 'cpu3'].map(c => assignedCharacters[c]?.id).filter(Boolean);
+
+    if (bannerEl) bannerEl.textContent = `📜 シナリオ関門：第 ${curGame} / ${totGames} 試合 終了 (突破条件: 最低1勝 ＋ 首位)`;
+  } else if (isMatchSeries) {
+    curGame = MatchSeriesManager.currentGame || 1;
+    totGames = MatchSeriesManager.totalGames || 10;
+    resultsList = MatchSeriesManager.getSortedResults();
+    rankHistoryData = MatchSeriesManager.rankHistory || [];
+    playerCharKey = MatchSeriesManager.playerCharId;
+    opponentCharKeys = [...MatchSeriesManager.selectedOpponentIds];
+
+    const modeStr = (MatchSeriesManager.mode === 'auto') ? '観戦モード' : '練習モード';
+    if (bannerEl) bannerEl.textContent = `⚔️ ${modeStr}：第 ${curGame} / ${totGames} 試合 終了 (全 ${totGames} 戦の激闘)`;
+  }
+
+  // ① 👑 本格総合成績テーブル描画
+  let html = `
+    <table class="ranking-table">
+      <thead>
+        <tr>
+          <th style="width: 32px; text-align: center;">総合</th>
+          <th>参加者</th>
+          <th style="text-align: right;">平均順位</th>
+          <th style="text-align: right;">大富豪率</th>
+          <th style="text-align: center; white-space: nowrap !important; min-width: 102px;">大 / 富 / 貧 / 大貧</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  resultsList.forEach((item, idx) => {
+    const rankBadge = `<span class="rank-num-badge rank-num-${idx + 1}">${idx + 1}</span>`;
+    const isMe = item.isPlayer;
+    const rowStyle = isMe ? ' style="background: rgba(212,175,55,0.18); font-weight: bold;"' : '';
+    const avatarSrc = (isMe && isScenario)
+      ? ScenarioManager.getCurrentAvatar().image
+      : (CHAR_IMAGES[item.id] || 'fugo-絵柄/king.png');
+    const displayName = isMe ? getPlayerDisplayName('player', true) : `${item.icon} ${item.name}`;
+    const foulSuffix = (typeof foulPlayers !== 'undefined' && foulPlayers[isMe ? 'player' : PLAYERS.find(pl => assignedCharacters[pl]?.id === item.id)])
+      ? ` <span class="foul-badge">(${foulPlayers[isMe ? 'player' : PLAYERS.find(pl => assignedCharacters[pl]?.id === item.id)]})</span>`
+      : '';
+
+    html += `
+      <tr${rowStyle}>
+        <td style="text-align: center;">${rankBadge}</td>
+        <td>
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <img src="${avatarSrc}" onerror="this.onerror=null; this.src='boy.png';" style="width: 20px; aspect-ratio: 2/3; border-radius: 3px; border: 1px solid rgba(212,175,55,0.4);" alt="">
+            <span style="color: ${isMe ? '#fff3a8' : '#e0e6ed'}; font-size: 11.5px;">${displayName}</span>
+          </div>
+        </td>
+        <td style="text-align: right; color: #ffd700; font-weight: 800;">${item.avg}位</td>
+        <td style="text-align: right; color: #fff3a8;">${item.winRate}%</td>
+        <td style="text-align: center; white-space: nowrap !important;">
+          ${renderRankCountBadges(item.df, item.f, item.h, item.dh)}${foulSuffix}
+        </td>
+      </tr>
+    `;
+  });
+
+  html += `</tbody></table>`;
+  tableWrap.innerHTML = html;
+
+  // ② 📈 順位推移折れ線グラフ（Canvasチャート）描画
+  if (chartCanvas) {
+    setTimeout(() => {
+      renderSharedRankChart(chartCanvas, chartLegend, rankHistoryData, totGames, playerCharKey, opponentCharKeys, isScenario);
+    }, 60);
+  }
+}
+
+function renderSharedRankChart(canvas, legendEl, rankHistory, totalGames, playerCharId, opponentIds, isScenario = false) {
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const w = rect.width || 600;
+  const h = rect.height || 145;
+
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
+
+  const padLeft = 44;
+  const padRight = 20;
+  const padTop = 18;
+  const padBottom = 22;
+
+  const chartW = w - padLeft - padRight;
+  const chartH = h - padTop - padBottom;
+
+  const rankY = {
+    1: padTop,
+    2: padTop + chartH * (1 / 3),
+    3: padTop + chartH * (2 / 3),
+    4: padTop + chartH
+  };
+
+  const rankLabels = { 1: '1位', 2: '2位', 3: '3位', 4: '4位' };
+
+  [1, 2, 3, 4].forEach(r => {
+    const y = rankY[r];
+    ctx.beginPath();
+    ctx.setLineDash(r === 1 ? [] : [3, 3]);
+    ctx.strokeStyle = r === 1 ? 'rgba(255, 215, 0, 0.45)' : 'rgba(212, 175, 55, 0.18)';
+    ctx.lineWidth = 1;
+    ctx.moveTo(padLeft, y);
+    ctx.lineTo(padLeft + chartW, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = r === 1 ? '#ffd700' : '#8c9ba5';
+    ctx.font = r === 1 ? 'bold 9px "Cinzel", "Noto Serif JP", serif' : '8.5px "Cinzel", "Noto Serif JP", serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(rankLabels[r], padLeft - 6, y);
+  });
+
+  const gamesCount = Math.max(1, rankHistory.length);
+  const maxAxisGames = Math.max(gamesCount, Math.min(totalGames, 20));
+
+  const getX = (gIdx) => {
+    if (maxAxisGames <= 1) return padLeft + chartW / 2;
+    return padLeft + ((gIdx - 1) / (maxAxisGames - 1)) * chartW;
+  };
+
+  const stepGame = maxAxisGames <= 10 ? 1 : 5;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = '#64748b';
+  ctx.font = '8.5px "JetBrains Mono", monospace';
+
+  for (let g = 1; g <= maxAxisGames; g++) {
+    if (g === 1 || g === maxAxisGames || g % stepGame === 0) {
+      const x = getX(g);
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.setLineDash([2, 4]);
+      ctx.moveTo(x, padTop);
+      ctx.lineTo(x, padTop + chartH);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillText(`${g}戦`, x, padTop + chartH + 5);
+    }
+  }
+
+  if (rankHistory.length === 0) return;
+
+  const rosterKeys = [playerCharId, ...opponentIds];
+  const colorPalette = ['#4caf50', '#00e5ff', '#ff4081', '#f59e0b'];
+  const rosterColorMap = {};
+  rosterColorMap[playerCharId] = '#ffd700';
+  opponentIds.forEach((id, idx) => {
+    rosterColorMap[id] = colorPalette[idx % colorPalette.length];
+  });
+
+  if (legendEl) {
+    let lhtml = '';
+    rosterKeys.forEach(cid => {
+      const isPlayer = (cid === playerCharId);
+      const def = isPlayer
+        ? (isScenario ? ScenarioManager.getCurrentAvatar() : CHARACTER_DEFS[cid])
+        : CHARACTER_DEFS[cid];
+      const name = isPlayer ? getPlayerDisplayName('player') : (def?.name || cid);
+      const icon = isPlayer ? '👤' : (def?.icon || '⚔️');
+      const color = rosterColorMap[cid] || '#d4af37';
+      lhtml += `
+        <div class="practice-chart-legend-item">
+          <span class="practice-chart-legend-dot" style="background: ${color}; color: ${color};"></span>
+          <span>${icon} ${name}</span>
+        </div>
+      `;
+    });
+    legendEl.innerHTML = lhtml;
+  }
+
+  rosterKeys.forEach(cid => {
+    const isPlayer = (cid === playerCharId);
+    const color = rosterColorMap[cid] || '#d4af37';
+    const points = [];
+
+    rankHistory.forEach(h => {
+      const r = h.ranks[cid] || 4;
+      points.push({ x: getX(h.gameIndex), y: rankY[r] });
+    });
+
+    if (points.length === 0) return;
+
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = isPlayer ? 2.8 : 1.6;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+
+    if (isPlayer) {
+      ctx.shadowColor = 'rgba(255, 215, 0, 0.7)';
+      ctx.shadowBlur = 6;
+    } else {
+      ctx.shadowBlur = 0;
+    }
+
+    points.forEach((pt, i) => {
+      if (i === 0) ctx.moveTo(pt.x, pt.y);
+      else ctx.lineTo(pt.x, pt.y);
+    });
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    points.forEach(pt => {
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, isPlayer ? 4 : 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = isPlayer ? '#ffffff' : color;
+      ctx.fill();
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = isPlayer ? '#ffd700' : '#0a101a';
+      ctx.stroke();
+    });
+  });
+}
+
+/* ============================================================
+ * 8.2 対局リプレイ ＆ 勝敗因分析マネージャー (ReplayManager)
  * ============================================================ */
 const ReplayManager = {
-  currentEpisodes: [],       // 現在閲覧可能な試合（エピソード）群
-  selectedEpisodeIndex: 0,   // 現在選択中の試合インデックス (-1 のときはシリーズ通算総括)
-  currentSteps: [],          // 選択された試合の全手番ステップ
-  currentIndex: 0,           // 現在の手番インデックス
-  branchIndices: [],         // 好手（勝因）または悪手（反省点）のハイライト群
-  playerFinalRank: 4,        // 選択された試合のプレイヤー確定順位 (1〜4)
-  handPotential: 'EVEN',     // 初期手札ポテンシャル ('BLESSED' | 'EVEN' | 'HARD')
-  handPotentialDesc: '',     // 初期手札評価テキスト
-  matchDiagnosis: null,      // 確定カルテ（Single Source of Truth）
-  macroWarChronicle: null,   // 宮廷大占勝師の1試合マクロ戦記
-  seriesMacroSummary: '',    // シリーズ全試合通算総括テキスト
-  fullHandsSnapshot: [],     // 各手番における全4席の手札完全復元データ [stepIdx][seatKey]
-  allowSeriesOverview: false,// シリーズ通算総括(-1)の表示許可フラグ
+  currentEpisodes: [],
+  selectedEpisodeIndex: 0,
+  currentSteps: [],
+  currentIndex: 0,
+  branchIndices: [],
+  playerFinalRank: 4,
+  handPotential: 'EVEN',
+  handPotentialDesc: '',
+  matchDiagnosis: null,
+  macroWarChronicle: null,
+  seriesMacroSummary: '',
+  fullHandsSnapshot: [],
+  allowSeriesOverview: false,
   autoPlayTimer: null,
   isPlaying: false,
   previousModalId: null,
@@ -2984,7 +3363,6 @@ const ReplayManager = {
     const winnerScore = this.calculateHandPowerScore(winnerInitCards);
     const totalTurns = ep.totalTurns || this.currentSteps.length;
 
-    // ★【禁止あがり・都落ちの特大敗因判定】★
     const seat1Steps = this.currentSteps.filter(s => s.seat === 1 || s.player === 'player');
     const lastPlayerStep = seat1Steps[seat1Steps.length - 1];
     const isPlayerFoulFinish = lastPlayerStep && lastPlayerStep.chosenMove && isForbiddenFinish(lastPlayerStep.chosenMove, (lastPlayerStep.isRevolution !== lastPlayerStep.isElevenBack)) && (lastPlayerStep.hand && lastPlayerStep.hand.length === lastPlayerStep.chosenMove.length);
@@ -3081,11 +3459,8 @@ const ReplayManager = {
 
     const countCard = (rank) => playedCards.filter(c => c && !c.isJoker && normalizeCardRank(c) === rank).length;
     const jokerPlayed = playedCards.filter(c => c && (c.isJoker || normalizeCardRank(c) === 'JOKER')).length;
-    const jPlayed = countCard('J');
-    const jRemainingInDeck = 4 - jPlayed;
 
     const myJokers = playerHand.filter(c => c && (c.isJoker || normalizeCardRank(c) === 'JOKER'));
-    const myJs = playerHand.filter(c => c && !c.isJoker && normalizeCardRank(c) === 'J');
 
     let absoluteHighestRanks = [];
     let adviceType = null;
@@ -3145,8 +3520,6 @@ const ReplayManager = {
 
     return {
       playedCardsCount: playedCards.length,
-      jRemainingInDeck,
-      myJsCount: myJs.length,
       absoluteHighestRanks,
       adviceType,
       cardKeyName
@@ -3512,7 +3885,6 @@ const ReplayManager = {
       const minEnemyLen = enemyCounts.length > 0 ? Math.min(...enemyCounts) : 99;
       const isEnemyReach = (minEnemyLen <= 2);
 
-      // ★禁止あがり検知（最重要反省点）★
       const isEffectiveRev = (st.isRevolution !== st.isElevenBack);
       if (!isPass && chosen.length === hand.length && isForbiddenFinish(chosen, isEffectiveRev)) {
         this.branchIndices.push({
@@ -3524,7 +3896,6 @@ const ReplayManager = {
         continue;
       }
 
-      // ★禁止カード詰みルート（1手前に詰ませてしまった手番）★
       if (!isPass && willLeaveOnlyForbiddenCards(chosen, hand, isEffectiveRev)) {
         this.branchIndices.push({
           index: i,
@@ -3725,29 +4096,67 @@ const ReplayManager = {
       seat_1: [], seat_2: [], seat_3: [], seat_4: []
     };
 
+    const ep = this.currentEpisodes[this.selectedEpisodeIndex];
+    const getSeatFoulType = (seatNum) => {
+      if (!ep || !ep.seats) return null;
+      const s = ep.seats.find(item => item.seat === seatNum);
+      if (!s) return null;
+      if (foulPlayers && foulPlayers[PLAYERS[seatNum - 1]]) {
+        return foulPlayers[PLAYERS[seatNum - 1]];
+      }
+      return null;
+    };
+
     const nameTop = document.getElementById('replay-name-top');
     const countTop = document.getElementById('replay-count-top');
     const handTop = document.getElementById('replay-hand-top');
     if (nameTop) nameTop.textContent = getPlayerDisplayName('cpu2', true);
     const topCards = handsNow.seat_3 || [];
-    if (countTop) countTop.textContent = `残り ${topCards.length}枚`;
-    this.renderSeatCardsOpen(handTop, topCards, activeSeatNum === 3 ? chosen : []);
+    if (countTop) {
+      const fType = getSeatFoulType(3);
+      if (topCards.length === 0 && fType === '反則負け') {
+        countTop.innerHTML = '<span class="replay-status-foul">⚠️ 反則負け</span>';
+      } else if (fType === '都落ち') {
+        countTop.innerHTML = '<span class="replay-status-capital-fall">🏛️ 都落ち</span>';
+      } else {
+        countTop.textContent = `残り ${topCards.length}枚`;
+      }
+    }
+    this.renderSeatCardsOpen(handTop, topCards, activeSeatNum === 3 ? chosen : [], getSeatFoulType(3));
 
     const nameLeft = document.getElementById('replay-name-left');
     const countLeft = document.getElementById('replay-count-left');
     const handLeft = document.getElementById('replay-hand-left');
     if (nameLeft) nameLeft.textContent = getPlayerDisplayName('cpu1', true);
     const leftCards = handsNow.seat_2 || [];
-    if (countLeft) countLeft.textContent = `残り ${leftCards.length}枚`;
-    this.renderSeatCardsOpen(handLeft, leftCards, activeSeatNum === 2 ? chosen : []);
+    if (countLeft) {
+      const fType = getSeatFoulType(2);
+      if (leftCards.length === 0 && fType === '反則負け') {
+        countLeft.innerHTML = '<span class="replay-status-foul">⚠️ 反則負け</span>';
+      } else if (fType === '都落ち') {
+        countLeft.innerHTML = '<span class="replay-status-capital-fall">🏛️ 都落ち</span>';
+      } else {
+        countLeft.textContent = `残り ${leftCards.length}枚`;
+      }
+    }
+    this.renderSeatCardsOpen(handLeft, leftCards, activeSeatNum === 2 ? chosen : [], getSeatFoulType(2));
 
     const nameRight = document.getElementById('replay-name-right');
     const countRight = document.getElementById('replay-count-right');
     const handRight = document.getElementById('replay-hand-right');
     if (nameRight) nameRight.textContent = getPlayerDisplayName('cpu3', true);
     const rightCards = handsNow.seat_4 || [];
-    if (countRight) countRight.textContent = `残り ${rightCards.length}枚`;
-    this.renderSeatCardsOpen(handRight, rightCards, activeSeatNum === 4 ? chosen : []);
+    if (countRight) {
+      const fType = getSeatFoulType(4);
+      if (rightCards.length === 0 && fType === '反則負け') {
+        countRight.innerHTML = '<span class="replay-status-foul">⚠️ 反則負け</span>';
+      } else if (fType === '都落ち') {
+        countRight.innerHTML = '<span class="replay-status-capital-fall">🏛️ 都落ち</span>';
+      } else {
+        countRight.textContent = `残り ${rightCards.length}枚`;
+      }
+    }
+    this.renderSeatCardsOpen(handRight, rightCards, activeSeatNum === 4 ? chosen : [], getSeatFoulType(4));
 
     const nameBottom = document.getElementById('replay-name-bottom');
     const countBottom = document.getElementById('replay-count-bottom');
@@ -3756,15 +4165,35 @@ const ReplayManager = {
     if (nameBottom) nameBottom.textContent = `${bottomDisplayName} の手札`;
 
     const bottomCards = handsNow.seat_1 || [];
-    if (countBottom) countBottom.textContent = `残り ${bottomCards.length}枚`;
+    if (countBottom) {
+      const fType = getSeatFoulType(1);
+      if (bottomCards.length === 0 && fType === '反則負け') {
+        countBottom.innerHTML = '<span class="replay-status-foul">⚠️ 反則負け</span>';
+      } else if (fType === '都落ち') {
+        countBottom.innerHTML = '<span class="replay-status-capital-fall">🏛️ 都落ち</span>';
+      } else {
+        countBottom.textContent = `残り ${bottomCards.length}枚`;
+      }
+    }
 
     if (handBottom) {
       handBottom.innerHTML = '';
-      bottomCards.forEach(c => {
-        if (!c) return;
-        const isThisPlayed = (activeSeatNum === 1) && chosen.some(pc => isSameCard(pc, c));
-        handBottom.appendChild(this.createRoyalCardEl(c, isThisPlayed, false));
-      });
+      if (bottomCards.length === 0) {
+        const fType = getSeatFoulType(1);
+        if (fType === '反則負け') {
+          handBottom.innerHTML = '<span style="font-size:11px; color:#f87171; font-weight:800;">⚠️ 反則負け（失格・大貧民確定）</span>';
+        } else if (fType === '都落ち') {
+          handBottom.innerHTML = '<span style="font-size:11px; color:#ffd700; font-weight:800;">🏛️ 都落ち（大貧民転落・離脱）</span>';
+        } else {
+          handBottom.innerHTML = '<span style="font-size:11px; color:#ffd700; font-weight:800;">👑 上がり！</span>';
+        }
+      } else {
+        bottomCards.forEach(c => {
+          if (!c) return;
+          const isThisPlayed = (activeSeatNum === 1) && chosen.some(pc => isSameCard(pc, c));
+          handBottom.appendChild(this.createRoyalCardEl(c, isThisPlayed, false));
+        });
+      }
     }
 
     const fieldCardsEl = document.getElementById('replay-field-cards');
@@ -3911,11 +4340,17 @@ const ReplayManager = {
     }
   },
 
-  renderSeatCardsOpen(containerEl, cards, chosen) {
+  renderSeatCardsOpen(containerEl, cards, chosen, foulType = null) {
     if (!containerEl) return;
     containerEl.innerHTML = '';
     if (!cards || cards.length === 0) {
-      containerEl.innerHTML = '<span style="font-size:9.5px; color:#ffd700; font-weight:800;">👑 上がり！</span>';
+      if (foulType === '反則負け') {
+        containerEl.innerHTML = '<span style="font-size:9.5px; color:#f87171; font-weight:800;">⚠️ 反則負け</span>';
+      } else if (foulType === '都落ち') {
+        containerEl.innerHTML = '<span style="font-size:9.5px; color:#ffd700; font-weight:800;">🏛️ 都落ち</span>';
+      } else {
+        containerEl.innerHTML = '<span style="font-size:9.5px; color:#ffd700; font-weight:800;">👑 上がり！</span>';
+      }
       return;
     }
 
@@ -4498,7 +4933,7 @@ function renderRankingModalContent() {
       const avatarEl = c.isPlayer
         ? `<div style="width: 22px; height: 33px; border-radius: 3px; border: 1px solid rgba(212,175,55,0.8); background: #1a2332; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0;">👤</div>`
         : `<img src="${CHAR_IMAGES[c.id] || 'fugo-絵柄/king.png'}" onerror="this.onerror=null; this.src='${c.id.toLowerCase()}.png';" style="width: 22px; height: 33px; border-radius: 3px; border: 1px solid rgba(212,175,55,0.4); flex-shrink: 0; object-fit: cover;" alt="">`;
-      const foulSuffix = (typeof foulPlayers !== 'undefined' && foulPlayers[c.isPlayer ? 'player' : PLAYERS.find(pl => assignedCharacters[pl]?.id === c.id)]) ? ` <span class="foul-badge">(${foulPlayers[c.isPlayer ? 'player' : PLAYERS.find(pl => assignedCharacters[pl]?.id === c.id)]})</span>` : '';
+      const foulSuffix = (typeof foulPlayers !== 'undefined' && foulPlayers[c.isPlayer ? 'player' : PLAYERS.find(pl => assignedCharacters[pl]?.id === c.id)]) ? ` <span class="foul-badge">(${foulPlayers[c.isPlayer ? 'player' : PLAYERS.find(pl => assignedCharacters[pl]?.id === item.id)]})</span>` : '';
 
       html += `
         <tr${rowClass}>
@@ -5008,7 +5443,6 @@ const MatchSeriesManager = {
     GameEventManager.on('gameEnd', (payload) => {
       if (this.isActive) {
         this.recordGameResult(payload.playerStatusMap);
-
         renderFinalRanking();
 
         if (this.currentGame >= this.totalGames) {
@@ -5016,9 +5450,6 @@ const MatchSeriesManager = {
           this.showFinishModal();
         } else {
           SaveLoadManager.saveGameState(true, 'series_next_match');
-
-          const statsBtn = document.getElementById('btn-next-game-stats');
-          if (statsBtn) statsBtn.textContent = '📊 途中成績を確認';
 
           const promptEl = document.getElementById('next-game-prompt-text');
           const nextMatchBtnText = document.getElementById('next-match-btn-text');
@@ -5032,6 +5463,8 @@ const MatchSeriesManager = {
               ? '次の試合へ (座席継続・カード交換へ)'
               : '次の試合へ (席替えランダム・直接配札)';
           }
+
+          renderNextGameInterimDashboard();
 
           const nModal = document.getElementById('next-game-modal');
           if (nModal) nModal.classList.add('active');
@@ -5050,8 +5483,6 @@ const MatchSeriesManager = {
         }
       } else if (!ScenarioManager || !ScenarioManager.isActive) {
         renderFinalRanking();
-        const statsBtn = document.getElementById('btn-next-game-stats');
-        if (statsBtn) statsBtn.textContent = '👤 あなたの通算戦績を確認';
         SaveLoadManager.clearSaveData();
         const nModal = document.getElementById('next-game-modal');
         if (nModal) nModal.classList.add('active');
@@ -5240,238 +5671,6 @@ const MatchSeriesManager = {
     return list;
   },
 
-  renderPracticeRankChart(canvasId, legendId) {
-    const canvas = document.getElementById(canvasId);
-    const legendEl = document.getElementById(legendId);
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    const w = rect.width || 600;
-    const h = rect.height || 180;
-
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-    ctx.scale(dpr, dpr);
-
-    ctx.clearRect(0, 0, w, h);
-
-    const padLeft = 46;
-    const padRight = 24;
-    const padTop = 22;
-    const padBottom = 26;
-
-    const chartW = w - padLeft - padRight;
-    const chartH = h - padTop - padBottom;
-
-    const rankY = {
-      1: padTop,
-      2: padTop + chartH * (1 / 3),
-      3: padTop + chartH * (2 / 3),
-      4: padTop + chartH
-    };
-
-    const rankLabels = {
-      1: '1位 (大富豪)',
-      2: '2位 (富豪)',
-      3: '3位 (貧民)',
-      4: '4位 (大貧民)'
-    };
-
-    [1, 2, 3, 4].forEach(r => {
-      const y = rankY[r];
-      ctx.beginPath();
-      ctx.setLineDash(r === 1 ? [] : [4, 4]);
-      ctx.strokeStyle = r === 1 ? 'rgba(255, 215, 0, 0.45)' : 'rgba(212, 175, 55, 0.18)';
-      ctx.lineWidth = 1;
-      ctx.moveTo(padLeft, y);
-      ctx.lineTo(padLeft + chartW, y);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      ctx.fillStyle = r === 1 ? '#ffd700' : '#8c9ba5';
-      ctx.font = r === 1 ? 'bold 9.5px "Cinzel", "Noto Serif JP", serif' : '9px "Cinzel", "Noto Serif JP", serif';
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(rankLabels[r], padLeft - 6, y);
-    });
-
-    const gamesCount = Math.max(1, this.rankHistory.length);
-    const maxAxisGames = Math.max(gamesCount, Math.min(this.totalGames, 20));
-
-    const getX = (gIdx) => {
-      if (maxAxisGames <= 1) return padLeft + chartW / 2;
-      return padLeft + ((gIdx - 1) / (maxAxisGames - 1)) * chartW;
-    };
-
-    const stepGame = maxAxisGames <= 10 ? 1 : (maxAxisGames <= 25 ? 5 : 10);
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillStyle = '#64748b';
-    ctx.font = '9px "JetBrains Mono", monospace';
-
-    for (let g = 1; g <= maxAxisGames; g++) {
-      if (g === 1 || g === maxAxisGames || g % stepGame === 0) {
-        const x = getX(g);
-        ctx.beginPath();
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-        ctx.setLineDash([2, 4]);
-        ctx.moveTo(x, padTop);
-        ctx.lineTo(x, padTop + chartH);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        ctx.fillText(`${g}戦`, x, padTop + chartH + 7);
-      }
-    }
-
-    if (this.rankHistory.length === 0) {
-      ctx.fillStyle = '#8c9ba5';
-      ctx.font = '12px "Noto Serif JP", serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('第1試合終了後に順位推移グラフが生成されます', padLeft + chartW / 2, padTop + chartH / 2);
-      return;
-    }
-
-    const rosterColorMap = {};
-    rosterColorMap[this.playerCharId] = '#ffd700';
-    const cpuPalette = ['#4caf50', '#00e5ff', '#ff4081', '#f59e0b', '#ec4899'];
-    this.selectedOpponentIds.forEach((id, idx) => {
-      rosterColorMap[id] = cpuPalette[idx % cpuPalette.length];
-    });
-
-    if (legendEl) {
-      let lhtml = '';
-      this.roster.forEach(cid => {
-        const item = this.historyStats[cid];
-        if (!item) return;
-        const color = rosterColorMap[cid] || '#d4af37';
-        lhtml += `
-          <div class="practice-chart-legend-item">
-            <span class="practice-chart-legend-dot" style="background: ${color}; color: ${color};"></span>
-            <span>${item.icon} ${item.name}</span>
-          </div>
-        `;
-      });
-      legendEl.innerHTML = lhtml;
-    }
-
-    this.roster.forEach(cid => {
-      const isPlayer = (cid === this.playerCharId && this.mode === 'practice');
-      const color = rosterColorMap[cid] || '#d4af37';
-
-      const points = [];
-      this.rankHistory.forEach(h => {
-        const r = h.ranks[cid] || 4;
-        points.push({
-          x: getX(h.gameIndex),
-          y: rankY[r],
-          rank: r
-        });
-      });
-
-      if (points.length === 0) return;
-
-      ctx.beginPath();
-      ctx.strokeStyle = color;
-      ctx.lineWidth = isPlayer ? 3 : 1.8;
-      ctx.lineJoin = 'round';
-      ctx.lineCap = 'round';
-
-      if (isPlayer) {
-        ctx.shadowColor = 'rgba(255, 215, 0, 0.7)';
-        ctx.shadowBlur = 8;
-      } else {
-        ctx.shadowBlur = 0;
-      }
-
-      points.forEach((pt, i) => {
-        if (i === 0) ctx.moveTo(pt.x, pt.y);
-        else ctx.lineTo(pt.x, pt.y);
-      });
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-
-      points.forEach(pt => {
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, isPlayer ? 4.5 : 3, 0, Math.PI * 2);
-        ctx.fillStyle = isPlayer ? '#ffffff' : color;
-        ctx.fill();
-        ctx.lineWidth = 1.5;
-        ctx.strokeStyle = isPlayer ? '#ffd700' : '#0a101a';
-        ctx.stroke();
-      });
-    });
-  },
-
-  showInterimModal() {
-    const tableWrap = document.getElementById('practice-interim-table-wrap');
-    const titleEl = document.getElementById('practice-interim-title');
-    const subTitleEl = document.getElementById('practice-interim-subtitle');
-    if (!tableWrap) return;
-
-    const modeStr = this.mode === 'auto' ? '観戦モード' : '練習モード';
-    if (titleEl) titleEl.textContent = `⚔️ ${modeStr} 途中成績 (${this.currentGame} / ${this.totalGames} 試合消化)`;
-    if (subTitleEl) subTitleEl.textContent = `第 ${this.currentGame} 試合終了時点での途中順位・平均順位です`;
-
-    const list = this.getSortedResults();
-
-    let html = `
-      <table class="ranking-table">
-        <thead>
-          <tr>
-            <th style="width: 32px; text-align: center;">順位</th>
-            <th>参加者</th>
-            <th style="text-align: right;">平均順位</th>
-            <th style="text-align: right;">大富豪率</th>
-            <th style="text-align: center; white-space: nowrap !important; min-width: 102px;">大 / 富 / 貧 / 大貧</th>
-          </tr>
-        </thead>
-        <tbody>
-    `;
-
-    list.forEach((item, idx) => {
-      const rankBadge = `<span class="rank-num-badge rank-num-${idx + 1}">${idx + 1}</span>`;
-      const isPlayer = item.isPlayer;
-      const rowStyle = isPlayer ? ' style="background: rgba(212,175,55,0.18); font-weight: bold;"' : '';
-      const avatarEl = `<img src="${CHAR_IMAGES[item.id] || 'fugo-絵柄/king.png'}" onerror="this.onerror=null; this.src='${item.id.toLowerCase()}.png';" style="width: 20px; aspect-ratio: 2/3; border-radius: 3px; border: 1px solid rgba(212,175,55,0.4);" alt="">`;
-      const displayName = isPlayer ? getPlayerDisplayName('player', true) : `${item.icon} ${item.name}`;
-      const foulSuffix = (typeof foulPlayers !== 'undefined' && foulPlayers[isPlayer ? 'player' : PLAYERS.find(pl => assignedCharacters[pl]?.id === item.id)]) ? ` <span class="foul-badge">(${foulPlayers[isPlayer ? 'player' : PLAYERS.find(pl => assignedCharacters[pl]?.id === item.id)]})</span>` : '';
-
-      html += `
-        <tr${rowStyle}>
-          <td style="text-align: center;">${rankBadge}</td>
-          <td>
-            <div style="display: flex; align-items: center; gap: 4px;">
-              ${avatarEl}
-              <span style="color: ${isPlayer ? '#fff3a8' : '#e0e6ed'};">${displayName}</span>
-            </div>
-          </td>
-          <td style="text-align: right; color: #ffd700; font-weight: 800;">${item.avg}位</td>
-          <td style="text-align: right; color: #fff3a8;">${item.winRate}%</td>
-          <td style="text-align: center; white-space: nowrap !important;">
-            ${renderRankCountBadges(item.df, item.f, item.h, item.dh)}${foulSuffix}
-          </td>
-        </tr>
-      `;
-    });
-
-    html += `</tbody></table>`;
-    tableWrap.innerHTML = html;
-
-    updateFullscreenButtonsUI();
-    const interimModal = document.getElementById('practice-interim-modal');
-    if (interimModal) interimModal.classList.add('active');
-
-    setTimeout(() => {
-      this.renderPracticeRankChart('practice-interim-chart', 'practice-interim-chart-legend');
-    }, 50);
-  },
-
   showFinishModal() {
     const nextGameModal = document.getElementById('next-game-modal');
     if (nextGameModal) nextGameModal.classList.remove('active');
@@ -5577,8 +5776,16 @@ const MatchSeriesManager = {
     if (finishModal) finishModal.classList.add('active');
 
     setTimeout(() => {
-      this.renderPracticeRankChart('practice-finish-chart', 'practice-finish-chart-legend');
-    }, 50);
+      renderSharedRankChart(
+        document.getElementById('practice-finish-chart'),
+        document.getElementById('practice-finish-chart-legend'),
+        this.rankHistory,
+        this.totalGames,
+        this.playerCharId,
+        this.selectedOpponentIds,
+        false
+      );
+    }, 60);
   },
 
   showStatusMessage(text) {
@@ -6044,6 +6251,8 @@ const SaveLoadManager = {
             ? '次の試合へ (座席継続・カード交換へ)'
             : '次の試合へ (席替えランダム・直接配札)';
         }
+
+        renderNextGameInterimDashboard();
         const nModal = document.getElementById('next-game-modal');
         if (nModal) nModal.classList.add('active');
       } else if (isPreExchangePhase) {
@@ -6090,6 +6299,377 @@ const SaveLoadManager = {
     }
   }
 };
+
+/* ============================================================
+ * 11.5 統合オープニングマネージャー (OpeningManager)
+ * ★全画面モード維持・優美3Dカルーセル＆確実な音楽開始制御
+ * ============================================================ */
+const OpeningManager = {
+  STORAGE_KEY: 'royalLastOpeningSeenTime',
+  ONE_WEEK_MS: 7 * 24 * 60 * 60 * 1000,
+  currentStep: 0,
+  totalSteps: 5,
+  autoTimer: null,
+  carouselTimer: null,
+  bgmAudio: null,
+  isAudioPlaying: false,
+  hasRequestedFullscreen: false,
+  isOpen: false,
+
+  SCRIPT_DATA: {
+    1: [
+      { role: "勝機まで牙を隠す、重鎮の温存術", quote: "焦るな……最強の札は、最後に切るものだ。" },
+      { role: "王者の威厳・冷徹なる盤面支配", quote: "我が宮廷の掟、容易く破れると思うなよ。" },
+      { role: "愚直一徹・最弱札からの正攻法", quote: "小細工はいらぬ！弱い札から正々堂々と攻めるのみ！" },
+      { role: "優雅なるパス・無駄な消耗の回避", quote: "無理な小競り合いは美しくない。ここは引かせていただくよ。" },
+      { role: "算盤の駆け引き・鉄壁のペア構築", quote: "札は単発で捨てちゃ損。ペアで揃えてこそ価値が出るのさ！" },
+      { role: "天地逆転・一撃必殺の革命魔", quote: "強者が勝つ時代は終わりだ……すべてをひっくり返してやる！" }
+    ],
+    2: [
+      { role: "次代を担う俊英・電光石火の読み", quote: "父上の時代は終わった。この盤面、僕が支配してみせる！" },
+      { role: "宮廷政治の真髄・冷徹な手札管理", quote: "あなたの手札、すべてお見通しよ。無駄なあがきはおやめなさい。" },
+      { role: "深謀遠慮・場に出た札の完全記録", quote: "あの札がもう出尽くしたなら……私の勝ち筋はここにある。" },
+      { role: "絶望を超越せし、王族最強の到達点", quote: "幾多の敗北を越えてきた。貴様の次の一手、すべて看破したぞ。" }
+    ],
+    3: [
+      { role: "あなたの分身・華麗なる支配", isHero: false, quote: "ふふ、そんな熱い視線を向けられたら……全部奪いたくなっちゃうわ。" },
+      { role: "あなたの分身・若き天才の知謀", isHero: false, quote: "盤面を支配する理は、僕の手の中にある。" },
+      { role: "あなたの分身・底知れぬ直感", isHero: false, quote: "カードの声が聞こえる……あなたの次の一手もね。" },
+      { role: "あなたの分身・百戦錬磨の勝負勘", isHero: false, quote: "小細工はいらねぇ。修羅場をくぐった数がモノを言うのさ。" },
+      { role: "立ちはだかる覇王・天下布武の連打", isHero: true, quote: "8切りで親を奪い、一気に畳み掛ける！天下を獲る札は揃うた！" },
+      { role: "神話の頂点・原初の英雄王", isHero: true, quote: "上がりを狙うなど片腹痛い！王の宝物庫の前にひれ伏すがよい！" },
+      { role: "法家統制・徹底した手札圧縮", isHero: true, quote: "法に従い整然と札を刈り取る。天下統一の盤面を見よ。" },
+      { role: "完全傾聴・大調和カウンター", isHero: true, quote: "和を以て貴しと為す……だがジョーカー単騎には容赦せぬ。" },
+      { role: "不敗の重装ファランクス進軍", isHero: true, quote: "我が進軍を遮る壁などない！最短の手数で駆け抜けてみせよう！" }
+    ]
+  },
+
+  trackPointers: { 1: 1, 2: 1, 3: 1 },
+
+  checkShouldAutoPlay() {
+    try {
+      const lastSeen = localStorage.getItem(this.STORAGE_KEY);
+      const now = Date.now();
+      if (!lastSeen || (now - parseInt(lastSeen, 10) > this.ONE_WEEK_MS)) {
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  },
+
+  initOpening() {
+    this.createGoldSpecks();
+    this.setupEvents();
+
+    if (this.checkShouldAutoPlay()) {
+      this.openOpening();
+    }
+  },
+
+  openOpening() {
+    this.isOpen = true;
+    this.currentStep = 0;
+    this.hasRequestedFullscreen = false;
+
+    const screen = document.getElementById('screen-opening');
+    if (screen) {
+      screen.classList.remove('is-hidden');
+    }
+
+    if (bgmMgr) {
+      bgmMgr.setCharSelectPhase(false);
+      bgmMgr.audioA.pause();
+      bgmMgr.audioB.pause();
+    }
+
+    this.renderStep(0);
+  },
+
+  startBgm() {
+    if (this.isAudioPlaying) return;
+    if (isSoundMuted) return;
+
+    if (!this.bgmAudio) {
+      this.bgmAudio = new Audio();
+      this.bgmAudio.loop = true;
+      this.bgmAudio.volume = 0.55;
+      this.bgmAudio.src = 'bgm_opening.mp3';
+
+      this.bgmAudio.play().then(() => {
+        this.isAudioPlaying = true;
+        this.updatePrompt();
+      }).catch(err => {
+        console.warn('初回BGM自動再生ブロック（ユーザー操作待機）:', err);
+      });
+    } else {
+      this.bgmAudio.play().then(() => {
+        this.isAudioPlaying = true;
+        this.updatePrompt();
+      }).catch(() => {});
+    }
+  },
+
+  tryFullscreen() {
+    if (this.hasRequestedFullscreen) return;
+    this.hasRequestedFullscreen = true;
+    try {
+      const docEl = document.documentElement;
+      const req = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
+      if (req && !isFullscreenActive()) {
+        req.call(docEl).catch(() => {});
+      }
+    } catch (e) {}
+  },
+
+  createGoldSpecks() {
+    const box = document.getElementById('opening-stage-box');
+    if (!box) return;
+    for (let i = 0; i < 30; i++) {
+      const s = document.createElement('div');
+      s.className = 'gold-speck';
+      const sz = Math.floor(Math.random() * 5) + 3;
+      s.style.width = `${sz}px`;
+      s.style.height = `${sz}px`;
+      s.style.left = `${Math.random() * 98}%`;
+      s.style.animationDuration = `${(Math.random() * 3 + 3.8)}s`;
+      s.style.animationDelay = `${(Math.random() * 4)}s`;
+      box.appendChild(s);
+    }
+  },
+
+  shiftCarousel(actId) {
+    const rail = document.getElementById(`rail-act-${actId}`);
+    if (!rail) return;
+    const cards = rail.querySelectorAll('.plaque-box');
+    const total = cards.length;
+    if (total < 3) return;
+
+    this.trackPointers[actId] = (this.trackPointers[actId] + 1) % total;
+    const center = this.trackPointers[actId];
+    const left = (center - 1 + total) % total;
+    const right = (center + 1) % total;
+
+    cards.forEach((card, idx) => {
+      card.classList.remove('pos-left', 'pos-center', 'pos-right', 'pos-back');
+      if (idx === center) card.classList.add('pos-center');
+      else if (idx === left) card.classList.add('pos-left');
+      else if (idx === right) card.classList.add('pos-right');
+      else card.classList.add('pos-back');
+    });
+
+    const dataArr = this.SCRIPT_DATA[actId];
+    if (dataArr && dataArr[center]) {
+      const rEl = document.getElementById(`role-act-${actId}`);
+      const qEl = document.getElementById(`quote-act-${actId}`);
+      if (rEl && qEl) {
+        rEl.style.opacity = '0';
+        qEl.style.opacity = '0';
+        setTimeout(() => {
+          rEl.textContent = dataArr[center].role;
+          if (dataArr[center].isHero) rEl.classList.add('hero-rival');
+          else rEl.classList.remove('hero-rival');
+          qEl.textContent = dataArr[center].quote;
+          rEl.style.opacity = '1';
+          qEl.style.opacity = '1';
+        }, 220);
+      }
+    }
+  },
+
+  launchCarousel(actId) {
+    this.stopCarousel();
+    if (actId < 1 || actId > 3) return;
+    this.carouselTimer = setInterval(() => {
+      this.shiftCarousel(actId);
+    }, 4800);
+  },
+
+  stopCarousel() {
+    if (this.carouselTimer) {
+      clearInterval(this.carouselTimer);
+      this.carouselTimer = null;
+    }
+  },
+
+  updatePrompt() {
+    const pr = document.getElementById('opening-guide-text');
+    if (!pr) return;
+    if (this.currentStep === 4) {
+      pr.textContent = '👑 入城するかタップで最初へ ↺';
+    } else if (!this.isAudioPlaying) {
+      pr.textContent = 'タップして開宴 ＆ 次へ ▼';
+    } else {
+      pr.textContent = 'TAP / クリックで進む ▼';
+    }
+  },
+
+  renderStep(idx) {
+    if (idx < 0 || idx >= this.totalSteps) return;
+    this.currentStep = idx;
+
+    for (let i = 0; i < this.totalSteps; i++) {
+      const sc = document.getElementById(`opening-act-${i}`);
+      if (sc) sc.classList.toggle('active', i === this.currentStep);
+    }
+
+    const dots = document.querySelectorAll('.opening-dot-item');
+    dots.forEach((dot, i) => {
+      dot.classList.toggle('active', i === this.currentStep);
+    });
+
+    if (this.currentStep >= 1 && this.currentStep <= 3) {
+      this.launchCarousel(this.currentStep);
+    } else {
+      this.stopCarousel();
+    }
+
+    this.updatePrompt();
+    this.scheduleNext();
+  },
+
+  advanceStep() {
+    this.startBgm();
+    this.tryFullscreen();
+    if (this.currentStep < this.totalSteps - 1) {
+      this.renderStep(this.currentStep + 1);
+    } else {
+      this.renderStep(0);
+    }
+  },
+
+  scheduleNext() {
+    if (this.autoTimer) clearTimeout(this.autoTimer);
+    let wait = 11000;
+    if (this.currentStep === 0) wait = 9000;
+    else if (this.currentStep === 4) wait = 12000;
+    this.autoTimer = setTimeout(() => this.advanceStep(), wait);
+  },
+
+  exitToGame() {
+    if (this.autoTimer) clearTimeout(this.autoTimer);
+    this.stopCarousel();
+    this.isOpen = false;
+
+    try {
+      localStorage.setItem(this.STORAGE_KEY, String(Date.now()));
+    } catch (e) {}
+
+    if (this.bgmAudio) {
+      try {
+        this.bgmAudio.pause();
+        this.bgmAudio.currentTime = 0;
+      } catch (e) {}
+    }
+    this.isAudioPlaying = false;
+
+    const screen = document.getElementById('screen-opening');
+    if (screen) {
+      screen.classList.add('is-hidden');
+    }
+
+    updateFullscreenButtonsUI();
+
+    if (bgmMgr && !isSoundMuted) {
+      bgmMgr.setBattleBaseSrc('bgm_normal.mp3');
+      bgmMgr.setCharSelectPhase(true);
+    }
+  },
+
+  setupEvents() {
+    const box = document.getElementById('opening-stage-box');
+    if (box) {
+      box.addEventListener('click', (e) => {
+        if (!this.isOpen) return;
+        if (e.target && (e.target.id === 'btn-enter-palace' || e.target.closest('#btn-enter-palace'))) return;
+        if (e.target.closest('.plaque-box')) {
+          e.stopPropagation();
+          this.startBgm();
+          this.tryFullscreen();
+          if (this.currentStep >= 1 && this.currentStep <= 3) {
+            this.shiftCarousel(this.currentStep);
+            this.launchCarousel(this.currentStep);
+          }
+          return;
+        }
+        this.advanceStep();
+      });
+    }
+
+    const btnSkip = document.getElementById('btn-skip-gate');
+    if (btnSkip) {
+      btnSkip.addEventListener('click', (e) => {
+        e.stopPropagation();
+        soundMgr.playSelect();
+        this.exitToGame();
+      });
+    }
+
+    const btnEnter = document.getElementById('btn-enter-palace');
+    if (btnEnter) {
+      btnEnter.addEventListener('click', (e) => {
+        e.stopPropagation();
+        soundMgr.playWin();
+        this.exitToGame();
+      });
+    }
+
+    const startPrompt = document.getElementById('opening-start-prompt');
+    if (startPrompt) {
+      startPrompt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.startBgm();
+        this.tryFullscreen();
+        this.advanceStep();
+      });
+    }
+
+    const dots = document.querySelectorAll('.opening-dot-item');
+    dots.forEach(dot => {
+      dot.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.startBgm();
+        this.tryFullscreen();
+        const target = parseInt(dot.getAttribute('data-step'), 10);
+        this.renderStep(target);
+      });
+    });
+
+    const prologueBtn = document.getElementById('btn-open-prologue');
+    if (prologueBtn) {
+      prologueBtn.onclick = () => {
+        soundMgr.playSelect();
+        this.openOpening();
+      };
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (!this.isOpen) return;
+      if (document.hidden) {
+        if (this.autoTimer) clearTimeout(this.autoTimer);
+        this.stopCarousel();
+        if (this.bgmAudio) { try { this.bgmAudio.pause(); } catch (e) {} }
+      } else {
+        this.scheduleNext();
+        if (this.currentStep >= 1 && this.currentStep <= 3) this.launchCarousel(this.currentStep);
+        if (this.bgmAudio && this.isAudioPlaying && !isSoundMuted) {
+          try { this.bgmAudio.play(); } catch (e) {}
+        }
+      }
+    });
+  }
+};
+
+/* ====================================================================
+ * 【main.js 後半（完全修復版・パート1） 終了地点】
+ * 次の結合先：「12. イベントリスナー初期化 ＆ アプリ起動」
+ * ==================================================================== */
+/* ====================================================================
+ * ROYAL DAIFUGO - main.js 【後半（完全修復版・パート2）】
+ * [Version: v4.0.0 - 統合オープニング完全制御＆BGM調和・リプレイ客観表示版]
+ * ※「12. イベントリスナー初期化 ＆ アプリ起動」の開始から
+ *   ファイル末尾（最後まで）を出力します。
+ * 【パート1の直下にそのまま貼り付けるだけで構文エラーなく結合可能】
+ * ==================================================================== */
 
 /* ============================================================
  * 12. イベントリスナー初期化 ＆ アプリ起動
@@ -6141,15 +6721,15 @@ function initEvents() {
   const replayBtnPractice = document.getElementById('btn-open-replay-practice');
   const replayBtnScenario = document.getElementById('btn-open-replay-scenario');
   if (replayBtnNormal) {
-    replayBtnNormal.innerHTML = '📜 対局リプレイ ＆ 勝敗因分析';
+    replayBtnNormal.innerHTML = '📜 直前対局のリプレイ ＆ 勝敗因分析を見る';
     replayBtnNormal.onclick = () => ReplayManager.openReplayModal();
   }
   if (replayBtnPractice) {
-    replayBtnPractice.innerHTML = '📜 対局リプレイ ＆ 勝敗因分析';
+    replayBtnPractice.innerHTML = '📜 対局リプレイ ＆ 勝敗因分析を見る';
     replayBtnPractice.onclick = () => ReplayManager.openReplayModal();
   }
   if (replayBtnScenario) {
-    replayBtnScenario.innerHTML = '📜 対局リプレイ ＆ 勝敗因分析';
+    replayBtnScenario.innerHTML = '📜 対局リプレイ ＆ 勝敗因分析を見る';
     replayBtnScenario.onclick = () => ReplayManager.openReplayModal();
   }
 
@@ -6202,28 +6782,13 @@ function initEvents() {
     };
   }
 
-  const nextGameStatsBtn = document.getElementById('btn-next-game-stats');
-  if (nextGameStatsBtn) {
-    nextGameStatsBtn.onclick = () => {
-      soundMgr.playSelect();
-      if (MatchSeriesManager && MatchSeriesManager.isActive) {
-        MatchSeriesManager.showInterimModal();
-      } else {
-        currentStatsTab = 'my';
-        document.querySelectorAll('.modal-tab-btn').forEach(b => b.classList.remove('active'));
-        const myTabBtn = document.getElementById('tab-my-stats-btn');
-        if (myTabBtn) myTabBtn.classList.add('active');
-        renderRankingModalContent();
-        statsModal.classList.add('active');
-      }
-    };
-  }
-
   const btnNextMatchProceed = document.getElementById('btn-next-match-proceed');
   if (btnNextMatchProceed) {
     btnNextMatchProceed.onclick = () => {
       soundMgr.playSelect();
-      if (MatchSeriesManager && MatchSeriesManager.isActive) {
+      if (typeof ScenarioManager !== 'undefined' && ScenarioManager.isActive) {
+        ScenarioManager.proceedNextScenarioMatch();
+      } else if (MatchSeriesManager && MatchSeriesManager.isActive) {
         MatchSeriesManager.nextMatch();
       } else {
         if (nextGameModal) nextGameModal.classList.remove('active');
@@ -6343,15 +6908,26 @@ function initEvents() {
     bgmMgr.audioA.muted = isSoundMuted;
     bgmMgr.audioB.muted = isSoundMuted;
 
+    if (OpeningManager && OpeningManager.bgmAudio) {
+      OpeningManager.bgmAudio.muted = isSoundMuted;
+    }
+
     if (!isSoundMuted) {
       soundMgr.playSelect();
-      const rev = typeof isRevolution !== 'undefined' ? isRevolution : false;
-      const eb = typeof isElevenBack !== 'undefined' ? isElevenBack : false;
-      bgmMgr.update(rev, eb);
+      if (OpeningManager && OpeningManager.isOpen) {
+        OpeningManager.startBgm();
+      } else {
+        const rev = typeof isRevolution !== 'undefined' ? isRevolution : false;
+        const eb = typeof isElevenBack !== 'undefined' ? isElevenBack : false;
+        bgmMgr.update(rev, eb);
+      }
       soundMgr.init();
     } else {
       bgmMgr.audioA.pause();
       bgmMgr.audioB.pause();
+      if (OpeningManager && OpeningManager.bgmAudio) {
+        OpeningManager.bgmAudio.pause();
+      }
       if (soundMgr.ctx && soundMgr.ctx.state === 'running') soundMgr.ctx.suspend();
     }
   };
@@ -6779,13 +7355,22 @@ function initEvents() {
       updateFieldOverlap();
       ['cpu1', 'cpu2', 'cpu3'].forEach(c => renderCpuStack(c, hands[c].length));
 
-      const interimModal = document.getElementById('practice-interim-modal');
-      if (interimModal && interimModal.classList.contains('active')) {
-        MatchSeriesManager.renderPracticeRankChart('practice-interim-chart', 'practice-interim-chart-legend');
+      const nextGameModal = document.getElementById('next-game-modal');
+      if (nextGameModal && nextGameModal.classList.contains('active')) {
+        renderNextGameInterimDashboard();
       }
+
       const finishModal = document.getElementById('practice-finish-modal');
       if (finishModal && finishModal.classList.contains('active')) {
-        MatchSeriesManager.renderPracticeRankChart('practice-finish-chart', 'practice-finish-chart-legend');
+        renderSharedRankChart(
+          document.getElementById('practice-finish-chart'),
+          document.getElementById('practice-finish-chart-legend'),
+          MatchSeriesManager.rankHistory,
+          MatchSeriesManager.totalGames,
+          MatchSeriesManager.playerCharId,
+          MatchSeriesManager.selectedOpponentIds,
+          false
+        );
       }
       updateFullscreenButtonsUI();
     }, 100);
@@ -6805,7 +7390,7 @@ function startApp() {
   try {
     document.querySelectorAll('#char-modal img[data-char-img]').forEach(img => {
       img.src = CHAR_IMAGES[img.getAttribute('data-char-img')] || 'fugo-絵柄/king.png';
-      img.onerror = () => { img.src = 'king.png'; };
+      img.onerror = () => { img.src = 'fugo-絵柄/king.png'; };
     });
     initRuleTexts();
     ScenarioManager.init();
@@ -6814,7 +7399,11 @@ function startApp() {
     initEvents();
     SaveLoadManager.updateLoadButtonState();
     AIStatusUI.pingServer();
-    bgmMgr.setCharSelectPhase(true);
+    OpeningManager.initOpening();
+
+    if (!OpeningManager.isOpen) {
+      bgmMgr.setCharSelectPhase(true);
+    }
 
     const badgeIds = [
       'version-badge',

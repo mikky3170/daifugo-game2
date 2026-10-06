@@ -1,6 +1,6 @@
 /* ====================================================================
  * ROYAL DAIFUGO - scenario.js
- * [Version: v3.7.2 - 英傑会話登場時専用BGM即時同期＆演出深化版]
+ * [Version: v4.0.0 - ステージクリア時折れ線グラフ完全連動・英傑会話BGM同期版]
  * ==================================================================== */
 
 const GUIDE_SPEAKER = '宮廷案内役';
@@ -296,6 +296,7 @@ const ScenarioManager = {
     prelimGroups: null,
     unlockedSecrets: { YOUNG_KING: false, QUEEN: false, AWAKENED_KING: false },
     stageMatchStats: {},
+    stageRankHistory: [],
     pendingAdvStory: null,
     aiStats: {}
   },
@@ -310,6 +311,7 @@ const ScenarioManager = {
     if (!this.data.selectedPrelimGroup) this.data.selectedPrelimGroup = 'A';
     if (!this.data.unlockedSecrets) this.data.unlockedSecrets = { YOUNG_KING: false, QUEEN: false, AWAKENED_KING: false };
     if (!this.data.stageMatchStats) this.data.stageMatchStats = {};
+    if (!this.data.stageRankHistory) this.data.stageRankHistory = [];
     this.setupPrelimGroups();
 
     GameStorage.syncWithScenarioProgress(this.data);
@@ -354,6 +356,7 @@ const ScenarioManager = {
       prelimGroups: null,
       unlockedSecrets: { YOUNG_KING: false, QUEEN: false, AWAKENED_KING: false },
       stageMatchStats: {},
+      stageRankHistory: [],
       pendingAdvStory: null,
       aiStats: {}
     };
@@ -400,6 +403,7 @@ const ScenarioManager = {
 
     this.currentSeatRoster = null;
     this.data.stageMatchStats = {};
+    this.data.stageRankHistory = [];
     this.data.currentMatchIndex = 1;
     if (typeof pendingReceivedCards !== 'undefined') pendingReceivedCards = [];
     previousRanks = {};
@@ -455,6 +459,7 @@ const ScenarioManager = {
 
     this.currentSeatRoster = null;
     this.data.stageMatchStats = {};
+    this.data.stageRankHistory = [];
     this.data.currentMatchIndex = 1;
     if (typeof pendingReceivedCards !== 'undefined') pendingReceivedCards = [];
     previousRanks = {};
@@ -662,6 +667,7 @@ const ScenarioManager = {
             soundMgr.playSelect();
             data.selectedPrelimGroup = gKey;
             data.stageMatchStats = {};
+            data.stageRankHistory = [];
             data.currentMatchIndex = 1;
             this.currentSeatRoster = null;
             if (typeof pendingReceivedCards !== 'undefined') pendingReceivedCards = [];
@@ -740,7 +746,7 @@ const ScenarioManager = {
         if (qName) qName.textContent = this.ROYAL_BOSSES.QUEEN.name;
         if (qRole) qRole.textContent = this.ROYAL_BOSSES.QUEEN.title;
         if (isQueenCleared) {
-          if (qTag) ykTag.textContent = '✅ 制覇済';
+          if (qTag) qTag.textContent = '✅ 制覇済';
           qCard.classList.add('cleared');
         } else if (isQueenActive) {
           if (qTag) qTag.textContent = '⚔️ 挑戦中';
@@ -944,7 +950,7 @@ const ScenarioManager = {
         launchBtn.innerHTML = '<span>出陣する ⚔️</span>';
         launchBtn.onclick = () => this.launchScenarioBattle();
       }
-    } else if (p === 'STAGE_3_GILGAMESH') {
+    } else if (p === 'STAGE_3_GILGAMESH' || p === 'COMPLETED') {
       if (stageLabel) stageLabel.textContent = `最終神話決戦：原初の覇王「ギルガメッシュ」 ${condDesc}`;
       if (ruleLabel) ruleLabel.textContent = `神話の覇王を討ち果たし、伝説となれ！`;
       if (userStatus) userStatus.textContent = '最終決戦：ギルガメッシュ';
@@ -1015,7 +1021,6 @@ const ScenarioManager = {
       const isGuideTalking = (item.speaker === GUIDE_SPEAKER);
       const speakerName = isPlayerTalking ? currentAvatar.name : item.speaker;
 
-      // ★英傑登場検知：宮廷案内役から英傑がセリフで現れた瞬間に専用BGMを即時クロスフェード再生★
       const heroKey = HERO_SPEAKER_KEY_MAP[item.speaker];
       if (heroKey && currentHeroBgmTriggered !== heroKey) {
         currentHeroBgmTriggered = heroKey;
@@ -1095,6 +1100,7 @@ const ScenarioManager = {
     const p = this.data.currentPhase;
     this.data.currentMatchIndex = 1;
     this.data.stageMatchStats = {};
+    this.data.stageRankHistory = [];
     this.currentSeatRoster = null;
     if (typeof pendingReceivedCards !== 'undefined') pendingReceivedCards = [];
     previousRanks = {};
@@ -1357,10 +1363,15 @@ const ScenarioManager = {
 
     previousRanks = { ...statusMap };
 
+    const thisGameRanks = {};
+
     PLAYERS.forEach(p => {
       const isMe = (p === 'player');
       const charId = isMe ? 'player' : assignedCharacters[p]?.id;
       if (!charId) return;
+
+      const rNum = rankValues[statusMap[p]] || 4;
+      thisGameRanks[charId] = rNum;
 
       if (!this.data.stageMatchStats[charId]) {
         this.data.stageMatchStats[charId] = {
@@ -1374,7 +1385,6 @@ const ScenarioManager = {
         };
       }
       const st = this.data.stageMatchStats[charId];
-      const rNum = rankValues[statusMap[p]] || 4;
       st.games++;
       st.rankSum += rNum;
       if (rNum === 1) st.df++;
@@ -1397,77 +1407,37 @@ const ScenarioManager = {
       }
     });
 
+    if (!this.data.stageRankHistory) this.data.stageRankHistory = [];
+    this.data.stageRankHistory.push({
+      gameIndex: this.data.currentMatchIndex || 1,
+      ranks: thisGameRanks
+    });
+
     this.save();
 
     const curM = this.data.currentMatchIndex || 1;
     const totM = this.data.matchesPerStage || 1;
     const matchWinnerSeat = PLAYERS.find(s => statusMap[s] === '大富豪') || 'player';
-    const matchWinnerDef = assignedCharacters[matchWinnerSeat];
-    const finishCard = actionStats && actionStats[matchWinnerSeat] ? actionStats[matchWinnerSeat].finishCard : null;
 
     if (curM < totM) {
-      const modalNext = document.getElementById('modal-scenario-next-match');
-      const titleEl = document.getElementById('next-match-modal-title');
-      const msgEl = document.getElementById('next-match-modal-msg');
-      const tableEl = document.getElementById('next-match-scores-table');
-      const wImg = document.getElementById('next-match-winner-img');
-      const wName = document.getElementById('next-match-winner-name');
+      renderFinalRanking();
+      renderNextGameInterimDashboard();
 
-      if (wImg) wImg.src = matchWinnerSeat === 'player' ? this.getCurrentAvatar().image : (CHAR_IMAGES[matchWinnerDef.id] || 'fugo-絵柄/king.png');
-      if (wName) wName.textContent = getPlayerDisplayName(matchWinnerSeat, true);
-      if (titleEl) titleEl.textContent = `第 ${curM} 試合 決着`;
+      const promptEl = document.getElementById('next-game-prompt-text');
+      const nextMatchBtnText = document.getElementById('next-match-btn-text');
 
-      let cardBadge = '';
-      if (finishCard) {
-        const disp = finishCard.isJoker ? '🃏 JOKER' : `${finishCard.suitSymbol || finishCard.suit}${finishCard.display || finishCard.rank}`;
-        cardBadge = `<div class="finish-card-highlight">決まり手：<strong>${disp}</strong></div>`;
+      if (promptEl) {
+        const exStr = this.data.enableCardExchange ? '（座席継続・カード交換あり）' : '（席替えシャッフル・直接配札）';
+        promptEl.textContent = `第 ${curM} / ${totM} 試合が終了しました${exStr}。`;
       }
-      if (msgEl) msgEl.innerHTML = `第 ${curM} / ${totM} 試合が決着しました。${cardBadge}`;
-
-      if (tableEl) {
-        const order = ['大富豪', '富豪', '貧民', '大貧民'];
-        let html = `
-          <div class="ranking-table-container">
-            <table class="ranking-table">
-              <thead>
-                <tr>
-                  <th style="width: 32px; text-align: center;">着順</th>
-                  <th>参加者</th>
-                  <th style="text-align: center; white-space: nowrap !important;">確定階級</th>
-                </tr>
-              </thead>
-              <tbody>
-        `;
-
-        order.forEach((rName, idx) => {
-          const sKey = PLAYERS.find(s => statusMap[s] === rName);
-          const isMe = (sKey === 'player');
-          const rowStyle = isMe ? ' style="background: rgba(212,175,55,0.18); font-weight: bold;"' : '';
-          const rankBadge = `<span class="rank-num-badge rank-num-${idx + 1}">${idx + 1}</span>`;
-          const charDef = assignedCharacters[sKey];
-          const avatarSrc = isMe ? this.getCurrentAvatar().image : (CHAR_IMAGES[charDef.id] || 'fugo-絵柄/king.png');
-          const displayName = getPlayerDisplayName(sKey, true);
-          const foulSuffix = (typeof foulPlayers !== 'undefined' && foulPlayers[sKey]) ? ` <span class="foul-badge">(${foulPlayers[sKey]})</span>` : '';
-
-          html += `
-            <tr${rowStyle}>
-              <td style="text-align: center;">${rankBadge}</td>
-              <td>
-                <div style="display: flex; align-items: center; gap: 4px;">
-                  <img src="${avatarSrc}" onerror="this.onerror=null; this.src='boy.png';" style="width: 20px; aspect-ratio: 2/3; border-radius: 3px; border: 1px solid rgba(212,175,55,0.4);" alt="">
-                  <span style="color: ${isMe ? '#fff3a8' : '#e0e6ed'};">${displayName}</span>
-                </div>
-              </td>
-              <td style="text-align: center; color: #ffd700; font-weight: 800; white-space: nowrap !important;">${rName}${foulSuffix}</td>
-            </tr>
-          `;
-        });
-
-        html += `</tbody></table></div>`;
-        tableEl.innerHTML = html;
+      if (nextMatchBtnText) {
+        nextMatchBtnText.innerHTML = this.data.enableCardExchange
+          ? '次の試合へ (座席継続・カード交換へ)'
+          : '次の試合へ (席替えランダム・直接配札)';
       }
 
-      if (modalNext) modalNext.classList.add('active');
+      const nModal = document.getElementById('next-game-modal');
+      if (nModal) nModal.classList.add('active');
     } else {
       const outcome = this.evaluateStageOutcome();
       this.handleFinalStageOutcome(outcome, matchWinnerSeat);
@@ -1630,6 +1600,7 @@ const ScenarioManager = {
         retryBtn.onclick = () => {
           if (clearModal) clearModal.classList.remove('active');
           this.data.stageMatchStats = {};
+          this.data.stageRankHistory = [];
           this.data.currentMatchIndex = 1;
           this.currentSeatRoster = null;
           if (typeof pendingReceivedCards !== 'undefined') pendingReceivedCards = [];
@@ -1732,6 +1703,7 @@ const ScenarioManager = {
         if (clearModal) clearModal.classList.remove('active');
         this.isActive = false;
         this.data.stageMatchStats = {};
+        this.data.stageRankHistory = [];
         if (typeof pendingReceivedCards !== 'undefined') pendingReceivedCards = [];
         previousRanks = {};
         this.save();
@@ -1740,6 +1712,24 @@ const ScenarioManager = {
     }
 
     if (clearModal) clearModal.classList.add('active');
+
+    // ★【シナリオ関門突破 折れ線グラフ描画連動】
+    setTimeout(() => {
+      const chartCanvas = document.getElementById('stage-clear-chart');
+      const chartLegend = document.getElementById('stage-clear-chart-legend');
+      if (chartCanvas && typeof renderSharedRankChart === 'function') {
+        const opponentKeys = ['cpu1', 'cpu2', 'cpu3'].map(c => assignedCharacters[c]?.id).filter(Boolean);
+        renderSharedRankChart(
+          chartCanvas,
+          chartLegend,
+          this.data.stageRankHistory || [],
+          this.data.matchesPerStage || 1,
+          'player',
+          opponentKeys,
+          true
+        );
+      }
+    }, 70);
   },
 
   advancePhase() {
@@ -1801,6 +1791,7 @@ const ScenarioManager = {
     if (typeof pendingReceivedCards !== 'undefined') pendingReceivedCards = [];
     previousRanks = {};
     this.data.stageMatchStats = {};
+    this.data.stageRankHistory = [];
     this.data.currentMatchIndex = 1;
     this.save();
 
@@ -1810,6 +1801,9 @@ const ScenarioManager = {
   },
 
   proceedNextScenarioMatch() {
+    const nextGameModal = document.getElementById('next-game-modal');
+    if (nextGameModal) nextGameModal.classList.remove('active');
+
     const modalNext = document.getElementById('modal-scenario-next-match');
     if (modalNext) modalNext.classList.remove('active');
 
