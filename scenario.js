@@ -1,6 +1,6 @@
 /* ====================================================================
  * ROYAL DAIFUGO - scenario.js
- * [Version: v4.0.0 - ステージクリア時折れ線グラフ完全連動・英傑会話BGM同期版]
+ * [Version: v4.1.0 - ステージクリア時折れ線グラフ完全連動・PCログ直接格納＆自動退避版]
  * ==================================================================== */
 
 const GUIDE_SPEAKER = '宮廷案内役';
@@ -558,6 +558,7 @@ const ScenarioManager = {
 
     if (grandSaveBox) {
       grandSaveBox.classList.remove('is-hidden');
+      this.bindScenarioLogSaveActions();
     }
 
     if (retryBtn) retryBtn.classList.add('is-hidden');
@@ -567,7 +568,6 @@ const ScenarioManager = {
       returnBtn.querySelector('.btn-text').textContent = '🏆 別の勝負師で最初から挑む（周回）';
       returnBtn.onclick = () => {
         if (clearModal) clearModal.classList.remove('active');
-        if (grandSaveBox) grandSaveBox.classList.add('is-hidden');
         this.reset();
       };
     }
@@ -575,10 +575,26 @@ const ScenarioManager = {
     if (clearModal) clearModal.classList.add('active');
   },
 
+  bindScenarioLogSaveActions() {
+    const jsonlBtn = document.getElementById('btn-scenario-download-jsonl');
+    if (jsonlBtn) {
+      jsonlBtn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.downloadLogs();
+      };
+    }
+  },
+
+  // ★PC logs/ 直接格納 ＆ 手元完全フォールバック ＆ 画面上直貼りワンタップコピー完全連携
   async downloadLogs() {
-    const steps = AIDataLogger.stepLogs.filter(st => st.pattern === 'SCENARIO_BATTLE');
+    let steps = AIDataLogger.stepLogs.filter(st => st.pattern === 'SCENARIO_BATTLE');
+    // フィルターの空振りを完全防止（最新の対局ステップが存在すれば全件を確実に取得）
     if (!steps || steps.length === 0) {
-      alert('保存可能なシナリオ対戦ログがありません。');
+      steps = AIDataLogger.stepLogs;
+    }
+    if (!steps || steps.length === 0) {
+      alert('保存可能な対戦ログが記録されていません。');
       return;
     }
 
@@ -586,36 +602,19 @@ const ScenarioManager = {
     const fileName = `scenario_battle_all_steps_${this.getCurrentAvatar().id}_${getFormattedTimestamp()}.jsonl`;
 
     const statusEl = document.getElementById('scenario-save-status-msg');
-    const showMsg = (text) => {
+    const showMsg = (text, isSuccess = true) => {
       if (!statusEl) return;
       statusEl.textContent = text;
+      statusEl.style.color = isSuccess ? '#6ee7b7' : '#fca5a5';
+      statusEl.style.borderColor = isSuccess ? '#059669' : '#dc2626';
       statusEl.classList.remove('is-hidden');
-      setTimeout(() => { if (statusEl) statusEl.classList.add('is-hidden'); }, 5000);
+      setTimeout(() => { if (statusEl) statusEl.classList.add('is-hidden'); }, 7000);
     };
 
-    if (AIStatusUI.isServerOnline) {
-      try {
-        const res = await fetch(CONFIG.PYTHON_SAVE_LOG_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filename: fileName, content: jsonl })
-        });
-        if (res.ok) {
-          const btn = document.getElementById('btn-scenario-download-jsonl');
-          if (btn) {
-            const orig = btn.innerHTML;
-            btn.innerHTML = '✅ PCへ直接保存完了！';
-            setTimeout(() => { if (btn) btn.innerHTML = orig; }, 3000);
-          }
-          showMsg(`💾 PC側の logs/ フォルダに直接保存しました！ (${fileName}) ※全画面維持`);
-          updateFullscreenButtonsUI();
-          return;
-        }
-      } catch (err) {}
-    }
-
-    AIDataLogger.downloadFile(jsonl, fileName, 'application/x-ndjson;charset=utf-8');
-    showMsg(`📥 英雄の全対戦ログ（${fileName}）を正常に保存しました！`);
+    // AIDataLoggerの統合保存関数を呼び出し（サーバー保存＋ファイルDL試行＋最前面直コピー完全展開）
+    await AIDataLogger.saveLogFile(jsonl, fileName, (msg, isSuccess) => {
+      showMsg(msg, isSuccess);
+    });
   },
 
   renderMapTree() {
@@ -778,7 +777,7 @@ const ScenarioManager = {
         if (akName) akName.textContent = this.ROYAL_BOSSES.AWAKENED_KING.name;
         if (akRole) akRole.textContent = this.ROYAL_BOSSES.AWAKENED_KING.title;
         if (isAwakenedCleared) {
-          if (akTag) akTag.textContent = '✅ 制覇済';
+          if (akTag) qTag.textContent = '✅ 制覇済';
           akCard.classList.add('cleared');
         } else if (isAwakenedActive) {
           if (akTag) akTag.textContent = '⚔️ 挑戦中';
@@ -1363,6 +1362,7 @@ const ScenarioManager = {
 
     previousRanks = { ...statusMap };
 
+    // グラフ描画用にプレイヤーおよび各CPUのキャラIDベースで順位を完全記録
     const thisGameRanks = {};
 
     PLAYERS.forEach(p => {
@@ -1371,6 +1371,7 @@ const ScenarioManager = {
       if (!charId) return;
 
       const rNum = rankValues[statusMap[p]] || 4;
+      thisGameRanks[p] = rNum;
       thisGameRanks[charId] = rNum;
 
       if (!this.data.stageMatchStats[charId]) {
@@ -1414,6 +1415,11 @@ const ScenarioManager = {
     });
 
     this.save();
+
+    // ★万一のブラウザ終了に備え、localStorageへ直前対局ステップを自動永久バックアップ
+    try {
+      localStorage.setItem('royalScenarioLastMatchStepsBackup', JSON.stringify(AIDataLogger.stepLogs));
+    } catch (e) {}
 
     const curM = this.data.currentMatchIndex || 1;
     const totM = this.data.matchesPerStage || 1;
@@ -1517,7 +1523,37 @@ const ScenarioManager = {
     const winnerPlate = document.getElementById('stage-clear-winner-plate');
     const grandSaveBox = document.getElementById('scenario-grand-save-box');
 
-    if (grandSaveBox) grandSaveBox.classList.add('is-hidden');
+    // ★【上部見切れ解消・縦スクロール対応】モーダル内部コンテナのスタイル保証
+    if (clearModal) {
+      const modalContent = clearModal.querySelector('.modal-content') || clearModal.firstElementChild || clearModal;
+      if (modalContent) {
+        modalContent.style.maxHeight = '88vh';
+        modalContent.style.overflowY = 'auto';
+        modalContent.style.webkitOverflowScrolling = 'touch';
+        modalContent.style.overscrollBehavior = 'contain';
+        modalContent.style.paddingBottom = '32px';
+        modalContent.style.boxSizing = 'border-box';
+        modalContent.scrollTop = 0; // 最上部へリセット
+      }
+    }
+
+    // ★【下部ボタン群の均等化配置】
+    const buttonsWrap = returnBtn ? returnBtn.parentElement : null;
+    if (buttonsWrap) {
+      buttonsWrap.style.display = 'flex';
+      buttonsWrap.style.flexDirection = 'column';
+      buttonsWrap.style.gap = '8px';
+      buttonsWrap.style.width = '100%';
+      buttonsWrap.style.boxSizing = 'border-box';
+    }
+
+    // ★【敗北時（DEFEAT）も含めたログ保存ボタンの常時展開】
+    if (grandSaveBox) {
+      grandSaveBox.classList.remove('is-hidden');
+      grandSaveBox.style.width = '100%';
+      grandSaveBox.style.margin = '0 0 4px 0';
+      this.bindScenarioLogSaveActions();
+    }
 
     const isCleared = outcome.isCleared;
     const pAvatar = this.getCurrentAvatar();
@@ -1597,6 +1633,8 @@ const ScenarioManager = {
 
       if (retryBtn) {
         retryBtn.classList.remove('is-hidden');
+        retryBtn.style.width = '100%';
+        retryBtn.style.margin = '0';
         retryBtn.onclick = () => {
           if (clearModal) clearModal.classList.remove('active');
           this.data.stageMatchStats = {};
@@ -1612,6 +1650,8 @@ const ScenarioManager = {
 
       if (restartBtn) {
         restartBtn.classList.remove('is-hidden');
+        restartBtn.style.width = '100%';
+        restartBtn.style.margin = '0';
         restartBtn.onclick = () => {
           if (confirm('シナリオを最初からやり直しますか？\n（ステージ進行状況がリセットされますが、一度解放したキャラクターは保持されます）')) {
             if (clearModal) clearModal.classList.remove('active');
@@ -1620,6 +1660,21 @@ const ScenarioManager = {
           }
         };
       }
+    }
+
+    if (returnBtn) {
+      returnBtn.style.width = '100%';
+      returnBtn.style.margin = '0';
+      returnBtn.onclick = () => {
+        if (clearModal) clearModal.classList.remove('active');
+        this.isActive = false;
+        this.data.stageMatchStats = {};
+        this.data.stageRankHistory = [];
+        if (typeof pendingReceivedCards !== 'undefined') pendingReceivedCards = [];
+        previousRanks = {};
+        this.save();
+        this.openMapScreen();
+      };
     }
 
     if (scoresTable) {
@@ -1698,27 +1753,18 @@ const ScenarioManager = {
       scoresTable.innerHTML = html;
     }
 
-    if (returnBtn) {
-      returnBtn.onclick = () => {
-        if (clearModal) clearModal.classList.remove('active');
-        this.isActive = false;
-        this.data.stageMatchStats = {};
-        this.data.stageRankHistory = [];
-        if (typeof pendingReceivedCards !== 'undefined') pendingReceivedCards = [];
-        previousRanks = {};
-        this.save();
-        this.openMapScreen();
-      };
-    }
-
     if (clearModal) clearModal.classList.add('active');
 
-    // ★【シナリオ関門突破 折れ線グラフ描画連動】
+    // ★【シナリオ関門突破 折れ線グラフ描画完全連動（英傑名凡例の完全同期）】
     setTimeout(() => {
       const chartCanvas = document.getElementById('stage-clear-chart');
       const chartLegend = document.getElementById('stage-clear-chart-legend');
       if (chartCanvas && typeof renderSharedRankChart === 'function') {
-        const opponentKeys = ['cpu1', 'cpu2', 'cpu3'].map(c => assignedCharacters[c]?.id).filter(Boolean);
+        const opponentKeys = [
+          assignedCharacters.cpu1?.id || 'cpu1',
+          assignedCharacters.cpu2?.id || 'cpu2',
+          assignedCharacters.cpu3?.id || 'cpu3'
+        ];
         renderSharedRankChart(
           chartCanvas,
           chartLegend,
@@ -1729,7 +1775,7 @@ const ScenarioManager = {
           true
         );
       }
-    }, 70);
+    }, 120);
   },
 
   advancePhase() {

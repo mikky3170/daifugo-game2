@@ -1,6 +1,6 @@
 /* ====================================================================
  * ROYAL DAIFUGO - game.css
- * [CSS Version: v4.0.0 - 拡大版カルーセル・優美3Dイージング・全画面維持オープニング統合版]
+ * [CSS Version: v4.1.0 - 拡大版カルーセル・優美3Dイージング・全画面維持オープニング統合版]
  * ==================================================================== */
 
 /* ============================================================
@@ -703,7 +703,7 @@
 .player-box.active-turn .turn-badge { visibility: visible; opacity: 1; }
 
 /* ============================================================
- * 7. 各プレイヤー固有レイアウト ＆ 禁止あがり・都落ち事前警告バッジ（中央配置・祭壇下枠回避版）
+ * 7. 各プレイヤー固有レイアウト ＆ 禁止あがり・都落ち事前警告バッジ
  * ============================================================ */
 #cpu2 {
   grid-row: 1;
@@ -800,8 +800,8 @@
   align-items: center;
   justify-content: flex-end;
   position: relative;
-  margin-top: 4px;
-  z-index: 50;
+  margin-top: 2px;
+  z-index: 120;
   width: 100%;
 }
 
@@ -974,7 +974,7 @@
 }
 
 /* ============================================================
- * ★ 禁止あがり・都落ち事前警告バッジ（中央祭壇下枠回避・中央絶対配置）
+ * ★ 禁止あがり・都落ち事前警告バッジ
  * ============================================================ */
 .player-foul-alert {
   position: absolute;
@@ -1551,7 +1551,7 @@
   justify-content: center;
   align-items: flex-end;
   height: calc(var(--card-height) + 18px);
-  margin-bottom: 2px;
+  margin-bottom: 4px;
   max-width: 100%;
   width: 100%;
   padding: 0 4px;
@@ -1561,6 +1561,7 @@
   box-sizing: border-box;
   touch-action: manipulation;
   gap: 0;
+  z-index: 150 !important;
 }
 
 .card {
@@ -1621,7 +1622,7 @@
     0 10px 24px rgba(0, 0, 0, 0.9),
     inset 0 0 0 1.5px #ffd700 !important;
   background: radial-gradient(ellipse at 50% 45%, #ffffff 0%, #fffbf0 70%, #f7eccf 100%) !important;
-  z-index: 100 !important;
+  z-index: 200 !important;
 }
 
 #player-hand .card.card-giving-highlight {
@@ -1633,7 +1634,7 @@
     0 8px 20px rgba(0, 0, 0, 0.85),
     inset 0 0 0 1.5px #ffffff !important;
   background: radial-gradient(ellipse at 50% 45%, #ffffff 0%, #fff5f5 70%, #fee2e2 100%) !important;
-  z-index: 85 !important;
+  z-index: 185 !important;
   animation: givingCardGlow 1.2s infinite alternate ease-in-out;
 }
 
@@ -1657,7 +1658,7 @@
     0 8px 20px rgba(0, 0, 0, 0.85),
     inset 0 0 0 1.5px #ffffff !important;
   background: radial-gradient(ellipse at 50% 45%, #ffffff 0%, #fffdf0 70%, #fef3c7 100%) !important;
-  z-index: 80;
+  z-index: 180 !important;
   animation: receivedCardGlow 1.5s infinite alternate ease-in-out;
 }
 
@@ -2114,9 +2115,12 @@
 .modal-next-game-compact {
   max-width: 640px !important;
   width: 95% !important;
-  padding: 12px 14px;
+  max-height: 90vh;
+  max-height: 90dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 14px 24px 14px;
   position: relative;
-  overflow: visible;
   margin-top: 90px;
   box-sizing: border-box;
 }
@@ -2308,6 +2312,7 @@
   justify-content: center;
   text-align: center;
   gap: 6px;
+  touch-action: manipulation;
 }
 .btn-next-match-seat .btn-icon { font-size: 14px; color: #0b1017; }
 .btn-next-match-seat .btn-text {
@@ -2317,7 +2322,7 @@
 }
 
 /* ============================================================
- * 12.3 練習試合・順位推移Canvasチャート
+ * 12.3 練習試合・順位推移Canvasチャート ＆ シナリオ保存UI
  * ============================================================ */
 .practice-chart-wrapper {
   background: linear-gradient(180deg, rgba(14, 22, 36, 0.96) 0%, rgba(8, 12, 20, 0.98) 100%);
@@ -2329,6 +2334,8 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .practice-chart-header {
@@ -2377,16 +2384,18 @@
 .practice-canvas-container {
   width: 100%;
   height: 145px;
+  min-height: 140px;
   position: relative;
   overflow: hidden;
   background: rgba(4, 7, 12, 0.6);
   border-radius: 5px;
   border: 1px solid rgba(255, 255, 255, 0.05);
+  box-sizing: border-box;
 }
 
 .practice-canvas-container canvas {
-  width: 100%;
-  height: 100%;
+  width: 100% !important;
+  height: 100% !important;
   display: block;
 }
 
@@ -2418,6 +2427,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+  touch-action: manipulation;
 }
 .btn-result-act:hover {
   background: linear-gradient(180deg, #324a70 0%, #19273d 100%);
@@ -2433,6 +2443,20 @@
   height: 40px;
   font-size: 13px;
   border-radius: 7px;
+  cursor: pointer;
+  touch-action: manipulation;
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 10;
+}
+
+.scenario-grand-save-box {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+  z-index: 20;
 }
 
 .practice-save-status-msg {
@@ -3668,7 +3692,7 @@
   width: 100%;
   max-width: 620px;
   background: linear-gradient(90deg, rgba(20, 10, 5, 0.92) 0%, rgba(45, 28, 12, 0.95) 50%, rgba(20, 10, 5, 0.92) 100%);
-  border: 1.5px solid var(--color-gold-bright);
+  border: 1.5px solid var(--gold-bright);
   border-radius: 6px;
   padding: 6px 14px;
   margin-bottom: 6px;
@@ -3799,4 +3823,21 @@
   .plaque-pic { height: clamp(100px, 16vh, 125px); }
   .plaque-box.pos-left { transform: translateX(-105px) translateZ(-40px) scale(0.85); }
   .plaque-box.pos-right { transform: translateX(105px) translateZ(-40px) scale(0.85); }
+
+  .modal-next-game-compact {
+    max-height: 88vh;
+    max-height: 88dvh;
+    padding: 10px 10px 28px 10px;
+    margin-top: 80px;
+  }
+
+  .btn-practice-download-gold {
+    height: 44px;
+    font-size: 12.5px;
+  }
+
+  .scenario-grand-save-box {
+    margin-top: 12px !important;
+    padding-bottom: 4px;
+  }
 }

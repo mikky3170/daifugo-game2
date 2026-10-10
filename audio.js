@@ -1,6 +1,6 @@
 /* ====================================================================
  * ROYAL DAIFUGO - audio.js
- * [Version: v4.0.0 - 裏画面完全消音・BGMフェード競合根絶＆音響保護版]
+ * [Version: v4.1.0 - オープニング排他保護・完全消音ガード＆シームレス音響版]
  * ==================================================================== */
 
 /* ★最小化・裏画面での完全消音ガードを備えたSoundManager★ */
@@ -145,7 +145,7 @@ class SoundManager {
   }
 }
 
-/* ★排他制御と完全消音ガードを備えたBgmManager（裏画面完全消音・タイマー競合根絶版）★ */
+/* ★排他制御と完全消音ガードを備えたBgmManager（オープニング排他保護版）★ */
 class BgmManager {
   constructor() {
     this.audioA = new Audio();
@@ -193,6 +193,10 @@ class BgmManager {
 
     const handleShow = () => {
       this.isBackgrounded = false;
+      // オープニング画面が表示中のときはメインBGMを再開させない
+      if (typeof OpeningManager !== 'undefined' && OpeningManager.isOpen) {
+        return;
+      }
       if (this.wasPlayingBeforeHidden && (typeof isSoundMuted === 'undefined' || !isSoundMuted)) {
         this.activeAudio.volume = this.targetVolume;
         this.activeAudio.play().catch(() => {});
@@ -214,6 +218,9 @@ class BgmManager {
 
     const unlockAudio = () => {
       if (this.isBackgrounded || document.hidden) return;
+      // ★オープニング再生中はメインBGMの割り込みアンロックを完全にブロック
+      if (typeof OpeningManager !== 'undefined' && OpeningManager.isOpen) return;
+
       if (typeof isSoundMuted === 'undefined' || !isSoundMuted) {
         const src = (this.isCharSelectPhase && !this.isHeroAdvMode) ? this.tracks.charSelect : this.currentBattleBaseSrc;
         if (!this.activeAudio.src || this.currentSrc !== src) {
@@ -247,6 +254,9 @@ class BgmManager {
 
   crossFade(nextSrc, forceRestart = false) {
     if (!nextSrc) return;
+    // オープニング画面が表示中のときはメインBGMのフェードを拒絶
+    if (typeof OpeningManager !== 'undefined' && OpeningManager.isOpen) return;
+
     if (this.isBackgrounded || document.hidden) {
       this.currentSrc = nextSrc;
       return;
@@ -275,7 +285,7 @@ class BgmManager {
     const playPromise = incoming.play();
 
     const startTransition = () => {
-      if (this.isBackgrounded || document.hidden) {
+      if (this.isBackgrounded || document.hidden || (typeof OpeningManager !== 'undefined' && OpeningManager.isOpen)) {
         incoming.pause();
         outgoing.pause();
         return;
@@ -287,7 +297,7 @@ class BgmManager {
       const startOutVol = outgoing.volume;
 
       this.fadeTimer = setInterval(() => {
-        if (this.isBackgrounded || document.hidden) {
+        if (this.isBackgrounded || document.hidden || (typeof OpeningManager !== 'undefined' && OpeningManager.isOpen)) {
           clearInterval(this.fadeTimer);
           this.fadeTimer = null;
           incoming.pause();
@@ -315,7 +325,7 @@ class BgmManager {
 
     if (playPromise !== undefined) {
       playPromise.then(startTransition).catch(() => {
-        if (!this.isBackgrounded && !document.hidden) {
+        if (!this.isBackgrounded && !document.hidden && !(typeof OpeningManager !== 'undefined' && OpeningManager.isOpen)) {
           incoming.volume = this.targetVolume;
           outgoing.pause();
           this.activeAudio = incoming;
@@ -365,6 +375,8 @@ class BgmManager {
   }
 
   update(isRev, isEb) {
+    if (typeof OpeningManager !== 'undefined' && OpeningManager.isOpen) return;
+
     if (this.isHeroAdvMode) {
       this.crossFade(this.currentBattleBaseSrc);
     } else if (this.isCharSelectPhase) {

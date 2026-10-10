@@ -1,6 +1,6 @@
 /* ====================================================================
  * ROYAL DAIFUGO - rules.js
- * [Version: v4.0.0 - 平時3合法あがり完全保証＆絶対強度テーブル版]
+ * [Version: v4.1.0 - ルール確定統一・絶対強度判定＆打牌バリデーション完全修復版]
  * ==================================================================== */
 
 /* ----------------------------------------------------
@@ -31,11 +31,6 @@ function getActiveGameRules(customRules = null) {
 /* ----------------------------------------------------
  * 1. カードランク絶対正規化アーキテクチャ（Sanitization Engine）
  * ---------------------------------------------------- */
-
-/**
- * あらゆるオブジェクト構造・プロパティ揺れ・装飾文字列（👑等）から
- * 純粋なカードランク文字列（'3'〜'10', 'J', 'Q', 'K', 'A', '2', 'JOKER'）を100%抽出する
- */
 function normalizeCardRank(card) {
   if (!card) return '';
   if (card.isJoker) return 'JOKER';
@@ -49,10 +44,8 @@ function normalizeCardRank(card) {
     raw = String(card.value);
   }
 
-  // 王冠マークや絵文字、空白を除去
   raw = raw.replace(/[👑★☆🃏🎭\s]/g, '').trim();
 
-  // 数値型表現の吸収（14 -> A, 13 -> K, 12 -> Q, 11 -> J, 15 -> 2 など）
   if (raw === '14') return 'A';
   if (raw === '13') return 'K';
   if (raw === '12') return 'Q';
@@ -69,9 +62,6 @@ function normalizeCardRank(card) {
   return upper;
 }
 
-/**
- * スート（記号）の完全正規化
- */
 function normalizeCardSuit(card) {
   if (!card) return '';
   if (card.isJoker) return card.suitSymbol || card.suit || '★';
@@ -85,41 +75,17 @@ function normalizeCardSuit(card) {
 }
 
 /* ----------------------------------------------------
- * 2. 明示的絶対強度テーブル（数式計算の完全廃止）
+ * 2. 明示的絶対強度テーブル
  * ---------------------------------------------------- */
-// 平時（通常）の強さテーブル： 3が最弱(1) 〜 2が最強(13)、JOKERは絶対最強(9999)
 const NORMAL_STRENGTH_MAP = {
-  '3': 1,
-  '4': 2,
-  '5': 3,
-  '6': 4,
-  '7': 5,
-  '8': 6,
-  '9': 7,
-  '10': 8,
-  'J': 9,
-  'Q': 10,
-  'K': 11,
-  'A': 12,
-  '2': 13,
+  '3': 1, '4': 2, '5': 3, '6': 4, '7': 5, '8': 6, '9': 7,
+  '10': 8, 'J': 9, 'Q': 10, 'K': 11, 'A': 12, '2': 13,
   'JOKER': 9999
 };
 
-// 反転時（革命・11バック）の強さテーブル： 2が最弱(1) 〜 3が最強(13)、JOKERは絶対最強(9999)
 const REVERSE_STRENGTH_MAP = {
-  '2': 1,
-  'A': 2,
-  'K': 3,
-  'Q': 4,
-  'J': 5,
-  '10': 6,
-  '9': 7,
-  '8': 8,
-  '7': 9,
-  '6': 10,
-  '5': 11,
-  '4': 12,
-  '3': 13,
+  '2': 1, 'A': 2, 'K': 3, 'Q': 4, 'J': 5, '10': 6, '9': 7,
+  '8': 8, '7': 9, '6': 10, '5': 11, '4': 12, '3': 13,
   'JOKER': 9999
 };
 
@@ -139,9 +105,6 @@ function getCardStrength(card, reverse = false) {
   return reverse ? (REVERSE_STRENGTH_MAP[rank] || 0) : (NORMAL_STRENGTH_MAP[rank] || 0);
 }
 
-/**
- * 2枚のカードが同一であるかをプロパティ単位で完全に厳格照合する安全ヘルパー
- */
 function isSameCard(c1, c2) {
   if (!c1 || !c2) return false;
   const isJ1 = !!c1.isJoker || normalizeCardRank(c1) === 'JOKER';
@@ -208,67 +171,49 @@ function shuffle(array) {
   return arr;
 }
 
-/**
- * 提出された手（1枚またはペア等）の「基準の強さ」を算出する
- * ※JOKERを含むペアの場合、JOKERはもう一方のカードの強さとして扱われる
- */
 function getPlayStrength(cards, reverse = false) {
   if (!cards || cards.length === 0) return 0;
 
-  // JOKER単騎
   if (cards.length === 1 && (cards[0].isJoker || normalizeCardRank(cards[0]) === 'JOKER')) {
     return 9999;
   }
 
-  // JOKERのみで構成されたペア（JOKER2枚出し）
   if (cards.every(c => c.isJoker || normalizeCardRank(c) === 'JOKER')) {
     return 9999;
   }
 
-  // JOKER以外のカードを基準として強さを測定
   const nonJoker = cards.filter(c => !c.isJoker && normalizeCardRank(c) !== 'JOKER');
   if (nonJoker.length === 0) return 9999;
 
   return getCardStrength(nonJoker[0], reverse);
 }
 
-/**
- * 指定されたカードセットが禁止あがり対象カードを含むか純粋判定
- * 【王道ルール完全準拠版】
- * ・平時（通常時）：2、8、JOKERでのあがりが禁止（※3〜Aはスート問わず全て合法）
- * ・革命中：3、8、JOKERでのあがりが禁止（※4〜2は全て合法）
- * @param {Array} cards - 出されたカード配列
- * @param {boolean} reverse - 革命中フラグ
- * @returns {boolean} 禁止あがり対象なら true
- */
-function isForbiddenFinish(cards, reverse = false) {
+/* ----------------------------------------------------
+ * 3. 確定シンプル統一禁止あがり判定 ＆ 逆算保護
+ * ※ 11バック時は通常扱い、スペ3は他の3と完全に同等
+ * ---------------------------------------------------- */
+function isForbiddenFinish(cards, currentRev = false) {
   if (!cards || cards.length === 0) return false;
 
-  // 1. ジョーカーあがり禁止（単騎・ペア問わずJOKERを含めば反則）
   if (cards.some(c => c.isJoker || normalizeCardRank(c) === 'JOKER')) {
     return true;
   }
 
-  // 2. 8あがり禁止（8切りを伴うあがり）
   if (cards.some(c => normalizeCardRank(c) === '8')) {
     return true;
   }
 
-  // 3. 最強数字あがり禁止（平時は2、革命時は3）
-  const strongestRank = reverse ? '3' : '2';
-  if (cards.some(c => normalizeCardRank(c) === strongestRank)) {
+  const finalRev = (cards.length >= 4) ? !currentRev : currentRev;
+  const forbiddenRank = finalRev ? '3' : '2';
+
+  if (cards.some(c => normalizeCardRank(c) === forbiddenRank)) {
     return true;
   }
 
-  // ※平時（!reverse）において、3（♠3含む）でのあがりは完全な合法手とする
   return false;
 }
 
-/**
- * 禁止あがり手判定純粋関数
- * rules.forbiddenFinish が ON の場合のみ、ラスト1手になるあがり手を反則手とみなす
- */
-function isForbiddenFinishMove(cards, hand, rules = null, reverse = false) {
+function isForbiddenFinishMove(cards, hand, rules = null, currentRev = false) {
   if (!cards || cards.length === 0 || !hand) return false;
   if (cards.length !== hand.length) return false;
 
@@ -277,86 +222,94 @@ function isForbiddenFinishMove(cards, hand, rules = null, reverse = false) {
     return false;
   }
 
-  return isForbiddenFinish(cards, reverse);
+  return isForbiddenFinish(cards, currentRev);
 }
 
-/**
- * 選択したカードを出した場合、残りの手札がすべて禁止あがりカード（2・8・JOKER・革命時3等）のみになり
- * 次回以降にあがれなくなる「1手前詰み状態」になるかを厳密判定するヘルパー
- * @param {Array} selectedCards - 出そうとしているカード配列
- * @param {Array} hand - 現在の手札配列
- * @param {boolean} reverse - 革命中フラグ
- * @returns {boolean} 残り手札が禁止カードのみになる場合は true
- */
-function willLeaveOnlyForbiddenCards(selectedCards, hand, reverse = false) {
+function willLeaveOnlyForbiddenCards(selectedCards, hand, currentRev = false, rules = null) {
   if (!selectedCards || selectedCards.length === 0 || !hand) return false;
-  if (selectedCards.length >= hand.length) return false; // あがり手そのものは判定外
+  if (selectedCards.length >= hand.length) return false;
 
-  // 選択カードを除外した残手札をシミュレート
+  const activeRules = getActiveGameRules(rules);
+  if (!activeRules.forbiddenFinish) {
+    return false;
+  }
+
   const remainingHand = hand.filter(hCard => !selectedCards.some(sCard => isSameCard(hCard, sCard)));
   if (remainingHand.length === 0) return false;
 
-  // 残り手札に含まれるすべてのカードが単体で禁止あがり対象であるか検証
-  const allCardsForbidden = remainingHand.every(card => isForbiddenFinish([card], reverse));
-  if (!allCardsForbidden) {
-    return false; // 1枚でも通常あがり可能なカードが残るなら詰みではない
-  }
-
-  return true;
+  const finalRev = (selectedCards.length >= 4) ? !currentRev : currentRev;
+  return remainingHand.every(card => isForbiddenFinish([card], finalRev));
 }
 
-/**
- * カード着手の妥当性検証（バリデーションの完全純粋関数化）
- */
+function willLeadToForbiddenTrap(move, hand, currentRev = false) {
+  if (!move || !hand) return false;
+  const remHand = hand.filter(c => !move.some(mc => isSameCard(mc, c)));
+  const remLen = remHand.length;
+
+  if (remLen === 0) return isForbiddenFinish(move, currentRev);
+
+  const finalRev = (move.length >= 4) ? !currentRev : currentRev;
+
+  if (remLen === 1) return isForbiddenFinish(remHand, finalRev);
+  if (remLen === 2) return remHand.every(c => isForbiddenFinish([c], finalRev));
+  if (remLen >= 3 && remLen <= 4) {
+    const safeAnchors = remHand.filter(c => !isForbiddenFinish([c], finalRev));
+    if (safeAnchors.length === 0) return true;
+    if (safeAnchors.length === 1 && move.some(c => isSameCard(c, safeAnchors[0]))) return true;
+  }
+  return false;
+}
+
+/* ----------------------------------------------------
+ * 4. 打牌妥当性バリデーション（完全健全化版）
+ * ---------------------------------------------------- */
 function isValidPlay(cards, currentField, reverse = false) {
   if (!cards || !Array.isArray(cards) || cards.length === 0) return false;
   if (!currentField || !Array.isArray(currentField)) currentField = [];
 
-  // ① ♠3返し特殊判定（場がJOKER単騎の時のみ）
+  // ① ♠3返し判定（場がJOKER単騎の時のみ）
   const isFieldLoneJoker = (currentField.length === 1 && (currentField[0].isJoker || normalizeCardRank(currentField[0]) === 'JOKER'));
   if (isFieldLoneJoker) {
     const isSingle = cards.length === 1;
     const isSpade3 = !cards[0].isJoker && normalizeCardSuit(cards[0]) === '♠' && normalizeCardRank(cards[0]) === '3';
     if (isSingle && isSpade3) {
-      return true; // ♠3返し成立
+      return true;
     }
   }
 
-  // ② 場がJOKERのみで構成されている場合（単騎またはペア）、♠3返し以外は絶対に上回れない
+  // ② 場がJOKERのみで構成されている場合
   if (currentField.length > 0 && currentField.every(c => c.isJoker || normalizeCardRank(c) === 'JOKER')) {
     return false;
   }
 
-  // ③ 出そうとしているカード群が「同一ランクのセット（ペア等）」として成立しているか検証
+  // ③ 同一ランクのセットか検証
   const nonJokers = cards.filter(c => !c.isJoker && normalizeCardRank(c) !== 'JOKER');
   if (nonJokers.length > 1) {
     const firstRank = normalizeCardRank(nonJokers[0]);
     const isAllSame = nonJokers.every(c => normalizeCardRank(c) === firstRank);
     if (!isAllSame) {
-      return false; // 数字がバラバラなカードは同時に出せない
+      return false;
     }
   }
 
-  // ④ 親番（場が空）の場合：セットが成立していれば無条件に出せる
+  // ④ 親番（場が空）
   if (currentField.length === 0) {
     return true;
   }
 
-  // ⑤ 子番の場合：場の枚数と完全に一致している必要がある
+  // ⑤ 子番の枚数一致
   if (cards.length !== currentField.length) {
     return false;
   }
 
-  // ⑥ 強さ比較判定（絶対強度テーブルによる比較）
+  // ⑥ 強さ比較判定
   const playStr = getPlayStrength(cards, reverse);
   const fieldStr = getPlayStrength(currentField, reverse);
 
-  // 提出手がJOKER単騎（9999）なら、場がJOKERでなければ無条件で勝てる
   if (playStr === 9999) {
     return fieldStr < 9999;
   }
 
-  // 厳格な大なり比較（playStr > fieldStr）
   return playStr > fieldStr;
 }
 
@@ -377,7 +330,6 @@ function getAllValidMoves(hand, currentField, reverse = false, filterForbidden =
   const isFieldEmpty = (!currentField || currentField.length === 0);
 
   if (isFieldEmpty) {
-    // 親番（場が空）
     for (let disp in groups) {
       const cards = groups[disp];
       const maxLen = cards.length + jokers.length;
@@ -388,14 +340,11 @@ function getAllValidMoves(hand, currentField, reverse = false, filterForbidden =
         moves.push([...cards.slice(0, naturalNeed), ...jokers.slice(0, jokerNeed)]);
       }
     }
-    // ジョーカー単騎出し
     if (jokers.length >= 1) moves.push([jokers[0]]);
-    // ジョーカー2枚出しペアの親番手
     if (jokers.length >= 2) moves.push([jokers[0], jokers[1]]);
   } else {
     const reqLen = currentField.length;
 
-    // スペード3返し候補
     if (reqLen === 1 && (currentField[0].isJoker || normalizeCardRank(currentField[0]) === 'JOKER')) {
       const spade3 = nonJokers.find(c => normalizeCardSuit(c) === '♠' && normalizeCardRank(c) === '3');
       if (spade3) moves.push([spade3]);
@@ -413,18 +362,15 @@ function getAllValidMoves(hand, currentField, reverse = false, filterForbidden =
       }
     }
 
-    // ジョーカー単騎受け
     if (reqLen === 1 && jokers.length >= 1 && isValidPlay([jokers[0]], currentField, reverse)) {
       moves.push([jokers[0]]);
     }
 
-    // ジョーカー2枚出しペア受け
     if (reqLen === 2 && jokers.length >= 2 && isValidPlay([jokers[0], jokers[1]], currentField, reverse)) {
       moves.push([jokers[0], jokers[1]]);
     }
   }
 
-  // ★親番（isFieldEmpty）の絶対安全保証：どんな状況でも手札から出せる手が必ず1つ以上生成される
   if (isFieldEmpty && moves.length === 0 && hand.length > 0) {
     moves.push([hand[0]]);
   }
@@ -432,8 +378,8 @@ function getAllValidMoves(hand, currentField, reverse = false, filterForbidden =
   if (filterForbidden) {
     const activeRules = getActiveGameRules(rules);
     if (activeRules.forbiddenFinish) {
-      const filtered = moves.filter(m => !isForbiddenFinishMove(m, hand, activeRules, reverse));
-      // 親番において、仮に全ての手が禁止あがりであっても親番パス（無限ループ）を防ぐため生の手を返す
+      const currentRevState = (typeof isRevolution !== 'undefined') ? !!isRevolution : false;
+      const filtered = moves.filter(m => !isForbiddenFinishMove(m, hand, activeRules, currentRevState));
       if (isFieldEmpty && filtered.length === 0) {
         return moves;
       }
@@ -444,9 +390,6 @@ function getAllValidMoves(hand, currentField, reverse = false, filterForbidden =
   return moves;
 }
 
-/**
- * 貧民・大貧民用の絶対最強カード選定（強い順にcount枚）
- */
 function selectTributeCards(hand, count, reverse = false) {
   const sorted = [...hand].sort((a, b) => getCardStrength(b, reverse) - getCardStrength(a, reverse));
   return sorted.slice(0, count);
@@ -478,7 +421,7 @@ function selectExchangeCardsSmart(hand, count) {
     if (key === 'J') score -= 6000;
 
     if (!c.isJoker && normalizeCardSuit(c) === '♦' && key === '3') {
-      score -= 40000; // 初手親番権利札の保護
+      score -= 40000;
     }
 
     if (size >= 4) score -= 30000;
@@ -506,12 +449,6 @@ function selectExchangeCardsSmart(hand, count) {
   return scored.slice(0, count).map(x => x.card);
 }
 
-/**
- * 4プレイヤー間のカード交換を実行する
- * @param {Object} playersCards - { playerId: Card[] }
- * @param {Object} ranks - { playerId: 'daifugo' | 'fugo' | 'heimin' | 'hinmin' | 'daihinmin' } または 前局順位マップ
- * @returns {Object} { exchangeLog, updatedCards }
- */
 function executeCardExchange(playersCards, ranks) {
   const resultLog = [];
   const updated = {};
@@ -528,7 +465,6 @@ function executeCardExchange(playersCards, ranks) {
     else if (r === 'daihinmin' || r === '大貧民' || r === 4) daihinminId = pid;
   }
 
-  // 1. 大富豪 ⇆ 大貧民（2枚交換）
   if (daifugoId && daihinminId && updated[daifugoId] && updated[daihinminId]) {
     const tributeCards = selectTributeCards(updated[daihinminId], 2, false);
     const giveCards = selectExchangeCardsSmart(updated[daifugoId], 2);
@@ -554,7 +490,6 @@ function executeCardExchange(playersCards, ranks) {
     });
   }
 
-  // 2. 富豪 ⇆ 貧民（1枚交換）
   if (fugoId && hinminId && updated[fugoId] && updated[hinminId]) {
     const tributeCards = selectTributeCards(updated[hinminId], 1, false);
     const giveCards = selectExchangeCardsSmart(updated[fugoId], 1);
@@ -587,9 +522,6 @@ function executeCardExchange(playersCards, ranks) {
   return { updatedCards: updated, exchangeLog: resultLog };
 }
 
-/**
- * プレイヤーが着手した直後の勝敗・失格判定
- */
 function evaluatePlayFinish(context) {
   const {
     playerId,
@@ -598,7 +530,7 @@ function evaluatePlayFinish(context) {
     previousDaifugoId,
     currentRankings = [],
     activePlayers = [],
-    effRev = false,
+    currentRev = false,
     rules = null
   } = context;
 
@@ -608,8 +540,8 @@ function evaluatePlayFinish(context) {
     return { status: 'CONTINUE' };
   }
 
-  // ① 禁止あがりチェック（平時3は完全に合法勝利、2・8・JOKER・革命時3のみ反則）
-  if (activeRules.forbiddenFinish && isForbiddenFinish(playedCards, effRev)) {
+  // ① 禁止あがりチェック（確定シンプル統一ルール）
+  if (activeRules.forbiddenFinish && isForbiddenFinish(playedCards, currentRev)) {
     return {
       status: 'FORBIDDEN_FINISH',
       disqualifiedPlayerId: playerId,
@@ -618,7 +550,7 @@ function evaluatePlayFinish(context) {
     };
   }
 
-  // ② 通常あがり成立（1位確定時、かつ前大富豪が別プレイヤーなら都落ちチェック）
+  // ② 通常あがり成立
   const finishOrder = currentRankings.length + 1;
   const events = [];
 
@@ -711,44 +643,40 @@ function isGuaranteedAbsoluteWin(move, unrevealed, reverse = false) {
   return true;
 }
 
-/**
- * 終盤確定読みエンジン (Endgame Solver)
- */
 function solveEndgameWinningSequence(hand, currentField, unrevealed = [], reverse = false, rules = null, maxDepth = 4) {
   if (!hand || hand.length === 0) return null;
   const activeRules = getActiveGameRules(rules);
   const rawMoves = getAllValidMoves(hand, currentField, reverse, true, activeRules);
   if (rawMoves.length === 0) return null;
 
-  const instant = rawMoves.find(m => m.length === hand.length && !isForbiddenFinishMove(m, hand, activeRules, reverse));
+  const currentRevState = (typeof isRevolution !== 'undefined') ? !!isRevolution : false;
+  const instant = rawMoves.find(m => m.length === hand.length && !isForbiddenFinish(m, currentRevState));
   if (instant) return instant;
 
   if (hand.length > 5) return null;
 
-  // 8切り架け橋コンボ探索
   const eightMoves = rawMoves.filter(m => m.some(c => normalizeCardRank(c) === '8'));
   for (const em of eightMoves) {
     const remHand = hand.filter(c => !em.some(ec => isSameCard(ec, c)));
     if (remHand.length === 0) continue;
 
     const nextLeadMoves = getAllValidMoves(remHand, [], reverse, true, activeRules);
-    const winNext = nextLeadMoves.find(nm => nm.length === remHand.length && !isForbiddenFinishMove(nm, remHand, activeRules, reverse));
+    const winNext = nextLeadMoves.find(nm => nm.length === remHand.length && !isForbiddenFinish(nm, currentRevState));
     if (winNext) {
       return em;
     }
   }
 
-  // 親番での確定制圧コンボ探索
   if ((!currentField || currentField.length === 0) && hand.length <= 4) {
     for (const firstMove of rawMoves) {
-      if (isForbiddenFinishMove(firstMove, hand, activeRules, reverse)) continue;
+      if (isForbiddenFinish(firstMove, currentRevState)) continue;
       
       if (isGuaranteedAbsoluteWin(firstMove, unrevealed, reverse)) {
         const remHand = hand.filter(c => !firstMove.some(fc => isSameCard(fc, c)));
         if (remHand.length === 0) return firstMove;
 
         const nextMoves = getAllValidMoves(remHand, [], reverse, true, activeRules);
-        const winNext = nextMoves.find(nm => nm.length === remHand.length && !isForbiddenFinishMove(nm, remHand, activeRules, reverse));
+        const winNext = nextMoves.find(nm => nm.length === remHand.length && !isForbiddenFinish(nm, currentRevState));
         if (winNext) {
           return firstMove;
         }
@@ -758,7 +686,7 @@ function solveEndgameWinningSequence(hand, currentField, unrevealed = [], revers
             if (isGuaranteedAbsoluteWin(secondMove, unrevealed, reverse)) {
               const remRemHand = remHand.filter(c => !secondMove.some(sc => isSameCard(sc, c)));
               const finalMoves = getAllValidMoves(remRemHand, [], reverse, true, activeRules);
-              const finalWin = finalMoves.find(fm => fm.length === remRemHand.length && !isForbiddenFinishMove(fm, remRemHand, activeRules, reverse));
+              const finalWin = finalMoves.find(fm => fm.length === remRemHand.length && !isForbiddenFinish(fm, currentRevState));
               if (finalWin) {
                 return firstMove;
               }
@@ -772,65 +700,7 @@ function solveEndgameWinningSequence(hand, currentField, unrevealed = [], revers
   return null;
 }
 
-/**
- * 未出カード特定関数
- */
 function getUnrevealedCards(myHand = [], playedHistory = [], currentField = []) {
   const known = [...(myHand || []), ...(playedHistory || []), ...(currentField || [])];
   return createDeck().filter(c => !known.some(k => isSameCard(c, k)));
 }
-
-function findDynamicBossCardsJS(myHand, unrevealed, rev = false) {
-  const bossSingles = [];
-  const bossPairs = [];
-
-  const unrevJokers = unrevealed.filter(c => c.isJoker || normalizeCardRank(c) === 'JOKER');
-  const hasSpade3 = myHand.some(c => !c.isJoker && normalizeCardSuit(c) === '♠' && normalizeCardRank(c) === '3');
-  const unrevNj = unrevealed.filter(c => !c.isJoker && normalizeCardRank(c) !== 'JOKER');
-
-  myHand.forEach(c => {
-    if (c.isJoker || normalizeCardRank(c) === 'JOKER') { bossSingles.push(c); return; }
-    const cStr = getCardStrength(c, rev);
-    const stronger = unrevNj.filter(uc => getCardStrength(uc, rev) > cStr);
-    if (stronger.length === 0) {
-      if (unrevJokers.length === 0 || hasSpade3) {
-        bossSingles.push(c);
-      }
-    }
-  });
-
-  const unrevGroups = {};
-  unrevNj.forEach(c => {
-    const k = normalizeCardRank(c);
-    unrevGroups[k] = (unrevGroups[k] || 0) + 1;
-  });
-  const unrevPairDisplays = Object.keys(unrevGroups).filter(d => unrevGroups[d] + unrevJokers.length >= 2);
-
-  const myGroups = {};
-  myHand.forEach(c => {
-    if (!c.isJoker && normalizeCardRank(c) !== 'JOKER') {
-      const k = normalizeCardRank(c);
-      if (!myGroups[k]) myGroups[k] = [];
-      myGroups[k].push(c);
-    }
-  });
-
-  Object.keys(myGroups).forEach(disp => {
-    if (myGroups[disp].length >= 2) {
-      const pStr = getCardStrength({ rank: disp, isJoker: false }, rev);
-      const strongerPairs = unrevPairDisplays.filter(d => getCardStrength({ isJoker: false, rank: d }, rev) > pStr);
-      if (strongerPairs.length === 0) {
-        bossPairs.push(disp);
-      }
-    }
-  });
-
-  const myJokers = myHand.filter(c => c.isJoker || normalizeCardRank(c) === 'JOKER');
-  if (myJokers.length >= 2) {
-    bossPairs.push('JOKER');
-  }
-
-  return { bossSingles, bossPairs };
-}
-
-
