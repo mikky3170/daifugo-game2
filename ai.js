@@ -1,6 +1,6 @@
 /* ====================================================================
  * ROYAL DAIFUGO - ai.js
- * [Version: v4.1.0 - 確定統一反則判定・純粋革命フラグ完全同期版]
+ * [Version: v4.1.2 - サーバー推論一元化・PC直接保存純化・軽量堅牢版]
  * ==================================================================== */
 
 /* ============================================================
@@ -14,6 +14,20 @@ const AI_SERVER_TARGET_CHAR_IDS = [
 function isPythonServerTargetChar(charId) {
   return charId && AI_SERVER_TARGET_CHAR_IDS.includes(charId);
 }
+
+const LOCAL_FALLBACK_QUOTES = {
+  GILGAMESH: 'フン、通信が途切れようと雑種相手に我の知恵を借りるまでもないわ！',
+  AWAKENED_KING: '外界との繋がりが絶たれようと…この直感だけで十分だ！',
+  SUPER_AI: '回線など頼らずとも、王家の品格は揺るぎません。',
+  KING: '神託を待たずとも、余の威光に揺らぎはない。',
+  NOBUNAGA: '狼煙が途絶えたか！ならばこの信長、自らの勘で斬り捨てるまで！',
+  SHOTOKU: '天の声は遮られようとも、十七条の憲法に迷いはありませぬ。',
+  SHI_HUANGDI: '万里の長城の外など知らぬ。余の法は朕自身にある。',
+  ALEXANDER: '援軍の報せなど要らぬ！我が軍団の突撃で押し通す！',
+  BEGINNER_AI: '電波が届かなくても…僕自身の力でやってみせるよ！'
+};
+
+const localFallbackCooldowns = {};
 
 const AIStatusUI = {
   isServerOnline: false,
@@ -113,25 +127,13 @@ const AIStatusUI = {
     ['player', 'cpu1', 'cpu2', 'cpu3'].forEach(p => this.clearBrainDot(p));
   },
 
-  flashBrainDot(playerKey, isOnline = true) {
-    const charDef = (typeof assignedCharacters !== 'undefined') ? assignedCharacters[playerKey] : null;
-    const effectiveCharId = charDef?.id;
-
-    if (!isPythonServerTargetChar(effectiveCharId)) {
-      this.clearBrainDot(playerKey);
-      return;
-    }
-    this.setBrainDot(playerKey, true, isOnline);
-    setTimeout(() => this.clearBrainDot(playerKey), 1200);
-  },
-
   async pingServer(isSilent = false) {
     if (!this.isServerOnline) {
       this.set('waking', 'AI: サーバー起動中...');
     }
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000);
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
       const res = await fetch(CONFIG.PYTHON_HEALTH_URL, {
         method: 'GET',
@@ -146,12 +148,12 @@ const AIStatusUI = {
         this.isWakingUp = false;
         this.consecutiveFailures = 0;
         this.set('online', 'AI: 稼働中');
-        console.log(`✅ [Pythonサーバー接続成功] モデル: ${data.hi2_name || 'hi2'} & ${data.gilgamesh_name || 'gilgamesh'}`);
+        console.log(`✅ [Pythonサーバー接続成功] モデル: ${data.model_unified || data.apex_name || 'APEX-v3'}`);
       } else {
         throw new Error(`HTTP ${res.status}`);
       }
     } catch (err) {
-      if (!isSilent) console.warn(`⚠️ [ヘルスチェック未到達] サーバー未起動またはスリープ中: ${err.message}`);
+      if (!isSilent) console.warn(`⚠️ [ヘルスチェック未到達] Pythonサーバー未起動: ${err.message}`);
       this.isServerOnline = false;
       this.set('offline', 'AI: オフライン');
     }
@@ -182,7 +184,7 @@ function getCharacterTacticalProfile(charId) {
 }
 
 /* ----------------------------------------------------
- * 3. PyTorch深層学習サーバー通信（確実なオフライン保護版）
+ * 3. PyTorch深層学習サーバー通信
  * ---------------------------------------------------- */
 let currentSessionGeneration = 0;
 
@@ -218,20 +220,20 @@ function filterCpuMovesForCharacter(charId, moves) {
   return filtered.length > 0 ? filtered : moves;
 }
 
-async function askPythonAI(hand, currentField, validMoves, modelType = 'super', playerKey = 'cpu2', activeGen = null) {
+async function askPythonAI(hand, currentField, validMoves, modelType = 'apex', playerKey = 'cpu2', activeGen = null) {
   const gen = (activeGen !== null) ? activeGen : currentSessionGeneration;
+  const charDef = assignedCharacters[playerKey] || CHARACTER_DEFS.SUPER_AI;
 
   if (!AIStatusUI.isServerOnline) {
     AIStatusUI.setBrainDot(playerKey, true, false);
-    return decideCpuMove(playerKey);
+    const localMove = decideCpuMove(playerKey);
+    return localMove;
   }
 
   AIStatusUI.set('thinking', 'AI: 思考中...');
   AIStatusUI.setBrainDot(playerKey, true, true);
 
-  const charDef = assignedCharacters[playerKey] || CHARACTER_DEFS.SUPER_AI;
   const targetMoves = filterCpuMovesForCharacter(charDef.id, validMoves);
-
   const isHeavyMcts = (charDef.id === 'GILGAMESH' || charDef.id === 'AWAKENED_KING');
   const timeoutMs = isHeavyMcts ? 5000 : 3500;
 
@@ -242,7 +244,7 @@ async function askPythonAI(hand, currentField, validMoves, modelType = 'super', 
     const mySeat = PLAYERS.indexOf(playerKey);
 
     const payload = {
-      modelType: 'super',
+      modelType: 'apex',
       charId: charDef.id,
       seat: mySeat >= 0 ? mySeat : 0,
       isRevolution: !!isRevolution,
@@ -275,7 +277,6 @@ async function askPythonAI(hand, currentField, validMoves, modelType = 'super', 
     const resData = await response.json();
 
     if (gen !== currentSessionGeneration) {
-      console.log('[AI GHOST GUARD] 破棄されたセッションの推論結果を安全に無視しました。');
       AIStatusUI.clearBrainDot(playerKey);
       return null;
     }
@@ -285,12 +286,17 @@ async function askPythonAI(hand, currentField, validMoves, modelType = 'super', 
       AIStatusUI.consecutiveFailures = 0;
       AIStatusUI.restoreIdleState();
 
-      if (!resData.chosenMove) return null;
-      return matchReturnedMoveWithHand(hand, resData.chosenMove);
+      if (!resData.chosenMove) {
+        console.log(`%c🟢 [AIサーバー推論: ${charDef.name}] APEX-v3/MCTS -> パス`, 'color: #10b981; font-weight: bold;');
+        return null;
+      }
+      const matched = matchReturnedMoveWithHand(hand, resData.chosenMove);
+      const moveStr = matched ? matched.map(c => c.isJoker ? '🃏JOKER' : `${normalizeCardSuit(c)}${normalizeCardRank(c)}`).join(' ') : 'パス';
+      console.log(`%c🟢 [AIサーバー推論: ${charDef.name}] APEX-v3/MCTS -> ${moveStr}`, 'color: #10b981; font-weight: bold;');
+      return matched;
     }
   } catch (err) {
     if (gen !== currentSessionGeneration) return null;
-    console.warn(`[AI通信遅延/例外] ${charDef.name}: ${err.message} -> ローカル代替思考を実行`);
 
     AIStatusUI.consecutiveFailures = (AIStatusUI.consecutiveFailures || 0) + 1;
     if (AIStatusUI.consecutiveFailures >= 2) {
@@ -300,13 +306,27 @@ async function askPythonAI(hand, currentField, validMoves, modelType = 'super', 
       AIStatusUI.restoreIdleState();
     }
     AIStatusUI.setBrainDot(playerKey, true, false);
+
+    const now = Date.now();
+    const lastQuoteTime = localFallbackCooldowns[playerKey] || 0;
+    if (now - lastQuoteTime > 6000 && LOCAL_FALLBACK_QUOTES[charDef.id]) {
+      localFallbackCooldowns[playerKey] = now;
+      if (typeof showCharacterDialogue === 'function') {
+        showCharacterDialogue(playerKey, LOCAL_FALLBACK_QUOTES[charDef.id]);
+      }
+    }
+
+    const localMove = decideCpuMove(playerKey);
+    const moveStr = localMove ? localMove.map(c => c.isJoker ? '🃏JOKER' : `${normalizeCardSuit(c)}${normalizeCardRank(c)}`).join(' ') : 'パス';
+    console.warn(`🟡 [AIローカル代替: ${charDef.name}] サーバー未接続/タイムアウトのためローカル思考 -> ${moveStr}`);
+    return localMove;
   }
 
   return decideCpuMove(playerKey);
 }
 
 /* ----------------------------------------------------
- * 4. AIデータロガー (AIDataLogger)
+ * 4. AIデータロガー (AIDataLogger) - PC logs/ 直接保存一本化版
  * ---------------------------------------------------- */
 const AIDataLogger = {
   activeGameId: null,
@@ -397,7 +417,7 @@ const AIDataLogger = {
     };
 
     this.stepLogs.push(step);
-    if (this.stepLogs.length > 2000) this.stepLogs.shift();
+    if (this.stepLogs.length > 2500) this.stepLogs.shift();
 
     if (typeof MatchSeriesManager !== 'undefined' && MatchSeriesManager.isActive) {
       MatchSeriesManager.recordStepLog(step);
@@ -498,275 +518,37 @@ const AIDataLogger = {
     return this.stepLogs.filter(s => s.gameId === gameId);
   },
 
-  openLogCopyModal(content, fileName = 'battle_log.jsonl') {
-    const existing = document.getElementById('log-direct-copy-modal');
-    if (existing) existing.remove();
-
-    const lineCount = content ? content.trim().split('\n').length : 0;
-    const charCount = content ? content.length : 0;
-
-    const modal = document.createElement('div');
-    modal.id = 'log-direct-copy-modal';
-    modal.className = 'custom-log-copy-modal-overlay';
-    modal.style.cssText = `
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      width: 100vw; height: 100vh;
-      background: rgba(5, 8, 15, 0.88);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      z-index: 999999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 12px;
-      box-sizing: border-box;
-      touch-action: pan-y;
-      animation: modalFadeIn 0.2s ease forwards;
-    `;
-
-    modal.innerHTML = `
-      <div class="custom-log-copy-card" style="
-        background: linear-gradient(145deg, #131d2e, #0a111c);
-        border: 2px solid #ffd700;
-        border-radius: 12px;
-        box-shadow: 0 16px 48px rgba(0,0,0,0.8), 0 0 24px rgba(212,175,55,0.3);
-        width: 100%;
-        max-width: 580px;
-        max-height: 90vh;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        color: #e2e8f0;
-      ">
-        <div style="
-          padding: 12px 16px;
-          border-bottom: 1px solid rgba(212,175,55,0.4);
-          background: rgba(212,175,55,0.08);
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        ">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span style="font-size:18px;">📋</span>
-            <div>
-              <div style="font-family:'Cinzel',serif; font-weight:800; color:#ffd700; font-size:14px; letter-spacing:0.5px;">
-                対戦ログ回収センター (JSONL)
-              </div>
-              <div style="font-size:10px; color:#94a3b8;">
-                ${fileName} (${lineCount} 行 / ${(charCount / 1024).toFixed(1)} KB)
-              </div>
-            </div>
-          </div>
-          <button id="btn-close-log-copy-x" type="button" style="
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
-            color: #fff;
-            width: 28px; height: 28px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 14px;
-            display: flex; align-items: center; justify-content: center;
-          ">✖</button>
-        </div>
-
-        <div style="padding: 12px 16px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
-          <div style="background: rgba(245,158,11,0.12); border-left: 3px solid #f59e0b; padding: 6px 10px; border-radius: 4px; font-size: 11px; color: #fffadb; line-height: 1.45;">
-            💡 <strong>100%確実な回収保証:</strong> 端末のダウンロードフォルダに見当たらない場合でも、下の<strong>「📋 ワンタップ全選択コピー」</strong>を押せば、全対局ログをメモ帳やチャットへ直接貼り付けて回収できます！
-          </div>
-
-          <textarea id="log-copy-textarea" readonly spellcheck="false" autocomplete="off" style="
-            width: 100%;
-            height: 160px;
-            background: #060a12;
-            border: 1px solid rgba(212,175,55,0.4);
-            border-radius: 6px;
-            color: #a7f3d0;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 10px;
-            line-height: 1.35;
-            padding: 8px;
-            box-sizing: border-box;
-            resize: vertical;
-            white-space: pre;
-          "></textarea>
-        </div>
-
-        <div style="
-          padding: 12px 16px;
-          border-top: 1px solid rgba(212,175,55,0.3);
-          background: rgba(10, 16, 26, 0.95);
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        ">
-          <button id="btn-do-copy-log" type="button" style="
-            background: linear-gradient(135deg, #ffd700, #b8860b);
-            border: 1px solid #ffe066;
-            color: #0b111e;
-            font-weight: 800;
-            font-size: 13px;
-            padding: 10px;
-            border-radius: 6px;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(212,175,55,0.3);
-            display: flex; align-items: center; justify-content: center; gap: 6px;
-          ">
-            <span>📋 ワンタップ全選択＆クリップボードにコピー</span>
-          </button>
-
-          <div style="display:flex; gap:8px;">
-            <button id="btn-retry-dl-file" type="button" style="
-              flex: 1;
-              background: rgba(255,255,255,0.08);
-              border: 1px solid rgba(212,175,55,0.5);
-              color: #ffd700;
-              font-size: 11px;
-              padding: 8px;
-              border-radius: 6px;
-              cursor: pointer;
-            ">
-              📥 ファイル保存を再試行
-            </button>
-            <button id="btn-close-log-copy-footer" type="button" style="
-              flex: 1;
-              background: rgba(255,255,255,0.06);
-              border: 1px solid rgba(255,255,255,0.2);
-              color: #cbd5e1;
-              font-size: 11px;
-              padding: 8px;
-              border-radius: 6px;
-              cursor: pointer;
-            ">
-              対戦画面へ戻る
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    const txtArea = modal.querySelector('#log-copy-textarea');
-    if (txtArea) txtArea.value = content || '';
-
-    const closeModal = () => {
-      soundMgr.playDeselect();
-      modal.remove();
-      updateFullscreenButtonsUI();
-    };
-
-    modal.querySelector('#btn-close-log-copy-x').onclick = closeModal;
-    modal.querySelector('#btn-close-log-copy-footer').onclick = closeModal;
-
-    modal.onclick = (e) => {
-      if (e.target === modal) closeModal();
-    };
-
-    const copyBtn = modal.querySelector('#btn-do-copy-log');
-    if (copyBtn) {
-      copyBtn.onclick = () => {
-        soundMgr.playSelect();
-        if (txtArea) {
-          txtArea.select();
-          txtArea.setSelectionRange(0, 9999999);
-        }
-
-        const fallbackExec = () => {
-          try {
-            document.execCommand('copy');
-            copyBtn.innerHTML = '<span>✅ クリップボードにコピー成功！</span>';
-            copyBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-            copyBtn.style.color = '#ffffff';
-            soundMgr.playWin();
-          } catch (err) {
-            alert('全選択しました。画面の長押しメニューから「コピー」を選択してください。');
-          }
-        };
-
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(content).then(() => {
-            copyBtn.innerHTML = '<span>✅ クリップボードにコピー成功！</span>';
-            copyBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-            copyBtn.style.color = '#ffffff';
-            soundMgr.playWin();
-          }).catch(() => fallbackExec());
-        } else {
-          fallbackExec();
-        }
-      };
-    }
-
-    const retryDlBtn = modal.querySelector('#btn-retry-dl-file');
-    if (retryDlBtn) {
-      retryDlBtn.onclick = () => {
-        soundMgr.playSelect();
-        this.downloadFile(content, fileName, 'application/x-ndjson;charset=utf-8');
-        retryDlBtn.textContent = '✅ 保存命令を実行しました';
-      };
-    }
-  },
-
   async saveLogFile(content, fileName, onMessageCallback = null) {
     const notify = (msg, isSuccess = true) => {
       console.log(`[AIDataLogger] ${msg}`);
       if (typeof onMessageCallback === 'function') onMessageCallback(msg, isSuccess);
     };
 
-    if (AIStatusUI.isServerOnline) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 6000);
-
-        const res = await fetch(CONFIG.PYTHON_SAVE_LOG_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filename: fileName, content: content }),
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-
-        if (res.ok) {
-          const resData = await res.json();
-          notify(`💾 パソコンの logs/ フォルダに直接保存しました！ (${resData.filename || fileName})`, true);
-          this.openLogCopyModal(content, fileName);
-          setTimeout(updateFullscreenButtonsUI, 120);
-          return true;
-        }
-      } catch (err) {
-        console.warn(`[AIDataLogger] PC直接保存API通信エラー: ${err.message} -> 手元ダウンロードへフォールバック`);
-      }
-    }
-
     try {
-      this.downloadFile(content, fileName, 'application/x-ndjson;charset=utf-8');
-      notify(`📥 ダウンロードを実行しました（画面のコピー画面もご利用ください）`, true);
-    } catch (e) {
-      notify(`⚠️ ダウンロードがブロックされました。画面から直接コピーしてください`, false);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+      const res = await fetch(CONFIG.PYTHON_SAVE_LOG_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: fileName, content: content }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const resData = await res.json();
+        const savedFilename = resData.filename || fileName;
+        notify(`💾 パソコンの logs/ フォルダに直接保存しました！ (${savedFilename})`, true);
+        return true;
+      } else {
+        throw new Error(`HTTP ${res.status}`);
+      }
+    } catch (err) {
+      console.warn('⚠️ [直接保存失敗] server.py が未起動です:', err.message);
+      notify('⚠️ server.py が未起動のため logs/ に保存できませんでした。server.py を起動してください。', false);
+      return false;
     }
-
-    this.openLogCopyModal(content, fileName);
-    return true;
-  },
-
-  downloadFile(content, fileName, mimeType) {
-    let safeMime = mimeType || 'application/octet-stream';
-    if (fileName.endsWith('.jsonl')) safeMime = 'application/x-ndjson;charset=utf-8';
-    else if (fileName.endsWith('.json')) safeMime = 'application/json;charset=utf-8';
-    else if (fileName.endsWith('.csv')) safeMime = 'text/csv;charset=utf-8';
-
-    const blob = new Blob([content], { type: safeMime });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    a.rel = 'noopener noreferrer';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 4000);
-
-    setTimeout(updateFullscreenButtonsUI, 120);
   }
 };
 AIDataLogger.init();
@@ -995,736 +777,7 @@ const GameStorage = {
 GameStorage.init();
 
 /* ----------------------------------------------------
- * 6. キャラクター個別AI思考ルーチン ＆ 評価ヘルパー
- * ---------------------------------------------------- */
-function evaluateHandFormation(move, hand, currentRev = false, minOppLen = 99) {
-  if (!move || !hand) return 0;
-  const handLen = hand.length;
-  const moveLen = move.length;
-
-  if (moveLen === handLen) {
-    if (isForbiddenFinish(move, currentRev)) return -999999;
-    return 200;
-  }
-
-  if (willLeadToForbiddenTrap(move, hand, currentRev)) {
-    return -999999;
-  }
-
-  const remHand = hand.filter(c => !move.some(mc => isSameCard(mc, c)));
-  const remLen = remHand.length;
-  if (remLen === 0) return 200;
-
-  const finalRev = (moveLen >= 4) ? !currentRev : currentRev;
-  let score = 0;
-
-  if (remLen === 1) {
-    if (isForbiddenFinish(remHand, finalRev)) {
-      score -= 500;
-    } else {
-      if (move.some(c => c.isJoker) && moveLen < handLen) {
-        score -= 50;
-      } else {
-        score += 50;
-      }
-    }
-  } else if (remLen === 2) {
-    if (remHand.every(c => isForbiddenFinish([c], finalRev))) score -= 300;
-  }
-
-  const origGroups = {};
-  hand.forEach(c => {
-    if (!c.isJoker) {
-      const k = normalizeCardRank(c);
-      origGroups[k] = (origGroups[k] || 0) + 1;
-    }
-  });
-
-  const remGroups = {};
-  let remJokers = 0;
-  remHand.forEach(c => {
-    if (c.isJoker) remJokers++;
-    else {
-      const k = normalizeCardRank(c);
-      remGroups[k] = (remGroups[k] || 0) + 1;
-    }
-  });
-
-  if (handLen >= 5 && minOppLen > 2 && moveLen === 1 && !move[0].isJoker) {
-    const disp = normalizeCardRank(move[0]);
-    const origCount = origGroups[disp] || 0;
-    if (origCount >= 2) {
-      score -= (origCount === 2 ? 22 : 35);
-    }
-  }
-
-  if (remLen >= 3 && minOppLen > 2) {
-    const hasBossRem = (
-      remJokers > 0 ||
-      remHand.some(c => normalizeCardRank(c) === (finalRev ? '3' : '2')) ||
-      remHand.some(c => normalizeCardRank(c) === '8')
-    );
-    if (hasBossRem) {
-      score += 15;
-    } else {
-      score -= 20;
-    }
-  }
-
-  if (moveLen === 1 && !move[0].isJoker) {
-    const disp = normalizeCardRank(move[0]);
-    if ((origGroups[disp] || 0) === 1 && getCardStrength(move[0], finalRev) <= 7) {
-      score += 12;
-    }
-  }
-
-  const groupCount = Object.keys(remGroups).length;
-  const effectiveTurns = groupCount + (remJokers > 0 && groupCount === 0 ? 1 : 0);
-  score -= (effectiveTurns * 3.5);
-
-  return score;
-}
-
-function isJokerWasteMove(move, hand) {
-  if (!move || !hand || move.length === hand.length) return false;
-
-  const hasJ = move.some(c => c.isJoker);
-  const hasNJ = move.some(c => !c.isJoker);
-
-  if (hasJ && hasNJ && move.length < 4) {
-    const remLen = hand.length - move.length;
-    if (remLen === 1) return false;
-    if (hand.length <= 4) return true;
-    if (move.some(c => !c.isJoker && getCardValue(c) <= 8)) return true;
-  }
-
-  if (hasJ && !hasNJ && move.length >= 2 && hand.length >= 4) return true;
-  return false;
-}
-
-function evaluateEightBridge(move, hand, minOppLen, isOppReach, isFieldEmpty = false, currentRev = false) {
-  if (!move || !move.some(c => normalizeCardRank(c) === '8')) return 0;
-  const handLen = hand.length;
-  if (move.length === handLen) {
-    return isForbiddenFinish(move, currentRev) ? -999999 : 130;
-  }
-
-  if (willLeadToForbiddenTrap(move, hand, currentRev)) {
-    return -999999;
-  }
-
-  const finalRev = (move.length >= 4) ? !currentRev : currentRev;
-
-  if (isFieldEmpty && handLen >= 4) {
-    const rem = hand.filter(c => !move.some(mc => isSameCard(mc, c)));
-    const hasStrongExit = rem.some(c => c.isJoker || (normalizeCardRank(c) === (finalRev ? '3' : '2')) || (normalizeCardRank(c) === 'A'));
-    if (!hasStrongExit) return -65;
-    return -25;
-  }
-
-  const remHand = hand.filter(c => !move.some(mc => isSameCard(mc, c)));
-  const remLen = remHand.length;
-
-  if (isOppReach) return 70;
-
-  const remGroups = {};
-  let remJokers = 0;
-  remHand.forEach(c => {
-    if (c.isJoker) remJokers++;
-    else {
-      const k = normalizeCardRank(c);
-      remGroups[k] = (remGroups[k] || 0) + 1;
-    }
-  });
-
-  const canFinishNext = (
-    remLen === 1 ||
-    (Object.keys(remGroups).length === 1 && remJokers === 0) ||
-    (Object.keys(remGroups).length === 0 && remJokers > 0)
-  );
-  if (canFinishNext) {
-    if (!isForbiddenFinish(remHand, finalRev)) return 95;
-  }
-
-  if (handLen >= 6) {
-    const hasStrongFollowup = (
-      remJokers > 0 ||
-      remHand.some(c => normalizeCardRank(c) === (finalRev ? '3' : '2')) ||
-      Object.values(remGroups).some(cnt => cnt >= 2)
-    );
-    if (!hasStrongFollowup) return -28;
-  }
-
-  return isFieldEmpty ? -20 : 20;
-}
-
-function evaluateElevenBackBalance(move, hand, effRev) {
-  if (!move || !move.some(c => normalizeCardRank(c) === 'J')) return 0;
-  const remHand = hand.filter(c => !move.some(mc => isSameCard(mc, c)));
-  if (remHand.length === 0) return 15;
-
-  const lowBeneficial = remHand.filter(c => !c.isJoker && getCardValue(c) <= 4).length;
-  const highRuined = remHand.filter(c => !c.isJoker && getCardValue(c) >= 11).length;
-
-  if (!effRev) {
-    if (lowBeneficial >= 3 && highRuined <= 1) return 30;
-    else if (highRuined >= 2) return -45;
-  } else {
-    if (highRuined >= 2) return 35;
-    else if (lowBeneficial >= 2) return -35;
-  }
-  return 0;
-}
-
-function evaluateMoveDefault(move, hand = null, isFieldEmpty = false, currentRev = false, minOppLen = 99, customRules = null, playedHistory = [], charProfile = null) {
-  if (!move || move.length === 0) return -999;
-  const profile = charProfile || getCharacterTacticalProfile('KING');
-
-  if (hand) {
-    if (move.length === hand.length) {
-      if (isForbiddenFinish(move, currentRev)) return -999999;
-      return 500;
-    }
-    if (willLeadToForbiddenTrap(move, hand, currentRev)) {
-      return -999999;
-    }
-  }
-
-  const count = move.length;
-  const nonJ = move.filter(c => !c.isJoker);
-  const val = nonJ.length > 0 ? getCardValue(nonJ[0]) : 14;
-
-  const multiMultiplier = count >= 2 ? (0.6 + profile.R4_leadMulti * 0.5) : 1.0;
-  let score = ((count * 10) * multiMultiplier) - val;
-
-  if (hand) {
-    if (isJokerWasteMove(move, hand)) score -= 500;
-
-    const isOppReach = (minOppLen <= 2);
-    score += evaluateEightBridge(move, hand, minOppLen, isOppReach, isFieldEmpty, currentRev) * profile.R6_eightCutBridge;
-    score += evaluateElevenBackBalance(move, hand, currentRev) * profile.R7_elevenBackControl;
-
-    if (isFieldEmpty && hand.length >= 4 && move.length === 1) {
-      const isSoloJoker = move[0].isJoker;
-      const isSoloTwo = (!move[0].isJoker && normalizeCardRank(move[0]) === '2');
-      if (isSoloJoker || isSoloTwo) {
-        const hasLowOrMid = hand.some(c => !c.isJoker && getCardValue(c) <= 10);
-        if (hasLowOrMid) {
-          score -= (55 + (profile.R5_trashCardClear * 25));
-        }
-      }
-    }
-  }
-
-  return score;
-}
-
-function shouldStrategicPassOnHighCard(move, hand, field, rev, minOppLen, charProfile = null, isGilgamesh = false) {
-  if (!field || field.length === 0) return false;
-  if (!move || move.length === 0) return false;
-  if (isGilgamesh) return false;
-
-  const profile = charProfile || { R12_smartPass: 0.75, R2_reachBlock: 0.80 };
-  const handLen = hand.length;
-  const isOpponentReach = (minOppLen <= 2);
-
-  if (isOpponentReach && RandomManager.random() < profile.R2_reachBlock) {
-    return false;
-  }
-  if (profile.R12_smartPass <= 0.05) return false;
-  if (handLen <= 3 || move.length === handLen) return false;
-
-  if (isJokerWasteMove(move, hand) && handLen >= 4) return true;
-
-  const isSoloJoker = (move.length === 1 && move[0].isJoker);
-  const isSoloTwo = (move.length === 1 && !move[0].isJoker && normalizeCardRank(move[0]) === '2');
-
-  if (isSoloJoker || isSoloTwo) {
-    const lowCardsCount = hand.filter(c => !c.isJoker && getCardValue(c) <= 7).length;
-    if (lowCardsCount >= 2) return (RandomManager.random() < profile.R12_smartPass);
-    const fieldTopVal = field[0].isJoker ? 14 : getCardValue(field[0]);
-    if (fieldTopVal <= 11) return (RandomManager.random() < profile.R12_smartPass);
-  }
-
-  return false;
-}
-
-function findSafeInstantWin(validMoves, hand, currentRev = false) {
-  if (!validMoves || validMoves.length === 0 || !hand) return null;
-  const wins = validMoves.filter(m => m.length === hand.length);
-  if (wins.length === 0) return null;
-  const safeWins = wins.filter(m => !isForbiddenFinish(m, currentRev));
-  return safeWins.length > 0 ? safeWins[0] : null;
-}
-
-/* [0] 👑 ギルガメッシュ */
-function decideGilgameshClient(cpuKey, hand, field, rev, allHands, finished, played, lastPlayer, passCount) {
-  const profile = getCharacterTacticalProfile('GILGAMESH');
-  const rawMoves = getAllValidMoves(hand, field, rev);
-  const valid = filterCpuMovesForCharacter('GILGAMESH', rawMoves);
-  if (valid.length === 0) return null;
-
-  const currentRev = (typeof isRevolution !== 'undefined') ? !!isRevolution : false;
-  const handLen = hand.length;
-  const isFieldEmpty = (field.length === 0);
-
-  const instantWin = findSafeInstantWin(valid, hand, currentRev);
-  if (instantWin) return instantWin;
-
-  const safeMoves = valid.filter(m => !isForbiddenFinish(m, currentRev) && !willLeadToForbiddenTrap(m, hand, currentRev));
-  const poolMoves = (safeMoves.length > 0 || isFieldEmpty) ? (safeMoves.length > 0 ? safeMoves : valid) : valid;
-
-  // ★完全版アンカー逆算
-  if (handLen in [2, 3]) {
-    const nonForbidden = hand.filter(c => !isForbiddenFinish([c], currentRev));
-    if (nonForbidden.length >= 1) {
-      const dumpTrapMoves = poolMoves.filter(m => 
-        m.some(c => isForbiddenFinish([c], currentRev)) &&
-        nonForbidden.some(c => !m.some(mc => isSameCard(mc, c)))
-      );
-      if (dumpTrapMoves.length > 0) {
-        dumpTrapMoves.sort((a, b) => (b.length * 100) + getCardStrength(b[0], rev) - ((a.length * 100) + getCardStrength(a[0], rev)));
-        return dumpTrapMoves[0];
-      }
-    }
-  }
-
-  const unrevealed = getUnrevealedCards(hand, played, field);
-  const endgameMove = solveEndgameWinningSequence(hand, field, unrevealed, rev, null, 6);
-  if (endgameMove && !willLeadToForbiddenTrap(endgameMove, hand, currentRev)) return endgameMove;
-
-  if (field.length === 1 && (field[0].isJoker || normalizeCardRank(field[0]) === 'JOKER')) {
-    const spade3 = hand.find(c => !c.isJoker && normalizeCardSuit(c) === '♠' && normalizeCardRank(c) === '3');
-    if (spade3) return [spade3];
-  }
-
-  const activeOthers = PLAYERS.filter(p => p !== cpuKey && !finished.includes(p));
-  const otherLens = activeOthers.map(p => (allHands[p] ? allHands[p].length : 0));
-  const minOppLen = otherLens.length > 0 ? Math.min(...otherLens) : 99;
-  const isOppReach = (minOppLen <= 2);
-
-  if (isOppReach && !isFieldEmpty) {
-    const eights = poolMoves.filter(m => m.some(c => normalizeCardRank(c) === '8'));
-    if (eights.length > 0) return eights[0];
-
-    const reachSeats = activeOthers.filter(p => (allHands[p] ? allHands[p].length : 99) <= 2);
-    const threatCards = reachSeats.flatMap(s => allHands[s] || []);
-
-    const solidBlockers = poolMoves.filter(m => 
-      threatCards.every(tc => !isValidPlay([tc], m, rev))
-    );
-
-    if (solidBlockers.length > 0) {
-      solidBlockers.sort((a, b) => (b.length * 100) - getCardStrength(b[0], rev));
-      return solidBlockers[0];
-    }
-  }
-
-  const unWasteMoves = poolMoves.filter(m => !isJokerWasteMove(m, hand));
-  const cands = unWasteMoves.length > 0 ? unWasteMoves : poolMoves;
-
-  let bestM = null, bestS = -9999;
-  for (const m of cands) {
-    let s = evaluateMoveDefault(m, hand, isFieldEmpty, currentRev, minOppLen, null, played, profile);
-    if (m.some(c => normalizeCardRank(c) === '8')) s += isOppReach ? 80 : 35;
-    if (s > bestS) { bestS = s; bestM = m; }
-  }
-
-  return bestM || cands[0];
-}
-
-/* [1] 🤴 覚醒新王 */
-function decideAwakenedYoungKingClient(cpuKey, hand, field, rev, allHands, finished, played, lastPlayer, passCount) {
-  const profile = getCharacterTacticalProfile('AWAKENED_KING');
-  const rawMoves = getAllValidMoves(hand, field, rev);
-  const valid = filterCpuMovesForCharacter('AWAKENED_KING', rawMoves);
-  if (valid.length === 0) return null;
-
-  const currentRev = (typeof isRevolution !== 'undefined') ? !!isRevolution : false;
-  const handLen = hand.length;
-  const isFieldEmpty = (field.length === 0);
-
-  const instantWin = findSafeInstantWin(valid, hand, currentRev);
-  if (instantWin) return instantWin;
-
-  const safeMoves = valid.filter(m => !isForbiddenFinish(m, currentRev) && !willLeadToForbiddenTrap(m, hand, currentRev));
-  const poolMoves = (safeMoves.length > 0 || isFieldEmpty) ? (safeMoves.length > 0 ? safeMoves : valid) : valid;
-
-  if (handLen in [2, 3]) {
-    const nonForbidden = hand.filter(c => !isForbiddenFinish([c], currentRev));
-    if (nonForbidden.length >= 1) {
-      const dumpTrapMoves = poolMoves.filter(m => 
-        m.some(c => isForbiddenFinish([c], currentRev)) &&
-        nonForbidden.some(c => !m.some(mc => isSameCard(mc, c)))
-      );
-      if (dumpTrapMoves.length > 0) {
-        dumpTrapMoves.sort((a, b) => (b.length * 100) + getCardStrength(b[0], rev) - ((a.length * 100) + getCardStrength(a[0], rev)));
-        return dumpTrapMoves[0];
-      }
-    }
-  }
-
-  const unrevealed = getUnrevealedCards(hand, played, field);
-  const endgameMove = solveEndgameWinningSequence(hand, field, unrevealed, rev, null, 5);
-  if (endgameMove && !willLeadToForbiddenTrap(endgameMove, hand, currentRev)) return endgameMove;
-
-  const activeOthers = PLAYERS.filter(p => p !== cpuKey && !finished.includes(p));
-  const otherLens = activeOthers.map(p => (allHands[p] ? allHands[p].length : 0));
-  const minOppLen = otherLens.length > 0 ? Math.min(...otherLens) : 99;
-
-  let bestMove = null, bestScore = -999;
-  for (let move of poolMoves) {
-    let s = evaluateMoveDefault(move, hand, isFieldEmpty, currentRev, minOppLen, null, played, profile);
-    if (move.length >= 4) s += 25;
-    if (isJokerWasteMove(move, hand)) s -= 500;
-    s += evaluateHandFormation(move, hand, currentRev, minOppLen) * 1.0;
-    if (s > bestScore) { bestScore = s; bestMove = move; }
-  }
-
-  const chosenMove = bestMove || poolMoves[0];
-  if (!isFieldEmpty && shouldStrategicPassOnHighCard(chosenMove, hand, field, rev, minOppLen, profile)) {
-    return null;
-  }
-  return chosenMove;
-}
-
-/* [2] 👸 女王 (SUPER_AI - 着順確保＆完全版アンカー逆算) */
-function decideQueenClient(cpuKey, hand, field, rev, allHands, finished, played, lastPlayer, passCount) {
-  const profile = getCharacterTacticalProfile('SUPER_AI');
-  const rawMoves = getAllValidMoves(hand, field, rev);
-  const valid = filterCpuMovesForCharacter('SUPER_AI', rawMoves);
-  if (valid.length === 0) return null;
-
-  const currentRev = (typeof isRevolution !== 'undefined') ? !!isRevolution : false;
-  const handLen = hand.length;
-  const isFieldEmpty = (field.length === 0);
-
-  const instantWin = findSafeInstantWin(valid, hand, currentRev);
-  if (instantWin) return instantWin;
-
-  const safeMoves = valid.filter(m => !isForbiddenFinish(m, currentRev) && !willLeadToForbiddenTrap(m, hand, currentRev));
-  const poolMoves = (safeMoves.length > 0 || isFieldEmpty) ? (safeMoves.length > 0 ? safeMoves : valid) : valid;
-
-  if (handLen in [2, 3]) {
-    const nonForbidden = hand.filter(c => !isForbiddenFinish([c], currentRev));
-    if (nonForbidden.length >= 1) {
-      const dumpTrapMoves = poolMoves.filter(m => 
-        m.some(c => isForbiddenFinish([c], currentRev)) &&
-        nonForbidden.some(c => !m.some(mc => isSameCard(mc, c)))
-      );
-      if (dumpTrapMoves.length > 0) {
-        dumpTrapMoves.sort((a, b) => (b.length * 100) + getCardStrength(b[0], rev) - ((a.length * 100) + getCardStrength(a[0], rev)));
-        return dumpTrapMoves[0];
-      }
-    }
-  }
-
-  const unrevealed = getUnrevealedCards(hand, played, field);
-  const endgameMove = solveEndgameWinningSequence(hand, field, unrevealed, rev, null, 4);
-  if (endgameMove && !willLeadToForbiddenTrap(endgameMove, hand, currentRev)) return endgameMove;
-
-  const activeOthers = PLAYERS.filter(p => p !== cpuKey && !finished.includes(p));
-  const otherLens = activeOthers.map(p => (allHands[p] ? allHands[p].length : 0));
-  const minOppLen = otherLens.length > 0 ? Math.min(...otherLens) : 99;
-  const isOppReach = (minOppLen <= 2);
-
-  const filteredPool = poolMoves.filter(m => !isJokerWasteMove(m, hand));
-  const pool = filteredPool.length > 0 ? filteredPool : poolMoves;
-
-  let bestMove = null, bestScore = -9999;
-  for (const m of pool) {
-    let s = evaluateMoveDefault(m, hand, isFieldEmpty, currentRev, minOppLen, null, played, profile);
-    s += (m.length * 15.0);
-    s += evaluateEightBridge(m, hand, minOppLen, isOppReach, isFieldEmpty, currentRev) * profile.R6_eightCutBridge;
-    s += evaluateElevenBackBalance(m, hand, rev) * profile.R7_elevenBackControl;
-
-    if (s > bestScore) { bestScore = s; bestMove = m; }
-  }
-
-  const chosen = bestMove || pool[0];
-  if (!isFieldEmpty && shouldStrategicPassOnHighCard(chosen, hand, field, rev, minOppLen, profile)) {
-    return null;
-  }
-  return chosen;
-}
-
-/* [3] 🏰 王 */
-function decideKingClient(cpuKey, hand, field, rev, allHands, finished, played, lastPlayer, passCount) {
-  const profile = getCharacterTacticalProfile('KING');
-  const rawMoves = getAllValidMoves(hand, field, rev);
-  const valid = filterCpuMovesForCharacter('KING', rawMoves);
-  if (valid.length === 0) return null;
-
-  const currentRev = (typeof isRevolution !== 'undefined') ? !!isRevolution : false;
-  const handLen = hand.length;
-  const isFieldEmpty = (field.length === 0);
-
-  const instantWin = findSafeInstantWin(valid, hand, currentRev);
-  if (instantWin) return instantWin;
-
-  const safeMoves = valid.filter(m => !isForbiddenFinish(m, currentRev) && !willLeadToForbiddenTrap(m, hand, currentRev));
-  const poolMoves = (safeMoves.length > 0 || isFieldEmpty) ? (safeMoves.length > 0 ? safeMoves : valid) : valid;
-
-  if (handLen in [2, 3]) {
-    const nonForbidden = hand.filter(c => !isForbiddenFinish([c], currentRev));
-    if (nonForbidden.length >= 1) {
-      const dumpTrapMoves = poolMoves.filter(m => 
-        m.some(c => isForbiddenFinish([c], currentRev)) &&
-        nonForbidden.some(c => !m.some(mc => isSameCard(mc, c)))
-      );
-      if (dumpTrapMoves.length > 0) {
-        dumpTrapMoves.sort((a, b) => (b.length * 100) + getCardStrength(b[0], rev) - ((a.length * 100) + getCardStrength(a[0], rev)));
-        return dumpTrapMoves[0];
-      }
-    }
-  }
-
-  const unrevealed = getUnrevealedCards(hand, played, field);
-  const endgameMove = solveEndgameWinningSequence(hand, field, unrevealed, rev, null, 5);
-  if (endgameMove && !willLeadToForbiddenTrap(endgameMove, hand, currentRev)) return endgameMove;
-
-  const activeOthers = PLAYERS.filter(p => p !== cpuKey && !finished.includes(p));
-  const otherLens = activeOthers.map(p => (allHands[p] ? allHands[p].length : 0));
-  const minOppLen = otherLens.length > 0 ? Math.min(...otherLens) : 99;
-
-  let bestM = null, bestS = -9999;
-  for (const m of poolMoves) {
-    let s = evaluateMoveDefault(m, hand, isFieldEmpty, currentRev, minOppLen, null, played, profile);
-    if (isJokerWasteMove(m, hand)) s -= 500.0;
-    s += evaluateHandFormation(m, hand, currentRev, minOppLen) * 0.8;
-    if (s > bestS) { bestS = s; bestM = m; }
-  }
-
-  const chosen = bestM || poolMoves[0];
-  if (!isFieldEmpty && shouldStrategicPassOnHighCard(chosen, hand, field, rev, minOppLen, profile)) {
-    return null;
-  }
-  return chosen;
-}
-
-/* [4] ⚔️ 織田信長 */
-function decideNobunagaClient(cpuKey, hand, field, rev, allHands, finished, played, lastPlayer, passCount) {
-  const profile = getCharacterTacticalProfile('NOBUNAGA');
-  const rawMoves = getAllValidMoves(hand, field, rev);
-  const valid = filterCpuMovesForCharacter('NOBUNAGA', rawMoves);
-  if (valid.length === 0) return null;
-
-  const currentRev = (typeof isRevolution !== 'undefined') ? !!isRevolution : false;
-  const handLen = hand.length;
-  const isFieldEmpty = (field.length === 0);
-
-  const instantWin = findSafeInstantWin(valid, hand, currentRev);
-  if (instantWin) return instantWin;
-
-  const safeMoves = valid.filter(m => !isForbiddenFinish(m, currentRev) && !willLeadToForbiddenTrap(m, hand, currentRev));
-  const poolMoves = (safeMoves.length > 0 || isFieldEmpty) ? (safeMoves.length > 0 ? safeMoves : valid) : valid;
-
-  if (handLen in [2, 3]) {
-    const nonForbidden = hand.filter(c => !isForbiddenFinish([c], currentRev));
-    if (nonForbidden.length >= 1) {
-      const dumpTrapMoves = poolMoves.filter(m => 
-        m.some(c => isForbiddenFinish([c], currentRev)) &&
-        nonForbidden.some(c => !m.some(mc => isSameCard(mc, c)))
-      );
-      if (dumpTrapMoves.length > 0) return dumpTrapMoves[0];
-    }
-  }
-
-  const activeOthers = PLAYERS.filter(p => p !== cpuKey && !finished.includes(p));
-  const otherLens = activeOthers.map(p => (allHands[p] ? allHands[p].length : 0));
-  const minOppLen = otherLens.length > 0 ? Math.min(...otherLens) : 99;
-
-  let bestMove = null, bestScore = -999;
-  for (let move of poolMoves) {
-    let s = evaluateMoveDefault(move, hand, isFieldEmpty, currentRev, minOppLen, null, played, profile);
-    if (move.length >= 4) s += 55;
-    if (isJokerWasteMove(move, hand)) s -= 500;
-    if (s > bestScore) { bestScore = s; bestMove = move; }
-  }
-
-  return bestMove || poolMoves[0];
-}
-
-/* [5] 🏛️ 秦の始皇帝 */
-function decideShiHuangdiClient(cpuKey, hand, field, rev, allHands, finished, played, lastPlayer, passCount) {
-  const profile = getCharacterTacticalProfile('SHI_HUANGDI');
-  const rawMoves = getAllValidMoves(hand, field, rev);
-  const valid = filterCpuMovesForCharacter('SHI_HUANGDI', rawMoves);
-  if (valid.length === 0) return null;
-
-  const currentRev = (typeof isRevolution !== 'undefined') ? !!isRevolution : false;
-  const handLen = hand.length;
-  const isFieldEmpty = (field.length === 0);
-
-  const instantWin = findSafeInstantWin(valid, hand, currentRev);
-  if (instantWin) return instantWin;
-
-  const safeMoves = valid.filter(m => !isForbiddenFinish(m, currentRev) && !willLeadToForbiddenTrap(m, hand, currentRev));
-  const poolMoves = (safeMoves.length > 0 || isFieldEmpty) ? (safeMoves.length > 0 ? safeMoves : valid) : valid;
-
-  if (handLen in [2, 3]) {
-    const nonForbidden = hand.filter(c => !isForbiddenFinish([c], currentRev));
-    if (nonForbidden.length >= 1) {
-      const dumpTrapMoves = poolMoves.filter(m => 
-        m.some(c => isForbiddenFinish([c], currentRev)) &&
-        nonForbidden.some(c => !m.some(mc => isSameCard(mc, c)))
-      );
-      if (dumpTrapMoves.length > 0) return dumpTrapMoves[0];
-    }
-  }
-
-  const activeOthers = PLAYERS.filter(p => p !== cpuKey && !finished.includes(p));
-  const otherLens = activeOthers.map(p => (allHands[p] ? allHands[p].length : 0));
-  const minOppLen = otherLens.length > 0 ? Math.min(...otherLens) : 99;
-
-  let bestMove = null, bestScore = -999;
-  for (let move of poolMoves) {
-    let s = evaluateMoveDefault(move, hand, isFieldEmpty, currentRev, minOppLen, null, played, profile);
-    if (isJokerWasteMove(move, hand)) s -= 500;
-    if (s > bestScore) { bestScore = s; bestMove = move; }
-  }
-
-  const chosenMove = bestMove || poolMoves[0];
-  if (!isFieldEmpty && shouldStrategicPassOnHighCard(chosenMove, hand, field, rev, minOppLen, profile)) {
-    return null;
-  }
-  return chosenMove;
-}
-
-/* [6] 🔮 聖徳太子 */
-function decideShotokuClient(cpuKey, hand, field, rev, allHands, finished, played, lastPlayer, passCount) {
-  const profile = getCharacterTacticalProfile('SHOTOKU');
-  const rawMoves = getAllValidMoves(hand, field, rev);
-  const valid = filterCpuMovesForCharacter('SHOTOKU', rawMoves);
-  if (valid.length === 0) return null;
-
-  const currentRev = (typeof isRevolution !== 'undefined') ? !!isRevolution : false;
-  const handLen = hand.length;
-  const isFieldEmpty = (field.length === 0);
-
-  const instantWin = findSafeInstantWin(valid, hand, currentRev);
-  if (instantWin) return instantWin;
-
-  const safeMoves = valid.filter(m => !isForbiddenFinish(m, currentRev) && !willLeadToForbiddenTrap(m, hand, currentRev));
-  const poolMoves = (safeMoves.length > 0 || isFieldEmpty) ? (safeMoves.length > 0 ? safeMoves : valid) : valid;
-
-  if (handLen in [2, 3]) {
-    const nonForbidden = hand.filter(c => !isForbiddenFinish([c], currentRev));
-    if (nonForbidden.length >= 1) {
-      const dumpTrapMoves = poolMoves.filter(m => 
-        m.some(c => isForbiddenFinish([c], currentRev)) &&
-        nonForbidden.some(c => !m.some(mc => isSameCard(mc, c)))
-      );
-      if (dumpTrapMoves.length > 0) return dumpTrapMoves[0];
-    }
-  }
-
-  const activeOthers = PLAYERS.filter(p => p !== cpuKey && !finished.includes(p));
-  const otherLens = activeOthers.map(p => (allHands[p] ? allHands[p].length : 0));
-  const minOppLen = otherLens.length > 0 ? Math.min(...otherLens) : 99;
-
-  let bestMove = null, bestScore = -999;
-  for (let move of poolMoves) {
-    let s = (move.length * 100) - getCardStrength(move[0], rev);
-    s += evaluateEightBridge(move, hand, minOppLen, minOppLen <= 2, isFieldEmpty, currentRev) * profile.R6_eightCutBridge;
-    s += evaluateElevenBackBalance(move, hand, rev) * profile.R7_elevenBackControl;
-    if (s > bestScore) { bestScore = s; bestMove = move; }
-  }
-
-  const chosenMove = bestMove || poolMoves[0];
-  if (field.length > 0 && shouldStrategicPassOnHighCard(chosenMove, hand, field, rev, minOppLen, profile)) {
-    return null;
-  }
-  return chosenMove;
-}
-
-/* [7] 🛡️ アレク王 */
-function decideAlexanderHybridClient(cpuKey, hand, field, rev, allHands, finished, played, lastPlayer, passCount) {
-  const profile = getCharacterTacticalProfile('ALEXANDER');
-  const rawMoves = getAllValidMoves(hand, field, rev);
-  const valid = filterCpuMovesForCharacter('ALEXANDER', rawMoves);
-  if (valid.length === 0) return null;
-
-  const currentRev = (typeof isRevolution !== 'undefined') ? !!isRevolution : false;
-  const handLen = hand.length;
-  const isFieldEmpty = (field.length === 0);
-
-  const instantWin = findSafeInstantWin(valid, hand, currentRev);
-  if (instantWin) return instantWin;
-
-  const safeMoves = valid.filter(m => !isForbiddenFinish(m, currentRev) && !willLeadToForbiddenTrap(m, hand, currentRev));
-  const poolMoves = (safeMoves.length > 0 || isFieldEmpty) ? (safeMoves.length > 0 ? safeMoves : valid) : valid;
-
-  if (handLen in [2, 3]) {
-    const nonForbidden = hand.filter(c => !isForbiddenFinish([c], currentRev));
-    if (nonForbidden.length >= 1) {
-      const dumpTrapMoves = poolMoves.filter(m => 
-        m.some(c => isForbiddenFinish([c], currentRev)) &&
-        nonForbidden.some(c => !m.some(mc => isSameCard(mc, c)))
-      );
-      if (dumpTrapMoves.length > 0) return dumpTrapMoves[0];
-    }
-  }
-
-  const activeOthers = PLAYERS.filter(p => p !== cpuKey && !finished.includes(p));
-  const otherLens = activeOthers.map(p => (allHands[p] ? allHands[p].length : 0));
-  const minOppLen = otherLens.length > 0 ? Math.min(...otherLens) : 99;
-
-  let bestMove = null, bestScore = -999;
-  for (let move of poolMoves) {
-    let s = evaluateMoveDefault(move, hand, isFieldEmpty, currentRev, minOppLen, null, played, profile);
-    if (isJokerWasteMove(move, hand)) s -= 500;
-    if (s > bestScore) { bestScore = s; bestMove = move; }
-  }
-
-  const chosenMove = bestMove || poolMoves[0];
-  if (!isFieldEmpty && shouldStrategicPassOnHighCard(chosenMove, hand, field, rev, minOppLen, profile)) {
-    return null;
-  }
-  return chosenMove;
-}
-
-/* 汎用・知性派貴族 */
-function selectMoveByCharacterDef(charDef, hand, currentField, rev, otherCounts, canPass, unrevealedCards, nextPlayerHandCount, customRules = null, playedHistory = []) {
-  const profile = getCharacterTacticalProfile(charDef.id);
-  const rawMoves = getAllValidMoves(hand, currentField, rev);
-  const validMoves = filterCpuMovesForCharacter(charDef.id, rawMoves);
-  if (validMoves.length === 0) return null;
-
-  const currentRev = (typeof isRevolution !== 'undefined') ? !!isRevolution : false;
-  const handLen = hand.length;
-  const isFieldEmpty = (!currentField || currentField.length === 0);
-
-  const instantWinningMove = findSafeInstantWin(validMoves, hand, currentRev);
-  if (instantWinningMove) return instantWinningMove;
-
-  const safeMoves = validMoves.filter(m => !isForbiddenFinish(m, currentRev) && !willLeadToForbiddenTrap(m, hand, currentRev));
-  const poolMoves = (safeMoves.length > 0 || isFieldEmpty) ? (safeMoves.length > 0 ? safeMoves : validMoves) : validMoves;
-
-  if (handLen in [2, 3]) {
-    const nonForbidden = hand.filter(c => !isForbiddenFinish([c], currentRev));
-    if (nonForbidden.length >= 1) {
-      const dumpTrapMoves = poolMoves.filter(m => 
-        m.some(c => isForbiddenFinish([c], currentRev)) &&
-        nonForbidden.some(c => !m.some(mc => isSameCard(mc, c)))
-      );
-      if (dumpTrapMoves.length > 0) return dumpTrapMoves[0];
-    }
-  }
-
-  const minOpp = otherCounts && otherCounts.length > 0 ? Math.min(...otherCounts) : 99;
-
-  poolMoves.sort((a, b) => evaluateMoveDefault(b, hand, isFieldEmpty, currentRev, minOpp, customRules, playedHistory, profile) - evaluateMoveDefault(a, hand, isFieldEmpty, currentRev, minOpp, customRules, playedHistory, profile));
-  const chosen = poolMoves[0];
-
-  if (!isFieldEmpty && canPass && shouldStrategicPassOnHighCard(chosen, hand, currentField, rev, minOpp, profile)) {
-    return null;
-  }
-  return chosen;
-}
-
-/* ----------------------------------------------------
- * 7. CPU・プレイヤー代行 手番決定
+ * 6. 軽量堅牢・ローカルフォールバック思考ルーチン
  * ---------------------------------------------------- */
 function decideCpuMove(cpu, explicitContext = null) {
   const ctx = explicitContext || {
@@ -1732,9 +785,6 @@ function decideCpuMove(cpu, explicitContext = null) {
     fieldCards: (typeof fieldCards !== 'undefined' ? fieldCards : []),
     rev: (typeof effectiveReverse === 'function' ? effectiveReverse() : false),
     finished: (typeof finishedPlayers !== 'undefined' ? finishedPlayers : []),
-    playedHistory: (typeof playedCardsHistory !== 'undefined' ? playedCardsHistory : []),
-    lastPlayer: (typeof lastPlayedPlayer !== 'undefined' ? lastPlayedPlayer : null),
-    passes: (typeof consecutivePasses !== 'undefined' ? consecutivePasses : 0),
     assigned: (typeof assignedCharacters !== 'undefined' ? assignedCharacters : {}),
     rules: getActiveGameRules()
   };
@@ -1743,51 +793,78 @@ function decideCpuMove(cpu, explicitContext = null) {
   const hand = ctx.hands[cpu] || [];
   const field = ctx.fieldCards || [];
   const rev = ctx.rev;
-  const rawMoves = getAllValidMoves(hand, field, rev);
-  const validMoves = filterCpuMovesForCharacter(charDef.id, rawMoves);
   const isFieldEmpty = (field.length === 0);
-  const canPass = !isFieldEmpty;
+
+  const rawMoves = getAllValidMoves(hand, field, rev, true, ctx.rules);
+  const validMoves = filterCpuMovesForCharacter(charDef.id, rawMoves);
 
   if (validMoves.length === 0) return null;
 
-  let chosen = null;
-  const cid = charDef.id;
+  const currentRevState = (typeof isRevolution !== 'undefined') ? !!isRevolution : false;
+  const instantWin = validMoves.find(m => m.length === hand.length && !isForbiddenFinish(m, currentRevState));
+  if (instantWin) return instantWin;
 
-  if (cid === 'GILGAMESH') {
-    chosen = decideGilgameshClient(cpu, hand, field, rev, ctx.hands, ctx.finished, ctx.playedHistory, ctx.lastPlayer, ctx.passes);
-  } else if (cid === 'AWAKENED_KING') {
-    chosen = decideAwakenedYoungKingClient(cpu, hand, field, rev, ctx.hands, ctx.finished, ctx.playedHistory, ctx.lastPlayer, ctx.passes);
-  } else if (cid === 'SUPER_AI') {
-    chosen = decideQueenClient(cpu, hand, field, rev, ctx.hands, ctx.finished, ctx.playedHistory, ctx.lastPlayer, ctx.passes);
-  } else if (cid === 'KING') {
-    chosen = decideKingClient(cpu, hand, field, rev, ctx.hands, ctx.finished, ctx.playedHistory, ctx.lastPlayer, ctx.passes);
-  } else if (cid === 'NOBUNAGA') {
-    chosen = decideNobunagaClient(cpu, hand, field, rev, ctx.hands, ctx.finished, ctx.playedHistory, ctx.lastPlayer, ctx.passes);
-  } else if (cid === 'SHOTOKU') {
-    chosen = decideShotokuClient(cpu, hand, field, rev, ctx.hands, ctx.finished, ctx.playedHistory, ctx.lastPlayer, ctx.passes);
-  } else if (cid === 'SHI_HUANGDI') {
-    chosen = decideShiHuangdiClient(cpu, hand, field, rev, ctx.hands, ctx.finished, ctx.playedHistory, ctx.lastPlayer, ctx.passes);
-  } else if (cid === 'ALEXANDER') {
-    chosen = decideAlexanderHybridClient(cpu, hand, field, rev, ctx.hands, ctx.finished, ctx.playedHistory, ctx.lastPlayer, ctx.passes);
-  } else {
-    const nextIdx = (PLAYERS.indexOf(cpu) + 1) % PLAYERS.length;
-    const nextCount = ctx.hands[PLAYERS[nextIdx]] ? ctx.hands[PLAYERS[nextIdx]].length : 10;
-    const otherCounts = PLAYERS.filter(p => p !== cpu && !ctx.finished.includes(p)).map(p => (ctx.hands[p] ? ctx.hands[p].length : 0));
-    const unrevealed = getUnrevealedCards(hand, ctx.playedHistory, field);
-    chosen = selectMoveByCharacterDef(charDef, hand, field, rev, otherCounts, canPass, unrevealed, nextCount, ctx.rules, ctx.playedHistory);
+  const profile = getCharacterTacticalProfile(charDef.id);
+
+  const activeOthers = PLAYERS.filter(p => p !== cpu && !ctx.finished.includes(p));
+  const otherLens = activeOthers.map(p => (ctx.hands[p] ? ctx.hands[p].length : 99));
+  const minOppLen = otherLens.length > 0 ? Math.min(...otherLens) : 99;
+  const isOpponentReach = (minOppLen <= 2);
+
+  // 他家リーチ時の迎撃ガード（8切りまたは支配札）
+  if (isOpponentReach && !isFieldEmpty) {
+    const eightMove = validMoves.find(m => m.some(c => normalizeCardRank(c) === '8'));
+    if (eightMove) return eightMove;
+
+    const strongBlocker = validMoves.find(m => m.some(c => c.isJoker || normalizeCardRank(c) === (rev ? '3' : '2')));
+    if (strongBlocker && Math.random() < profile.R2_reachBlock) return strongBlocker;
   }
 
-  if (isFieldEmpty && (!chosen || chosen.length === 0)) {
-    const currentRev = (typeof isRevolution !== 'undefined') ? !!isRevolution : false;
-    const safeInstant = validMoves.filter(m => !isForbiddenFinish(m, currentRev));
-    chosen = safeInstant.length > 0 ? safeInstant[0] : validMoves[0];
+  // 手札形成スコアリング
+  const scoredMoves = validMoves.map(m => {
+    let score = (m.length * 20.0 * profile.R4_leadMulti) - getPlayStrength(m, rev);
+
+    if (willLeadToForbiddenTrap(m, hand, currentRevState)) {
+      score -= 99999.0;
+    }
+
+    if (m.some(c => normalizeCardRank(c) === '8')) {
+      score += (isFieldEmpty ? -30.0 : 40.0) * profile.R6_eightCutBridge;
+    }
+
+    if (m.some(c => normalizeCardRank(c) === 'J')) {
+      score += (rev ? 30.0 : -30.0) * profile.R7_elevenBackControl;
+    }
+
+    if (m.length >= 4) {
+      score += 60.0 * profile.R8_plannedRevolution;
+    }
+
+    // 親番でのチケット単騎出し自滅抑制
+    if (isFieldEmpty && hand.length >= 4 && m.length === 1) {
+      const isTicket = m[0].isJoker || normalizeCardRank(m[0]) === (rev ? '3' : '2');
+      if (isTicket) score -= (50.0 * profile.R5_trashCardClear);
+    }
+
+    return { move: m, score: score };
+  });
+
+  scoredMoves.sort((a, b) => b.score - a.score);
+  const bestChoice = scoredMoves[0].move;
+
+  // スマートパス判断
+  if (!isFieldEmpty && Math.random() < profile.R12_smartPass && hand.length > 3) {
+    const isSingleHigh = bestChoice.length === 1 && (bestChoice[0].isJoker || normalizeCardRank(bestChoice[0]) === (rev ? '3' : '2'));
+    if (isSingleHigh && !isOpponentReach) {
+      return null;
+    }
   }
 
-  return chosen !== undefined ? chosen : (isFieldEmpty ? validMoves[0] : null);
+  return bestChoice || (isFieldEmpty ? validMoves[0] : null);
 }
 
 /* ----------------------------------------------------
- * 8. リアルタイム勝率計算
+ * 7. リアルタイム勝率計算
  * ---------------------------------------------------- */
 function calculateRealtimeWinRates() {
   const active = PLAYERS.filter(p => !finishedPlayers.includes(p));

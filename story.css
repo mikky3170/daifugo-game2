@@ -1,7 +1,6 @@
-
 /* ====================================================================
  * ROYAL DAIFUGO - story.css
- * [CSS Version: v3.2.9 - シナリオ・ADV・祭壇メッセージ見切れ完全解消版]
+ * [CSS Version: v4.1.2 - シナリオ・マップ・ADV会話演出純化版]
  * ==================================================================== */
 
 /* ============================================================
@@ -754,7 +753,7 @@ button.btn-launch-battle {
 }
 
 /* ============================================================
- * 14.1 ADVシネマティック演出 ＆ 宮廷案内役専用独立ビジュアル
+ * 14.1 ADVシネマティック演出 ＆ 会話ウィンドウ
  * ============================================================ */
 .scenario-adv-overlay {
   position: absolute;
@@ -1000,7 +999,7 @@ button.adv-btn-skip:hover {
 }
 
 /* ============================================================
- * 14.2 極上3段階CHAMPION装飾 ＆ 練習・観戦総合決着プレート
+ * 14.2 決着・結果ダイアログ装飾
  * ============================================================ */
 .modal-clear-gorgeous {
   width: 95%;
@@ -1011,46 +1010,6 @@ button.adv-btn-skip:hover {
   margin-top: 85px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.95), 0 0 30px rgba(212, 175, 55, 0.45);
   box-sizing: border-box;
-}
-
-.modal-winner-plate.is-tier1-champion {
-  border: 2px solid #d4af37;
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.95), 0 0 20px rgba(212, 175, 55, 0.8);
-}
-
-.modal-winner-plate.is-tier2-champion {
-  border: 2.2px solid #ffd700;
-  box-shadow: 0 -4px 28px rgba(0,0,0,0.95), 0 0 32px rgba(255, 215, 0, 0.95), inset 0 0 16px rgba(255, 255, 255, 0.3);
-  animation: tier2Pulse 2s infinite alternate ease-in-out;
-}
-@keyframes tier2Pulse {
-  0% { box-shadow: 0 -4px 24px rgba(0,0,0,0.95), 0 0 24px rgba(212, 175, 55, 0.8); }
-  100% { box-shadow: 0 -4px 34px rgba(0,0,0,0.95), 0 0 38px rgba(255, 215, 0, 1); }
-}
-
-.modal-winner-plate.is-tier3-champion {
-  border: 2.5px solid #ffffff;
-  background: linear-gradient(180deg, rgba(60, 40, 8, 0.98) 0%, rgba(20, 16, 32, 0.99) 100%);
-  box-shadow: 0 -4px 35px rgba(0,0,0,0.95), 0 0 50px rgba(255, 215, 0, 1), 0 0 70px rgba(255, 243, 168, 0.8), inset 0 0 24px rgba(255, 255, 255, 0.5);
-  animation: tier3Rainbow 2.5s infinite alternate ease-in-out;
-}
-@keyframes tier3Rainbow {
-  0% { filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.9)); }
-  50% { filter: drop-shadow(0 0 25px rgba(245, 158, 11, 1)); }
-  100% { filter: drop-shadow(0 0 35px rgba(255, 235, 59, 1)); }
-}
-
-.modal-winner-plate {
-  max-width: 480px;
-  width: calc(100% - 8px);
-}
-
-.modal-winner-plate .modal-winner-title {
-  font-size: clamp(11.5px, 2.5vw, 14.5px);
-  letter-spacing: 0.6px;
-  white-space: nowrap;
-  overflow: visible;
-  text-overflow: clip;
 }
 
 .champion-crown-overlay {
@@ -1117,18 +1076,6 @@ button.adv-btn-skip:hover {
   margin-bottom: 8px;
   line-height: 1.45;
 }
-
-.finish-card-highlight {
-  display: inline-block;
-  font-size: 11px;
-  color: #ffd700;
-  background: rgba(10, 16, 26, 0.85);
-  border: 1px solid rgba(212, 175, 55, 0.45);
-  border-radius: 4px;
-  padding: 2px 8px;
-  margin-top: 4px;
-}
-.finish-card-highlight strong { color: #fffadb; }
 
 .stage-result-summary-header {
   font-size: 11.5px;
@@ -1459,241 +1406,21 @@ button.adv-btn-skip:hover {
 }
 
 /* ============================================================
- * 15. レスポンシブ対応（整理統合版）
+ * 15. レスポンシブ対応
  * ============================================================ */
-
-/* 【タブレット・大画面（幅601px以上）】 */
 @media (min-width: 601px) {
-  :root {
-    --card-height: clamp(68px, 12.8vh, 100px);
-  }
-
-  .char-select-panel, .scenario-panel-container {
+  .scenario-panel-container {
     max-width: 680px;
   }
-
-  .char-picker-compact-grid {
-    gap: 8px;
-    padding: 6px 4px;
-  }
-
-  .compact-char-item {
-    flex: 0 0 calc((100% - 24px) / 4);
-    width: calc((100% - 24px) / 4);
-    min-width: 0;
-    max-width: none;
-    padding: 6px 4px;
-  }
-
-  .compact-char-item img {
-    width: 86px;
-    max-width: 96%;
-    height: auto;
-    aspect-ratio: 2 / 3;
-  }
-  .compact-char-item .c-name { font-size: 11px; }
-  .compact-char-item .c-desc { font-size: 9px; }
-
-  .btn-start-match-main { height: clamp(44px, 5.8vh, 50px); font-size: 15.5px; }
-
-  .battle-header-plate { max-width: 820px; padding: 5px 12px 6px 12px; }
-  .battle-logo-img, .title-logo-img { height: clamp(32px, 4.4vh, 44px); }
-  #rules-panel { max-width: 820px; }
-  .header-status-row { height: 44px; min-height: 44px; }
-  .eval-meter-left { flex: 0 0 84px; min-width: 84px; }
-  .eval-title-text { font-size: 12.5px; }
-  .eval-name, .eval-pct { font-size: 10.5px; }
-  .ai-status-orb-btn { flex: 0 0 96px; width: 96px; height: 26px; }
-  .ai-orb-label { font-size: 10px; }
-  .btn-rule-help { font-size: 12px; padding: 5px 10px; max-width: 125px; border-radius: 6px; }
-
-  #game-board {
-    max-width: 840px;
-    grid-template-columns: 92px 1fr 92px;
-    gap: 12px;
-    padding: 4px 10px;
-  }
-  #cpu1 { width: 92px; justify-self: center; transform: translateX(18px); }
-  #cpu3 { width: 92px; justify-self: center; transform: translateX(-18px); }
-  #cpu1 .char-row, #cpu3 .char-row { width: 100%; }
-  #cpu1 .turn-badge-container, #cpu3 .turn-badge-container { width: 100%; min-width: 86px; max-width: 96px; }
-  #cpu1 .ai-brain-dot, #cpu3 .ai-brain-dot { left: 2px; }
-  .name-rank-stack { width: 92px; min-width: 86px; max-width: 96px; }
-  .char-badge, .rank-badge, .turn-badge { width: 100%; min-width: 86px; max-width: 96px; font-size: 11px; }
-
-  .field-altar { max-width: 330px; min-height: 228px; height: auto; padding: 6px 10px; }
-
-  #player-area .char-portrait,
-  #cpu1 .char-portrait,
-  #cpu2 .char-portrait,
-  #cpu3 .char-portrait {
-    width: 74px;
-    height: 110px;
-  }
-
-  .cpu-card-stack .card-back { width: calc(var(--card-width) * 0.62); height: calc(var(--card-height) * 0.62); }
-  .cpu-card-stack { min-height: calc(var(--card-height) * 0.62); }
-  #cpu2-stack { max-width: 220px; }
-  #cpu1-stack, #cpu3-stack { width: 92px; max-width: 92px; margin: 2px auto; }
-
-  .bottom-console-frame { max-width: 820px; padding: 6px 12px 5px 12px; gap: 5px; margin-bottom: 3px; }
-  #app-footer-bar, .char-select-footer-bar { max-width: 820px; font-size: 10px; }
-
-  .btn-play-main { height: clamp(46px, 5.8vh, 52px); font-size: 15.5px; border-radius: 8px; gap: 8px; }
-  .btn-pass-sub { height: clamp(46px, 5.8vh, 52px); font-size: 14.5px; border-radius: 8px; min-width: 96px; }
-  .btn-exchange-main { height: clamp(46px, 5.8vh, 52px); font-size: 15px; }
-  .btn-sub { height: 30px; font-size: 11.5px; padding: 0 10px; border-radius: 5px; }
-  .dialogue-bubble { padding: 5px 12px; font-size: 12px; }
-
-  .modal-tabs { gap: 8px; }
-  .modal-tab-btn { font-size: 12px; padding: 8px 6px; }
-
   .modal-clear-gorgeous {
     max-width: 560px;
   }
 }
 
-/* 【スマートフォン（幅600px以下）：祭壇メッセージ完全枠内収容版】 */
 @media (max-width: 600px) {
-  .char-select-panel, .scenario-panel-container {
+  .scenario-panel-container {
     max-width: 100%;
   }
-
-  .char-picker-compact-grid {
-    gap: 6px;
-    padding: 4px 3px;
-  }
-
-  .compact-char-item {
-    flex: 0 0 calc((100% - 12px) / 3);
-    width: calc((100% - 12px) / 3);
-    min-width: 0;
-    max-width: none;
-    padding: 4px 2px;
-  }
-
-  .compact-char-item img {
-    width: 72px;
-    max-width: 96%;
-    height: auto;
-    aspect-ratio: 2 / 3;
-  }
-  .compact-char-item .c-name { font-size: 9.5px; }
-  .compact-char-item .c-desc { font-size: 8px; }
-
-  #game-board {
-    grid-template-columns: 88px 1fr 88px;
-    padding: 0 2px;
-    gap: 1px;
-  }
-
-  #cpu1 { justify-self: center; transform: none; width: 88px; }
-  #cpu3 { justify-self: center; transform: none; width: 88px; }
-
-  #cpu1 .cpu-side-upper-anchor {
-    transform: translateX(8px);
-    position: relative;
-    z-index: 100;
-  }
-  #cpu3 .cpu-side-upper-anchor {
-    transform: translateX(-8px);
-    position: relative;
-    z-index: 100;
-  }
-
-  /* 発言時はアンカーコンテナ全体をカード束より確実に前面へ昇格 */
-  #cpu1.is-speaking-parent .cpu-side-upper-anchor,
-  #cpu3.is-speaking-parent .cpu-side-upper-anchor {
-    z-index: 2850 !important;
-  }
-
-  /* 手札カード束の階層を固定し、拡大絵柄に覆い被さるのを防止 */
-  #cpu1-stack, #cpu3-stack {
-    position: relative;
-    z-index: 10;
-  }
-
-  #cpu1 .char-portrait,
-  #cpu3 .char-portrait,
-  #cpu2 .char-portrait,
-  #player-area .char-portrait {
-    width: 68px;
-    height: 102px;
-    transform-origin: top center;
-  }
-
-  /* 発言時の肖像画拡大（最前面化） */
-  .char-portrait.portrait-talk {
-    transform: scale(1.68) translateZ(0) !important;
-    transform-origin: top center !important;
-    z-index: 2850 !important;
-  }
-
-  /* セリフ吹き出し最前面化（z-index: 2900） */
-  .dialogue-bubble {
-    z-index: 2900 !important;
-  }
-
-  /* CPU1: 拡大した絵柄のすぐ下へ配置 */
-  #cpu1 .dialogue-bubble {
-    top: calc(100% + 4px) !important;
-    bottom: auto !important;
-    left: 0 !important;
-    right: auto !important;
-    transform: scale(0.9);
-    transform-origin: top left;
-    z-index: 2900 !important;
-  }
-  #cpu1 .dialogue-bubble.show {
-    opacity: 1;
-    transform: scale(1);
-  }
-
-  /* CPU3: 拡大した絵柄の1行下から表示（CPU1とセリフが重ならないオフセット） */
-  #cpu3 .dialogue-bubble {
-    top: calc(100% + 32px) !important;
-    bottom: auto !important;
-    right: 0 !important;
-    left: auto !important;
-    transform: scale(0.9);
-    transform-origin: top right;
-    z-index: 2900 !important;
-  }
-  #cpu3 .dialogue-bubble.show {
-    opacity: 1;
-    transform: scale(1);
-  }
-
-  /* 祭壇（.field-altar）：高さを自動適応とし、内部要素が上下に溢れない構造 */
-  .field-altar {
-    max-width: 236px;
-    min-height: 220px;
-    height: auto;
-    padding: 3px 4px 4px 4px;
-    justify-content: flex-start;
-    gap: 2px;
-  }
-  .field-container { height: calc(var(--card-height) * 0.88); }
-  #field-cards .card { width: calc(var(--card-width) * 0.86); height: calc(var(--card-height) * 0.86); }
-  
-  /* メッセージボックス：見切れ・上下突き抜けを完全根絶 */
-  #message-text {
-    min-height: 44px;
-    height: auto;
-    max-height: 56px;
-    padding: 3px 4px;
-    font-size: 10.5px;
-    line-height: 1.25;
-    margin-top: auto;
-  }
-
-  #cpu2-stack { max-width: 185px; }
-  #cpu1-stack, #cpu3-stack { width: 84px; max-width: 84px; }
-
-  #player-hand { width: 100%; padding: 0 4px; touch-action: manipulation; }
-
-  .modal-tabs { gap: 4px; }
-  .modal-tab-btn { font-size: 10.5px; padding: 6px 2px; }
 
   .avatar-select-grid-large {
     grid-template-columns: 1fr;
@@ -1797,21 +1524,4 @@ button.adv-btn-skip:hover {
   .ranking-table td:nth-child(2) {
     min-width: 95px;
   }
-
-  .log-viewer-nav-controls {
-    flex-wrap: wrap;
-  }
-  .btn-log-nav {
-    flex: 1 1 45%;
-    padding: 5px 8px;
-    font-size: 10.5px;
-  }
-  .log-game-select {
-    flex: 1 1 100%;
-    order: -1;
-    margin-bottom: 4px;
-    font-size: 11px;
-  }
 }
-
-

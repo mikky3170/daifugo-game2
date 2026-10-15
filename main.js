@@ -1,7 +1,7 @@
- /* ====================================================================
- * ROYAL DAIFUGO - main.js 【前半 / 全2回】
- * [Version: v4.1.0 - 全画面制御・打牌即時応答・排他ロック安全完全修復版]
- * ※ファイル先頭（1行目）から「7. DOM描画・手札アニメーション・UI同期」の終了まで。
+/* ====================================================================
+ * ROYAL DAIFUGO - main.js 【第1部 / 全3回】
+ * [Version: v4.1.4 - 全画面制御・カード交換完全セーブ保護・排他ロック安全版]
+ * ※ファイル先頭（1行目）から「5. カード交換処理（confirmExchange末尾）」まで。
  * ==================================================================== */
 
 /* ----------------------------------------------------
@@ -13,7 +13,7 @@ let isSpectatePaused = false;         // 観戦モード専用 一時停止フ�
 let enableCardExchange = true;
 let currentSpeed = 1;
 let isSoundMuted = false;
-let currentStatsTab = 'practice';
+let currentStatsTab = 'my';
 
 let hands = { player: [], cpu1: [], cpu2: [], cpu3: [] };
 let playerPassCounts = { player: 0, cpu1: 0, cpu2: 0, cpu3: 0 };
@@ -58,7 +58,7 @@ let scenarioMatchActionStats = {
 let lastTurnActivityTimestamp = Date.now();
 
 /* ============================================================
- * 2. 全画面（フルスクリーン）モード コントローラー（例外完全保護版）
+ * 2. 全画面（フルスクリーン）モード コントローラー
  * ============================================================ */
 function isFullscreenActive() {
   return !!(
@@ -79,20 +79,18 @@ function updateFullscreenButtonsUI() {
 
 let isFullscreenToggling = false;
 function toggleFullScreen() {
-  if (isFullscreenToggling) return;
-  isFullscreenToggling = true;
+  isFullscreenToggling = false;
+  const isFull = isFullscreenActive();
 
   try {
     if (typeof soundMgr !== 'undefined') soundMgr.playSelect();
   } catch (e) {}
 
-  const isFull = isFullscreenActive();
-
-  const resetLock = () => {
-    setTimeout(() => {
-      isFullscreenToggling = false;
-      updateFullscreenButtonsUI();
-    }, 200);
+  const resetLockAndSync = () => {
+    isFullscreenToggling = false;
+    updateFullscreenButtonsUI();
+    setTimeout(updateFullscreenButtonsUI, 60);
+    setTimeout(updateFullscreenButtonsUI, 240);
   };
 
   if (!isFull) {
@@ -102,21 +100,15 @@ function toggleFullScreen() {
       try {
         const p = req.call(docEl);
         if (p && typeof p.then === 'function') {
-          p.then(() => {
-            updateFullscreenButtonsUI();
-          }).catch(err => {
-            console.warn('[全画面化リクエスト失敗/非対応環境]:', err);
-            updateFullscreenButtonsUI();
-          }).finally(resetLock);
+          p.then(() => resetLockAndSync()).catch(() => resetLockAndSync());
         } else {
-          resetLock();
+          resetLockAndSync();
         }
       } catch (err) {
-        console.warn('[全画面化例外]:', err);
-        resetLock();
+        resetLockAndSync();
       }
     } else {
-      resetLock();
+      resetLockAndSync();
     }
   } else {
     const exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
@@ -124,31 +116,26 @@ function toggleFullScreen() {
       try {
         const p = exit.call(document);
         if (p && typeof p.then === 'function') {
-          p.then(() => {
-            updateFullscreenButtonsUI();
-          }).catch(err => {
-            console.warn('[全画面解除リクエスト失敗]:', err);
-            updateFullscreenButtonsUI();
-          }).finally(resetLock);
+          p.then(() => resetLockAndSync()).catch(() => resetLockAndSync());
         } else {
-          resetLock();
+          resetLockAndSync();
         }
       } catch (err) {
-        console.warn('[全画面解除例外]:', err);
-        resetLock();
+        resetLockAndSync();
       }
     } else {
-      resetLock();
+      resetLockAndSync();
     }
   }
 
-  setTimeout(updateFullscreenButtonsUI, 60);
+  resetLockAndSync();
 }
 
 ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(evt => {
   document.addEventListener(evt, () => {
     isFullscreenToggling = false;
     updateFullscreenButtonsUI();
+    setTimeout(updateFullscreenButtonsUI, 60);
   });
 });
 window.addEventListener('focus', () => {
@@ -162,7 +149,7 @@ window.addEventListener('pageshow', () => {
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) {
     isFullscreenToggling = false;
-    setTimeout(updateFullscreenButtonsUI, 100);
+    setTimeout(updateFullscreenButtonsUI, 80);
   }
 });
 
@@ -283,8 +270,6 @@ function removeCardsFromHandSafe(hand, cardsToRemove) {
 }
 
 function terminateCurrentSession() {
-  console.log('[SESSION] セッション完全終了クリーンアップを実行します。');
-
   currentSessionGeneration++;
   GameTimer.clearAll();
 
@@ -348,7 +333,7 @@ function terminateCurrentSession() {
 
   const modalsToClose = [
     'next-game-modal', 'modal-stage-clear', 'modal-scenario-next-match',
-    'victory-popup', 'adv-overlay', 'practice-interim-modal', 'practice-finish-modal', 'replay-modal'
+    'victory-popup', 'adv-overlay', 'practice-finish-modal', 'replay-modal'
   ];
   modalsToClose.forEach(id => {
     const m = document.getElementById(id);
@@ -360,10 +345,6 @@ function terminateCurrentSession() {
 
   AIStatusUI.restoreIdleState();
   AIStatusUI.clearAllBrainDots();
-}
-
-function effectiveReverse() {
-  return isRevolution !== isElevenBack;
 }
 
 function getSpeedMultiplier() {
@@ -413,7 +394,7 @@ function clearReceivedCardHighlights() {
 }
 
 /* ============================================================
- * ★ 完全自立型・常時ハートビート監視
+ * 常時ハートビート監視
  * ============================================================ */
 setInterval(() => {
   if (typeof gameEnded === 'undefined' || gameEnded) return;
@@ -539,7 +520,7 @@ function startNewGame() {
   const dealOrder = shuffle([...PLAYERS]);
   hands.player = []; hands.cpu1 = []; hands.cpu2 = []; hands.cpu3 = [];
   deck.forEach((card, i) => hands[dealOrder[i % dealOrder.length]].push(card));
-  PLAYERS.forEach(p => sortHand(hands[p]));
+  PLAYERS.forEach(p => sortHand(hands[p], false));
 
   playerPassCounts = { player: 0, cpu1: 0, cpu2: 0, cpu3: 0 };
   hasPassedInRound = { player: false, cpu1: false, cpu2: false, cpu3: false };
@@ -629,173 +610,243 @@ function setFirstTurnByDiamond3() {
 }
 
 /* ----------------------------------------------------
- * 5. カード交換処理
+ * 5. カード交換処理（セーブ完全保護・都落ち・反則負け完全防御版）
  * ---------------------------------------------------- */
 function proceedToExchange() {
+  if (isProcessing) return;
+  isProcessing = true;
+
   soundMgr.playSelect();
   isPreExchangePhase = false;
-  isExchangePhase = true;
   isExchangeTransitioning = false;
   pendingReceivedCards = [];
 
-  let daifugo = null, fugo = null, hinmin = null, daihinmin = null;
-  PLAYERS.forEach(p => {
-    if (previousRanks[p] === '大富豪') daifugo = p;
-    if (previousRanks[p] === '富豪') fugo = p;
-    if (previousRanks[p] === '貧民') hinmin = p;
-    if (previousRanks[p] === '大貧民') daihinmin = p;
-  });
+  const goExBtn = document.getElementById('go-exchange-btn');
+  if (goExBtn) goExBtn.disabled = true;
 
-  if (daihinmin && daihinmin !== 'player') {
-    checkAndTriggerDialogue(daihinmin, 'EXCHANGE');
-  }
-  if (hinmin && hinmin !== 'player') {
-    GameTimer.set(() => {
-      checkAndTriggerDialogue(hinmin, 'EXCHANGE');
-    }, 400);
-  }
+  try {
+    let daifugo = null, fugo = null, hinmin = null, daihinmin = null;
 
-  const isPlayerTribute = (daihinmin === 'player' || hinmin === 'player');
-  if (isPlayerTribute) {
-    sortHand(hands.player);
-    const tributeCount = (daihinmin === 'player') ? 2 : 1;
-    const startIndex = hands.player.length - tributeCount;
-    for (let i = startIndex; i < hands.player.length; i++) {
-      if (hands.player[i]) {
-        hands.player[i].isGivingCard = true;
-      }
+    PLAYERS.forEach(p => {
+      if (previousRanks[p] === '大富豪') daifugo = p;
+      if (previousRanks[p] === '富豪') fugo = p;
+      if (previousRanks[p] === '貧民') hinmin = p;
+      if (previousRanks[p] === '大貧民') daihinmin = p;
+    });
+
+    // 役職重複・欠落時の自動整合性修復ガード
+    const assignedSeats = [daifugo, fugo, hinmin, daihinmin].filter(Boolean);
+    if (assignedSeats.length < 4 || new Set(assignedSeats).size < 4) {
+      const unassigned = PLAYERS.filter(p => !assignedSeats.includes(p));
+      if (!daifugo && unassigned.length > 0) daifugo = unassigned.shift();
+      if (!fugo && unassigned.length > 0) fugo = unassigned.shift();
+      if (!hinmin && unassigned.length > 0) hinmin = unassigned.shift();
+      if (!daihinmin && unassigned.length > 0) daihinmin = unassigned.shift();
     }
-    render(true);
 
-    const tributeNames = hands.player.slice(startIndex).map(c => c.isJoker ? '🃏JOKER' : `${normalizeCardSuit(c)}${normalizeCardRank(c)}`).join(', ');
-    const receiverRank = (daihinmin === 'player') ? '大富豪' : '富豪';
-    setMessage(`【カード献上】最強カード【${tributeNames}】を${receiverRank}へ献上します`);
+    if (daihinmin && daihinmin !== 'player') {
+      checkAndTriggerDialogue(daihinmin, 'EXCHANGE');
+    }
+    if (hinmin && hinmin !== 'player') {
+      GameTimer.set(() => {
+        checkAndTriggerDialogue(hinmin, 'EXCHANGE');
+      }, 400);
+    }
 
-    isProcessing = true;
-    GameTimer.set(() => {
+    const isPlayerTribute = (daihinmin === 'player' || hinmin === 'player');
+
+    if (isPlayerTribute) {
+      // 大貧民・貧民（プレイヤー）：自動献上
+      isExchangePhase = false;
+      sortHand(hands.player, false);
+      const tributeCount = (daihinmin === 'player') ? 2 : 1;
+      const startIndex = Math.max(0, hands.player.length - tributeCount);
+      for (let i = startIndex; i < hands.player.length; i++) {
+        if (hands.player[i]) {
+          hands.player[i].isGivingCard = true;
+        }
+      }
+      render(true);
+
+      const tributeNames = hands.player.slice(startIndex).map(c => c.isJoker ? '🃏JOKER' : `${normalizeCardSuit(c)}${normalizeCardRank(c)}`).join(', ');
+      const receiverRank = (daihinmin === 'player') ? '大富豪' : '富豪';
+      setMessage(`【カード献上】最強カード【${tributeNames}】を${receiverRank}へ献上します`);
+
+      GameTimer.set(() => {
+        isProcessing = false;
+        executeTributeExchange(daifugo, fugo, hinmin, daihinmin);
+      }, 1200 / getSpeedMultiplier());
+    } else {
       isProcessing = false;
       executeTributeExchange(daifugo, fugo, hinmin, daihinmin);
-    }, 1300 / getSpeedMultiplier());
-  } else {
-    executeTributeExchange(daifugo, fugo, hinmin, daihinmin);
+    }
+  } catch (err) {
+    console.error('⚠️ [EXCHANGE ERROR] proceedToExchange 例外救済:', err);
+    isProcessing = false;
+    isPreExchangePhase = false;
+    isExchangePhase = false;
+    isExchangeTransitioning = false;
+    setFirstTurnByDiamond3();
+    render(true);
+    checkTurn();
   }
 }
 
+function safeSelectExchangeCards(hand, count) {
+  if (!hand || hand.length === 0) return [];
+  if (typeof selectExchangeCardsSmart === 'function') {
+    try {
+      return selectExchangeCardsSmart(hand, count);
+    } catch (e) {
+      console.warn('[CARD SELECT FALLBACK] selectExchangeCardsSmart例外:', e);
+    }
+  }
+  // 安全フォールバック：弱い順（先頭から）不要カードを選択
+  const sorted = [...hand].sort((a, b) => (a.rankValue || 0) - (b.rankValue || 0));
+  return sorted.slice(0, Math.min(count, sorted.length));
+}
+
 function executeTributeExchange(daifugo, fugo, hinmin, daihinmin) {
-  let playerTributeStr = '';
-  let playerReceivedStr = '';
+  try {
+    let playerTributeStr = '';
+    let playerReceivedStr = '';
 
-  if (daihinmin && daifugo) {
-    sortHand(hands[daihinmin]);
-    const tribute = hands[daihinmin].splice(hands[daihinmin].length - 2, 2);
-    tribute.forEach(c => { c.isGivingCard = false; });
+    // ① 大貧民 ➔ 大富豪への献上
+    if (daihinmin && daifugo && hands[daihinmin] && hands[daihinmin].length >= 2) {
+      sortHand(hands[daihinmin], false);
+      const tribute = hands[daihinmin].splice(hands[daihinmin].length - 2, 2);
+      tribute.forEach(c => { if (c) c.isGivingCard = false; });
 
-    if (daifugo === 'player') {
-      pendingReceivedCards = tribute;
-      GameStorage.recordExchange(0, 2);
+      if (daifugo === 'player') {
+        pendingReceivedCards = tribute;
+        if (typeof GameStorage !== 'undefined' && GameStorage.recordExchange) GameStorage.recordExchange(0, 2);
+      } else {
+        hands[daifugo].push(...tribute);
+        sortHand(hands[daifugo], false);
+      }
+
+      if (daihinmin === 'player') {
+        if (typeof GameStorage !== 'undefined' && GameStorage.recordExchange) GameStorage.recordExchange(2, 0);
+        playerTributeStr = tribute.map(c => c.isJoker ? '🃏JOKER' : `${normalizeCardSuit(c)}${normalizeCardRank(c)}`).join(', ');
+      }
+    }
+
+    // ② 貧民 ➔ 富豪への献上
+    if (hinmin && fugo && hands[hinmin] && hands[hinmin].length >= 1) {
+      sortHand(hands[hinmin], false);
+      const tribute = hands[hinmin].splice(hands[hinmin].length - 1, 1);
+      tribute.forEach(c => { if (c) c.isGivingCard = false; });
+
+      if (fugo === 'player') {
+        pendingReceivedCards = tribute;
+        if (typeof GameStorage !== 'undefined' && GameStorage.recordExchange) GameStorage.recordExchange(0, 1);
+      } else {
+        hands[fugo].push(...tribute);
+        sortHand(hands[fugo], false);
+      }
+
+      if (hinmin === 'player') {
+        if (typeof GameStorage !== 'undefined' && GameStorage.recordExchange) GameStorage.recordExchange(1, 0);
+        playerTributeStr = tribute.map(c => c.isJoker ? '🃏JOKER' : `${normalizeCardSuit(c)}${normalizeCardRank(c)}`).join(', ');
+      }
+    }
+
+    // ③ 大富豪（CPU） ➔ 大貧民への下賜
+    if (daifugo && daifugo !== 'player' && daihinmin && hands[daifugo]) {
+      const cards = safeSelectExchangeCards(hands[daifugo], 2);
+      removeCardsFromHandSafe(hands[daifugo], cards);
+
+      if (daihinmin === 'player') {
+        cards.forEach(c => { if (c) c.isReceivedCard = true; });
+        playerReceivedStr = cards.map(c => c.isJoker ? '🃏JOKER' : `${normalizeCardSuit(c)}${normalizeCardRank(c)}`).join(', ');
+      }
+      hands[daihinmin].push(...cards);
+      sortHand(hands[daihinmin], false);
+
+      GameTimer.set(() => {
+        checkAndTriggerDialogue(daifugo, 'EXCHANGE');
+      }, 600);
+    }
+
+    // ④ 富豪（CPU） ➔ 貧民への下賜
+    if (fugo && fugo !== 'player' && hinmin && hands[fugo]) {
+      const cards = safeSelectExchangeCards(hands[fugo], 1);
+      removeCardsFromHandSafe(hands[fugo], cards);
+
+      if (hinmin === 'player') {
+        cards.forEach(c => { if (c) c.isReceivedCard = true; });
+        playerReceivedStr = cards.map(c => c.isJoker ? '🃏JOKER' : `${normalizeCardSuit(c)}${normalizeCardRank(c)}`).join(', ');
+      }
+      hands[hinmin].push(...cards);
+      sortHand(hands[hinmin], false);
+
+      GameTimer.set(() => {
+        checkAndTriggerDialogue(fugo, 'EXCHANGE');
+      }, 800);
+    }
+
+    // ⑤ プレイヤー役職に応じた分岐
+    if (previousRanks.player === '大富豪') {
+      isExchangePhase = true;
+      requiredExchangeCount = 2;
+      if (!ScenarioManager || !ScenarioManager.isActive) {
+        SaveLoadManager.saveGameState(true, 'exchange');
+      }
+      if (isAutoPlayMode) {
+        autoSelectExchangeCards('player', 2);
+      } else {
+        setMessage(`【カード交換】不要なカードを <strong>2枚</strong> 選び「交換決定」を押してください`);
+        render(true);
+      }
+    } else if (previousRanks.player === '富豪') {
+      isExchangePhase = true;
+      requiredExchangeCount = 1;
+      if (!ScenarioManager || !ScenarioManager.isActive) {
+        SaveLoadManager.saveGameState(true, 'exchange');
+      }
+      if (isAutoPlayMode) {
+        autoSelectExchangeCards('player', 1);
+      } else {
+        setMessage(`【カード交換】不要なカードを <strong>1枚</strong> 選び「交換決定」を押してください`);
+        render(true);
+      }
     } else {
-      hands[daifugo].push(...tribute);
-      sortHand(hands[daifugo]);
-    }
-
-    if (daihinmin === 'player') {
-      GameStorage.recordExchange(2, 0);
-      playerTributeStr = tribute.map(c => c.isJoker ? '🃏JOKER' : `${normalizeCardSuit(c)}${normalizeCardRank(c)}`).join(', ');
-    }
-  }
-
-  if (hinmin && fugo) {
-    sortHand(hands[hinmin]);
-    const tribute = hands[hinmin].splice(hands[hinmin].length - 1, 1);
-    tribute.forEach(c => { c.isGivingCard = false; });
-
-    if (fugo === 'player') {
-      pendingReceivedCards = tribute;
-      GameStorage.recordExchange(0, 1);
-    } else {
-      hands[fugo].push(...tribute);
-      sortHand(hands[fugo]);
-    }
-
-    if (hinmin === 'player') {
-      GameStorage.recordExchange(1, 0);
-      playerTributeStr = tribute.map(c => c.isJoker ? '🃏JOKER' : `${normalizeCardSuit(c)}${normalizeCardRank(c)}`).join(', ');
-    }
-  }
-
-  if (daifugo && daifugo !== 'player') {
-    const cards = selectExchangeCardsSmart(hands[daifugo], 2);
-    removeCardsFromHandSafe(hands[daifugo], cards);
-
-    if (daihinmin === 'player') {
-      cards.forEach(c => c.isReceivedCard = true);
-      playerReceivedStr = cards.map(c => c.isJoker ? '🃏JOKER' : `${normalizeCardSuit(c)}${normalizeCardRank(c)}`).join(', ');
-    }
-    hands[daihinmin].push(...cards);
-    sortHand(hands[daihinmin]);
-
-    GameTimer.set(() => {
-      checkAndTriggerDialogue(daifugo, 'EXCHANGE');
-    }, 700);
-  }
-
-  if (fugo && fugo !== 'player') {
-    const cards = selectExchangeCardsSmart(hands[fugo], 1);
-    removeCardsFromHandSafe(hands[fugo], cards);
-
-    if (hinmin === 'player') {
-      cards.forEach(c => c.isReceivedCard = true);
-      playerReceivedStr = cards.map(c => c.isJoker ? '🃏JOKER' : `${normalizeCardSuit(c)}${normalizeCardRank(c)}`).join(', ');
-    }
-    hands[hinmin].push(...cards);
-    sortHand(hands[hinmin]);
-
-    GameTimer.set(() => {
-      checkAndTriggerDialogue(fugo, 'EXCHANGE');
-    }, 900);
-  }
-
-  if (previousRanks.player === '大富豪') {
-    requiredExchangeCount = 2;
-    if (isAutoPlayMode) {
-      autoSelectExchangeCards('player', 2);
-    } else {
-      setMessage(`【カード交換】不要なカードを <strong>2枚</strong> 選び「交換決定」を押してください`);
+      // プレイヤーが大貧民・貧民の場合：交換完了演出を経て次局開始
+      isExchangePhase = false;
+      isExchangeTransitioning = true;
+      PLAYERS.forEach(p => sortHand(hands[p], false));
       render(true);
-    }
-  } else if (previousRanks.player === '富豪') {
-    requiredExchangeCount = 1;
-    if (isAutoPlayMode) {
-      autoSelectExchangeCards('player', 1);
-    } else {
-      setMessage(`【カード交換】不要なカードを <strong>1枚</strong> 選び「交換決定」を押してください`);
-      render(true);
-    }
-  } else {
-    isExchangePhase = false;
-    isExchangeTransitioning = true;
-    PLAYERS.forEach(p => sortHand(hands[p]));
-    render(true);
 
-    setMessage(`【交換完了】下賜:${playerReceivedStr} ⇄ 献上:${playerTributeStr}`);
+      const downStr = playerReceivedStr || '受領';
+      const upStr = playerTributeStr || '献上';
+      setMessage(`【交換完了】下賜:${downStr} ⇄ 献上:${upStr}`);
 
-    lastTurnActivityTimestamp = Date.now();
-    isProcessing = true;
-    GameTimer.set(() => {
-      isExchangeTransitioning = false;
-      clearReceivedCardHighlights();
-      render(false);
-      setFirstTurnByDiamond3();
       lastTurnActivityTimestamp = Date.now();
-      isProcessing = false;
-      checkTurn();
-    }, 1500 / getSpeedMultiplier());
+      isProcessing = true;
+      GameTimer.set(() => {
+        isExchangeTransitioning = false;
+        clearReceivedCardHighlights();
+        render(false);
+        setFirstTurnByDiamond3();
+        lastTurnActivityTimestamp = Date.now();
+        isProcessing = false;
+        checkTurn();
+      }, 1400 / getSpeedMultiplier());
+    }
+  } catch (err2) {
+    console.error('⚠️ [EXCHANGE ERROR] executeTributeExchange 例外救済:', err2);
+    isProcessing = false;
+    isExchangePhase = false;
+    isExchangeTransitioning = false;
+    setFirstTurnByDiamond3();
+    render(true);
+    checkTurn();
   }
 }
 
 function autoSelectExchangeCards(player, count) {
   isProcessing = true;
-  const cards = selectExchangeCardsSmart(hands[player], count);
+  const cards = safeSelectExchangeCards(hands[player], count);
   selectedIndices = [];
   cards.forEach(c => {
     const idx = findCardIndexInHand(hands[player], c, selectedIndices);
@@ -825,7 +876,7 @@ function confirmExchange() {
 
   if (target) {
     hands[target].push(...given);
-    sortHand(hands[target]);
+    sortHand(hands[target], false);
   }
 
   const receivedTextList = [];
@@ -843,7 +894,7 @@ function confirmExchange() {
   selectedIndices = [];
   isExchangePhase = false;
   isExchangeTransitioning = true;
-  PLAYERS.forEach(p => sortHand(hands[p]));
+  PLAYERS.forEach(p => sortHand(hands[p], false));
 
   const givenStr = givenTextList.join(', ');
   const receivedStr = receivedTextList.join(', ');
@@ -861,8 +912,13 @@ function confirmExchange() {
     lastTurnActivityTimestamp = Date.now();
     isProcessing = false;
     checkTurn();
-  }, 1500 / getSpeedMultiplier());
+  }, 1400 / getSpeedMultiplier());
 }
+/* ====================================================================
+ * ROYAL DAIFUGO - main.js 【第2部 / 全3回】
+ * [Version: v4.1.4 - 全画面制御・打牌即時応答・警告バナー残留根絶完全修復版]
+ * ※「6. プレイヤー操作 ＆ 打牌処理」から「renderSharedRankChart末尾」まで。
+ * ==================================================================== */
 
 /* ----------------------------------------------------
  * 6. プレイヤー操作 ＆ 打牌処理（即時応答＆排他保証完全版）
@@ -878,7 +934,6 @@ function toggleSelectCard(index) {
   if (isPreExchangePhase || isExchangeTransitioning) return;
   if (!isExchangePhase && PLAYERS[Number(currentTurnIndex)] !== 'player') return;
 
-  // プレイヤー操作時は残留ロックを即時解除
   if (isProcessing && !isExchangePhase) {
     if (PLAYERS[Number(currentTurnIndex)] === 'player') {
       isProcessing = false;
@@ -890,10 +945,8 @@ function toggleSelectCard(index) {
   clearReceivedCardHighlights();
   pendingForbiddenConfirmation = false;
 
-  // 手札配列外インデックスの安全保護
   if (index < 0 || index >= hands.player.length) return;
 
-  // 不正な選択インデックスの自動浄化
   selectedIndices = selectedIndices.filter(i => i >= 0 && i < hands.player.length && hands.player[i] !== undefined);
 
   const handEl = document.getElementById('player-hand');
@@ -933,7 +986,6 @@ let playerPlayDebounceTimer = null;
 
 function playerPlayCard() {
   if (PLAYERS[Number(currentTurnIndex)] !== 'player') {
-    console.warn('[PLAY BLOCKED] 手番ではありません:', PLAYERS[currentTurnIndex]);
     return;
   }
 
@@ -947,7 +999,6 @@ function playerPlayCard() {
     isProcessing = false;
   }
 
-  // 選択カードの有効性・健全性チェック
   selectedIndices = selectedIndices.filter(i => i >= 0 && i < hands.player.length && hands.player[i] !== undefined);
 
   if (selectedIndices.length === 0) {
@@ -971,7 +1022,6 @@ function playerPlayCard() {
     return;
   }
 
-  // ★ 確定統一ルールに基づく禁止あがり・自爆詰み事前チェック
   const isLastMove = (cards.length === hands.player.length);
   let activeRules = { forbiddenFinish: true };
   try {
@@ -1050,7 +1100,6 @@ function playerPlayCard() {
 
 function playerPass() {
   if (PLAYERS[Number(currentTurnIndex)] !== 'player') {
-    console.warn('[PASS BLOCKED] 手番ではありません:', PLAYERS[currentTurnIndex]);
     return;
   }
 
@@ -1119,12 +1168,14 @@ function playCardSuccessDirect(player, cards) {
   if (cards.length >= 4) {
     isRevolution = !isRevolution;
     scenarioMatchActionStats[player].revolutions++;
-    PLAYERS.forEach(p => sortHand(hands[p]));
+    const revAfter = effectiveReverse();
+    PLAYERS.forEach(p => sortHand(hands[p], revAfter));
   }
   const isElevenBackCard = cards.some(c => normalizeCardRank(c) === 'J');
   if (isElevenBackCard) {
     isElevenBack = true;
-    PLAYERS.forEach(p => sortHand(hands[p]));
+    const revAfter = effectiveReverse();
+    PLAYERS.forEach(p => sortHand(hands[p], revAfter));
   }
   const isEight = cards.some(c => normalizeCardRank(c) === '8');
   if (isEight) {
@@ -1242,7 +1293,8 @@ function playCardSuccess(player, cards, needFullRedraw = false, playedIndices = 
       });
     }
     scenarioMatchActionStats[player].revolutions++;
-    PLAYERS.forEach(p => sortHand(hands[p]));
+    const revAfter = effectiveReverse();
+    PLAYERS.forEach(p => sortHand(hands[p], revAfter));
     needFullRedraw = true; hasSpecial = true; specialType = 'REVOLUTION';
   }
 
@@ -1253,7 +1305,8 @@ function playCardSuccess(player, cards, needFullRedraw = false, playedIndices = 
     triggerStatusFlyIn('eleven-back', '⚡ 11 BACK ⚡', 'eleven-back-status', () => {
       updateStatusUI();
     });
-    PLAYERS.forEach(p => sortHand(hands[p]));
+    const revAfter = effectiveReverse();
+    PLAYERS.forEach(p => sortHand(hands[p], revAfter));
     needFullRedraw = true; hasSpecial = true;
     if (!specialType) specialType = 'ELEVEN_BACK';
   }
@@ -1380,7 +1433,6 @@ function assignWinRank(player) {
 
 function processPass(player) {
   if (fieldCards.length === 0) {
-    console.warn(`[SAFETY] 親番でのパス要求(${player})を遮断しました。強制着手を促します。`);
     return;
   }
 
@@ -1439,7 +1491,7 @@ function nextTurn() {
     const seatResults = PLAYERS.map((p, idx) => ({
       seat: idx + 1,
       charId: assignedCharacters[p]?.id || p,
-      charName: getPlayerDisplayName(p),
+      charName: (assignedCharacters[p]?.id === 'GILGAMESH') ? 'ギルガメッシュ' : getPlayerDisplayName(p),
       finalRank: rankValues[playerStatusMap[p]] || 4,
       rankTitle: playerStatusMap[p]
     }));
@@ -1538,7 +1590,8 @@ function clearFieldDirect(nextPlayer = null) {
   let redraw = false;
   if (isElevenBack) {
     isElevenBack = false;
-    PLAYERS.forEach(p => sortHand(hands[p]));
+    const revAfter = effectiveReverse();
+    PLAYERS.forEach(p => sortHand(hands[p], revAfter));
     selectedIndices = [];
     redraw = true;
   }
@@ -1656,6 +1709,13 @@ async function cpuPlayTurn(cpu) {
     return;
   }
 
+  if (cpu === 'player' && !isAutoPlayMode) {
+    AIStatusUI.clearBrainDot('player');
+    isProcessing = false;
+    render(false);
+    return;
+  }
+
   const activeGen = currentSessionGeneration;
   lastTurnActivityTimestamp = Date.now();
 
@@ -1680,7 +1740,7 @@ async function cpuPlayTurn(cpu) {
     if (validMoves.length === 0) {
       move = null;
     } else if (isTargetServerChar && AIStatusUI.isServerOnline) {
-      move = await askPythonAI(hands[cpu], fieldCards, validMoves, 'super', cpu, activeGen);
+      move = await askPythonAI(hands[cpu], fieldCards, validMoves, 'apex', cpu, activeGen);
       if (activeGen !== currentSessionGeneration) {
         AIStatusUI.clearBrainDot(cpu);
         isProcessing = false;
@@ -1692,10 +1752,8 @@ async function cpuPlayTurn(cpu) {
         fieldCards: fieldCards,
         rev: rev,
         finished: finishedPlayers,
-        playedHistory: playedCardsHistory,
-        lastPlayer: lastPlayedPlayer,
-        passes: consecutivePasses,
-        assigned: assignedCharacters
+        assigned: assignedCharacters,
+        rules: gameRules
       };
       move = decideCpuMove(cpu, explicitContext);
     }
@@ -1709,6 +1767,13 @@ async function cpuPlayTurn(cpu) {
     if (activeGen !== currentSessionGeneration || gameEnded || isSpectatePaused || isExchangeTransitioning) {
       AIStatusUI.clearBrainDot(cpu);
       isProcessing = false;
+      return;
+    }
+
+    if (cpu === 'player' && !isAutoPlayMode) {
+      AIStatusUI.clearBrainDot('player');
+      isProcessing = false;
+      render(false);
       return;
     }
 
@@ -1772,9 +1837,9 @@ async function cpuPlayTurn(cpu) {
   }
 }
 
-/* ============================================================
+/* ----------------------------------------------------
  * 7. DOM描画・手札アニメーション・UI同期
- * ============================================================ */
+ * ---------------------------------------------------- */
 function createCardElement(card) {
   const el = document.createElement('div');
   const receivedClass = card.isReceivedCard ? ' card-received-highlight' : '';
@@ -1833,9 +1898,9 @@ function renderCpuStack(cpuId, count) {
   stack.innerHTML = '';
   if (count <= 0) return;
 
-  const isTablet = window.innerWidth > 600;
-  const cardW = isTablet ? 42 : 34;
-  let maxStackW = isTablet ? 92 : 80;
+  const isTablet = window.innerWidth >= 600;
+  const cardW = isTablet ? 32 : 24;
+  let maxStackW = isTablet ? 114 : 74;
 
   if (cpuId === 'cpu2') {
     maxStackW = isTablet ? 220 : 185;
@@ -1845,7 +1910,8 @@ function renderCpuStack(cpuId, count) {
   if (count > 1) {
     const step = (maxStackW - cardW) / (count - 1);
     overlapPx = Math.floor(step - cardW);
-    overlapPx = Math.min(0, Math.max(overlapPx, -(cardW - 8)));
+    const maxOverlap = isTablet ? -(cardW - 10) : -(cardW - 7);
+    overlapPx = Math.min(0, Math.max(overlapPx, maxOverlap));
   }
 
   stack.style.setProperty('--cpu-overlap', `${overlapPx}px`);
@@ -2245,7 +2311,6 @@ function updateControlsOnly() {
     } else {
       if (playBtn) playBtn.classList.remove('is-auto-disabled');
 
-      // 選択インデックス安全チェック
       selectedIndices = selectedIndices.filter(i => i >= 0 && i < hands.player.length && hands.player[i] !== undefined);
 
       const selectedCards = selectedIndices.map(i => hands.player[i]).filter(Boolean);
@@ -2275,7 +2340,7 @@ function updateControlsOnly() {
       } catch (e) {}
 
       if (foulAlert && !foulPlayers.player) {
-        if (GAME_SETTINGS.forbiddenFinishAlert && (isDirectForbiddenFinish || isTrapForbidden)) {
+        if (GAME_SETTINGS.forbiddenFinishAlert && selLen > 0 && (isDirectForbiddenFinish || isTrapForbidden)) {
           foulAlert.className = 'player-foul-alert';
           foulAlert.textContent = isDirectForbiddenFinish
             ? '⚠️ この手であがると反則負け！'
@@ -2466,7 +2531,8 @@ function getPlayerDisplayName(player, withIcon = false) {
     }
 
     const def = assignedCharacters.player;
-    const pName = def ? (def.name || '自分') : '自分';
+    let pName = def ? (def.name || '自分') : '自分';
+    if (def?.id === 'GILGAMESH') pName = 'ギルガメ';
 
     if (isSpectate) {
       const icon = def ? (def.icon || '👤') : '👤';
@@ -2481,7 +2547,12 @@ function getPlayerDisplayName(player, withIcon = false) {
   }
   const char = assignedCharacters[player];
   if (!char) return player;
-  return withIcon ? `${char.icon} ${char.name}` : char.name;
+  
+  let charDisplayName = char.name;
+  if (char.id === 'GILGAMESH') {
+    charDisplayName = 'ギルガメ';
+  }
+  return withIcon ? `${char.icon} ${charDisplayName}` : charDisplayName;
 }
 
 function setMessage(msg) {
@@ -2608,7 +2679,10 @@ function renderFinalRanking() {
         : (CHAR_IMAGES[wDef.id] || 'fugo-絵柄/king.png');
       winnerImg.onerror = () => { winnerImg.src = 'king.png'; };
     }
-    if (winnerName) winnerName.textContent = getPlayerDisplayName(daifugoPlayer, true);
+    if (winnerName) {
+      const formalName = (daifugoPlayer === 'player') ? getPlayerDisplayName('player', true) : `${wDef.icon} ${wDef.name}`;
+      winnerName.textContent = formalName;
+    }
   }
 
   if (!container) return;
@@ -2621,6 +2695,7 @@ function renderFinalRanking() {
       ? ScenarioManager.getCurrentAvatar().image
       : (CHAR_IMAGES[def.id] || 'fugo-絵柄/king.png');
     const foulNote = foulPlayers[p] ? ` <span class="foul-badge">(${foulPlayers[p]})</span>` : '';
+    const formalName = (p === 'player') ? getPlayerDisplayName('player', true) : `${def.icon} ${def.name}`;
 
     let cumScoreHtml = '';
     if (typeof MatchSeriesManager !== 'undefined' && MatchSeriesManager.isActive) {
@@ -2642,7 +2717,7 @@ function renderFinalRanking() {
       <div class="final-rank-row${idx === 0 ? ' rank-1' : ''}">
         <div class="final-rank-position">${rankName}</div>
         <img src="${imgSrc}" onerror="this.onerror=null; this.src='king.png';" alt="">
-        <div class="final-rank-name">${getPlayerDisplayName(p, true)}${foulNote}</div>
+        <div class="final-rank-name">${formalName}${foulNote}</div>
         ${cumScoreHtml}
       </div>
     `;
@@ -2694,18 +2769,10 @@ function updateCharIntroVisibility() {
     item.classList.toggle('is-currently-battling', isBattling);
   });
 }
- /* ====================================================================
- * ROYAL DAIFUGO - main.js 【後半 / 全2回】
- * [Version: v4.1.0 - 確定統一反則判定・リプレイ＆客観勝敗因分析・全画面完全同期部]
- * ====================================================================
- * 【※結合場所】:
- * 【前半】の末尾（updateCharIntroVisibility 関数末尾の閉じ括弧 }）の直下に、
- * そのまま貼り付けて結合してください。
- * ==================================================================== */
 
-/* ============================================================
- * 8. 各種モーダルUI・ビューア（新設ReplayManager含む）
- * ============================================================ */
+/* ----------------------------------------------------
+ * 8. 各種モーダルUI・ビューア
+ * ---------------------------------------------------- */
 function showEvalModal() {
   const { rates, topPlayer, topPct, diffFromSecond, isFinished } = calculateRealtimeWinRates();
   const body = document.getElementById('eval-modal-body');
@@ -3080,7 +3147,7 @@ function renderSharedRankChart(canvas, legendEl, rankHistory, totalGames, player
         ? (isScenario ? ScenarioManager.getCurrentAvatar() : CHARACTER_DEFS[cid])
         : CHARACTER_DEFS[cid];
       const name = isPlayer ? getPlayerDisplayName('player') : (def?.name || cid);
-      const icon = isPlayer ? '👤' : (def?.icon || '⚔️');
+      const icon = isPlayer ? (isScenario ? (ScenarioManager.getCurrentAvatar()?.icon || '👤') : '👤') : (def?.icon || '⚔️');
       const color = rosterColorMap[cid] || '#d4af37';
       lhtml += `
         <div class="practice-chart-legend-item">
@@ -3135,6 +3202,11 @@ function renderSharedRankChart(canvas, legendEl, rankHistory, totalGames, player
     });
   });
 }
+ /* ====================================================================
+ * ROYAL DAIFUGO - main.js 【第3部 / 全3回】
+ * [Version: v4.1.4 - セーブ完全保護・モード越境防御・構文完全修復版]
+ * ※「8.2 対局リプレイ ＆ 勝敗因分析マネージャー」からファイル末尾まで。
+ * ==================================================================== */
 
 /* ============================================================
  * 8.2 対局リプレイ ＆ 勝敗因分析マネージャー (ReplayManager)
@@ -3162,7 +3234,7 @@ const ReplayManager = {
       soundMgr.playSelect();
 
       this.previousModalId = null;
-      ['practice-finish-modal', 'modal-stage-clear', 'next-game-modal', 'practice-interim-modal', 'modal-scenario-next-match'].forEach(id => {
+      ['practice-finish-modal', 'modal-stage-clear', 'next-game-modal', 'modal-scenario-next-match'].forEach(id => {
         const m = document.getElementById(id);
         if (m && m.classList.contains('active')) {
           this.previousModalId = id;
@@ -4214,7 +4286,7 @@ const ReplayManager = {
     const topCards = handsNow.seat_3 || [];
     if (countTop) {
       const fType = getSeatFoulType(3);
-      if (topCards.length === 0 && fType === '反則負け') {
+      if (fType === '反則負け') {
         countTop.innerHTML = '<span class="replay-status-foul">⚠️ 反則負け</span>';
       } else if (fType === '都落ち') {
         countTop.innerHTML = '<span class="replay-status-capital-fall">🏛️ 都落ち</span>';
@@ -4231,7 +4303,7 @@ const ReplayManager = {
     const leftCards = handsNow.seat_2 || [];
     if (countLeft) {
       const fType = getSeatFoulType(2);
-      if (leftCards.length === 0 && fType === '反則負け') {
+      if (fType === '反則負け') {
         countLeft.innerHTML = '<span class="replay-status-foul">⚠️ 反則負け</span>';
       } else if (fType === '都落ち') {
         countLeft.innerHTML = '<span class="replay-status-capital-fall">🏛️ 都落ち</span>';
@@ -4248,7 +4320,7 @@ const ReplayManager = {
     const rightCards = handsNow.seat_4 || [];
     if (countRight) {
       const fType = getSeatFoulType(4);
-      if (rightCards.length === 0 && fType === '反則負け') {
+      if (fType === '反則負け') {
         countRight.innerHTML = '<span class="replay-status-foul">⚠️ 反則負け</span>';
       } else if (fType === '都落ち') {
         countRight.innerHTML = '<span class="replay-status-capital-fall">🏛️ 都落ち</span>';
@@ -4267,7 +4339,7 @@ const ReplayManager = {
     const bottomCards = handsNow.seat_1 || [];
     if (countBottom) {
       const fType = getSeatFoulType(1);
-      if (bottomCards.length === 0 && fType === '反則負け') {
+      if (fType === '反則負け') {
         countBottom.innerHTML = '<span class="replay-status-foul">⚠️ 反則負け</span>';
       } else if (fType === '都落ち') {
         countBottom.innerHTML = '<span class="replay-status-capital-fall">🏛️ 都落ち</span>';
@@ -4278,8 +4350,8 @@ const ReplayManager = {
 
     if (handBottom) {
       handBottom.innerHTML = '';
+      const fType = getSeatFoulType(1);
       if (bottomCards.length === 0) {
-        const fType = getSeatFoulType(1);
         if (fType === '反則負け') {
           handBottom.innerHTML = '<span style="font-size:11px; color:#f87171; font-weight:800;">⚠️ 反則負け（失格・大貧民確定）</span>';
         } else if (fType === '都落ち') {
@@ -4293,6 +4365,17 @@ const ReplayManager = {
           const isThisPlayed = (activeSeatNum === 1) && chosen.some(pc => isSameCard(pc, c));
           handBottom.appendChild(this.createRoyalCardEl(c, isThisPlayed, false));
         });
+        if (fType === '都落ち') {
+          const foulOverlay = document.createElement('div');
+          foulOverlay.className = 'replay-foul-overlay';
+          foulOverlay.innerHTML = '<span class="replay-status-capital-fall">🏛️ 都落ち離脱（手札保持）</span>';
+          handBottom.appendChild(foulOverlay);
+        } else if (fType === '反則負け') {
+          const foulOverlay = document.createElement('div');
+          foulOverlay.className = 'replay-foul-overlay';
+          foulOverlay.innerHTML = '<span class="replay-status-foul">⚠️ 反則負け失格</span>';
+          handBottom.appendChild(foulOverlay);
+        }
       }
     }
 
@@ -4459,6 +4542,18 @@ const ReplayManager = {
       const isThisPlayed = chosen && chosen.some(pc => isSameCard(pc, c));
       containerEl.appendChild(this.createRoyalCardEl(c, isThisPlayed, true));
     });
+
+    if (foulType === '都落ち') {
+      const foulOverlay = document.createElement('div');
+      foulOverlay.className = 'replay-foul-overlay';
+      foulOverlay.innerHTML = '<span class="replay-status-capital-fall">🏛️ 都落ち離脱</span>';
+      containerEl.appendChild(foulOverlay);
+    } else if (foulType === '反則負け') {
+      const foulOverlay = document.createElement('div');
+      foulOverlay.className = 'replay-foul-overlay';
+      foulOverlay.innerHTML = '<span class="replay-status-foul">⚠️ 反則負け失格</span>';
+      containerEl.appendChild(foulOverlay);
+    }
   },
 
   createRoyalCardEl(card, isPlayed = false, isMini = false) {
@@ -4615,6 +4710,7 @@ const ReplayManager = {
     const m = document.getElementById('replay-modal');
     if (m) m.classList.remove('active');
     this.restorePreviousModal();
+    if (typeof isFullscreenToggling !== 'undefined') isFullscreenToggling = false;
     updateFullscreenButtonsUI();
   }
 };
@@ -4751,158 +4847,7 @@ function renderRankingModalContent() {
 
   updateResetButtonUI();
 
-  if (currentStatsTab === 'practice') {
-    if (typeof ScenarioManager !== 'undefined' && ScenarioManager.isActive) {
-      const statsList = Object.values(ScenarioManager.data.stageMatchStats || {});
-      const pAvatar = ScenarioManager.getCurrentAvatar();
-      let html = `
-        <div style="margin-bottom: 8px; font-size: 11.5px; color: #b0bec5; line-height: 1.45;">
-          📜 シナリオ関門 途中成績<br>
-          <span style="font-size:10px; color:#8c9ba5;">※現在挑戦中の関門（ステージ）における対戦スコアです。規定試合消化後に【最低1勝 ＋ 首位（大富豪率または平均順位）】で関門突破となります。</span>
-        </div>
-        <div class="user-overall-summary-badge">
-          <span>📜 関門進捗:</span>
-          <span>第 <strong>${ScenarioManager.data.currentMatchIndex}</strong> / <strong>${ScenarioManager.data.matchesPerStage}</strong> 試合消化中</span>
-          <span>突破条件: <strong>最低1勝 ＋ 首位</strong></span>
-        </div>
-        <div class="ranking-table-container">
-          <table class="ranking-table">
-            <thead>
-              <tr>
-                <th style="width: 32px; text-align: center;">席</th>
-                <th>参加者</th>
-                <th style="text-align: right;">平均順位</th>
-                <th style="text-align: right;">大富豪率</th>
-                <th style="text-align: center; white-space: nowrap !important; min-width: 102px;">大 / 富 / 貧 / 大貧</th>
-              </tr>
-            </thead>
-            <tbody>
-      `;
-
-      if (statsList.length === 0) {
-        html += `
-          <tr>
-            <td colspan="5" style="text-align: center; color: #8c9ba5; padding: 12px;">第1試合の終了後に途中経過が表示されます。</td>
-          </tr>
-        `;
-      } else {
-        const sortedScenario = [...statsList].map(item => {
-          const g = Math.max(1, item.games);
-          return {
-            ...item,
-            dfRate: ((item.df / g) * 100).toFixed(1),
-            avgRank: (item.rankSum / g).toFixed(2)
-          };
-        }).sort((a, b) => parseFloat(a.avgRank) - parseFloat(b.avgRank));
-
-        sortedScenario.forEach((item, idx) => {
-          const isPlayer = item.isPlayer;
-          const rowStyle = isPlayer ? ' style="background: rgba(212,175,55,0.18); font-weight: bold;"' : '';
-          const avatarSrc = isPlayer ? pAvatar.image : (CHAR_IMAGES[item.charId] || 'fugo-絵柄/king.png');
-          const displayName = isPlayer ? getPlayerDisplayName('player', true) : `${item.icon} ${item.name}`;
-          const foulSuffix = (typeof foulPlayers !== 'undefined' && foulPlayers[isPlayer ? 'player' : PLAYERS.find(pl => assignedCharacters[pl]?.id === item.charId)]) ? ` <span class="foul-badge">(${foulPlayers[isPlayer ? 'player' : PLAYERS.find(pl => assignedCharacters[pl]?.id === item.charId)]})</span>` : '';
-
-          html += `
-            <tr${rowStyle}>
-              <td style="text-align: center; color: #ffd700;">${idx + 1}</td>
-              <td>
-                <div style="display: flex; align-items: center; gap: 4px;">
-                  <img src="${avatarSrc}" onerror="this.onerror=null; this.src='boy.png';" style="width: 20px; aspect-ratio: 2/3; border-radius: 3px; border: 1px solid rgba(212,175,55,0.4);" alt="">
-                  <span style="color: ${isPlayer ? '#fff3a8' : '#e0e6ed'};">${displayName}</span>
-                </div>
-              </td>
-              <td style="text-align: right; color: #ffd700; font-weight: 800;">${item.avgRank}位</td>
-              <td style="text-align: right; color: #fff3a8;">${item.dfRate}%</td>
-              <td style="text-align: center; white-space: nowrap !important;">
-                ${renderRankCountBadges(item.df, item.f, item.h, item.dh)}${foulSuffix}
-              </td>
-            </tr>
-          `;
-        });
-      }
-
-      html += `</tbody></table></div>`;
-      body.innerHTML = html;
-      return;
-    }
-
-    const isSeriesActive = (MatchSeriesManager && MatchSeriesManager.isActive);
-    if (!isSeriesActive) {
-      body.innerHTML = `
-        <div style="padding: 24px 16px; text-align: center; color: #cbd5e1; line-height: 1.6;">
-          現在進行中の対戦（練習/観戦）はありません。<br>
-          <span style="font-size: 11px; color: #8c9ba5;">タイトルメニューから「練習モード」または「観戦モード」を開始するとここにリアルタイム成績が表示されます。</span>
-        </div>
-      `;
-      return;
-    }
-
-    const pStats = GameStorage.loadPlayerStats();
-    const pTotal = pStats.totalGames;
-    const pAvg = pTotal > 0 ? (pStats.totalRankSum / pTotal).toFixed(2) : '-';
-    const pDfRate = pTotal > 0 ? ((pStats.rankCounts['大富豪'] / pTotal) * 100).toFixed(1) : '0.0';
-
-    const list = MatchSeriesManager.getSortedResults();
-    let html = `
-      <div style="margin-bottom: 8px; font-size: 11.5px; color: #b0bec5; line-height: 1.45;">
-        ⚔️ 進行中マッチ成績（練習・観戦シリーズ途中経過）<br>
-        <span style="font-size:10px; color:#8c9ba5;">※現在進行中の連続試合シリーズにおけるリアルタイム順位です。平均順位が高い順（1位に近い順）に表示されます。</span>
-      </div>
-
-      <div class="user-overall-summary-badge">
-        <span>👤 あなたの通算実績:</span>
-        <span>通算 <strong>${pTotal}</strong> 戦</span>
-        <span>平均 <strong>${pAvg}</strong> 位</span>
-        <span>大富豪率 <strong>${pDfRate}%</strong></span>
-      </div>
-
-      <div style="margin-bottom: 8px; font-size: 12px; color: #fff3a8; font-weight: bold; text-align: center;">
-        現在の対戦状況: 第 ${MatchSeriesManager.currentGame} / ${MatchSeriesManager.totalGames} 試合消化（${MatchSeriesManager.mode === 'auto' ? '観戦モード' : '練習モード'}）
-      </div>
-      <div class="ranking-table-container">
-        <table class="ranking-table">
-          <thead>
-            <tr>
-              <th style="width: 32px; text-align: center;">順位</th>
-              <th>参加者</th>
-              <th style="text-align: right;">平均順位</th>
-              <th style="text-align: right;">大富豪率</th>
-              <th style="text-align: center; white-space: nowrap !important; min-width: 102px;">大 / 富 / 貧 / 大貧</th>
-            </tr>
-          </thead>
-          <tbody>
-    `;
-
-    list.forEach((item, idx) => {
-      const rankBadge = `<span class="rank-num-badge rank-num-${idx + 1}">${idx + 1}</span>`;
-      const isPlayer = item.isPlayer;
-      const rowStyle = isPlayer ? ' style="background: rgba(212,175,55,0.18); font-weight: bold;"' : '';
-      const avatarEl = `<img src="${CHAR_IMAGES[item.id] || 'fugo-絵柄/king.png'}" onerror="this.onerror=null; this.src='${item.id.toLowerCase()}.png';" style="width: 20px; aspect-ratio: 2/3; border-radius: 3px; border: 1px solid rgba(212,175,55,0.4);" alt="">`;
-      const displayName = isPlayer ? getPlayerDisplayName('player', true) : `${item.icon} ${item.name}`;
-      const foulSuffix = (typeof foulPlayers !== 'undefined' && foulPlayers[isPlayer ? 'player' : PLAYERS.find(pl => assignedCharacters[pl]?.id === item.id)]) ? ` <span class="foul-badge">(${foulPlayers[isPlayer ? 'player' : PLAYERS.find(pl => assignedCharacters[pl]?.id === item.id)]})</span>` : '';
-
-      html += `
-        <tr${rowStyle}>
-          <td style="text-align: center;">${rankBadge}</td>
-          <td>
-            <div style="display: flex; align-items: center; gap: 4px;">
-              ${avatarEl}
-              <span style="color: ${isPlayer ? '#fff3a8' : '#e0e6ed'};">${displayName}</span>
-            </div>
-          </td>
-          <td style="text-align: right; color: #ffd700; font-weight: 800;">${item.avg}位</td>
-          <td style="text-align: right; color: #fff3a8;">${item.winRate}%</td>
-          <td style="text-align: center; white-space: nowrap !important;">
-            ${renderRankCountBadges(item.df, item.f, item.h, item.dh)}${foulSuffix}
-          </td>
-        </tr>
-      `;
-    });
-
-    html += `</tbody></table></div>`;
-    body.innerHTML = html;
-
-  } else if (currentStatsTab === 'my') {
+  if (currentStatsTab === 'my') {
     const stats = GameStorage.loadPlayerStats();
     const total = stats.totalGames;
     const avg = total > 0 ? (stats.totalRankSum / total).toFixed(2) : '-';
@@ -5183,8 +5128,6 @@ const StartSetupManager = {
     const pBtn = document.getElementById('btn-mode-practice');
     const aBtn = document.getElementById('btn-mode-auto');
     const sBtn = document.getElementById('btn-mode-scenario');
-    const scenarioPlate = document.getElementById('setup-scenario-info-plate');
-    const practiceWrap = document.getElementById('setup-practice-options-wrap');
 
     const setModeVisual = (mode) => {
       terminateCurrentSession();
@@ -5192,10 +5135,6 @@ const StartSetupManager = {
       if (pBtn) pBtn.classList.toggle('active', mode === 'practice');
       if (aBtn) aBtn.classList.toggle('active', mode === 'auto');
       if (sBtn) sBtn.classList.toggle('active', mode === 'scenario');
-
-      const isScenario = (mode === 'scenario');
-      if (scenarioPlate) scenarioPlate.classList.toggle('is-hidden', !isScenario);
-      if (practiceWrap) practiceWrap.classList.toggle('is-hidden', isScenario);
 
       this.updateStartButtonState();
       this.updateGuidanceMessage();
@@ -5215,10 +5154,17 @@ const StartSetupManager = {
       };
     }
 
+    /* シナリオ選択時：中間プレートを挟まず直接シナリオ画面へ遷移 */
     if (sBtn) {
       sBtn.onclick = () => {
         soundMgr.playSelect();
-        setModeVisual('scenario');
+        terminateCurrentSession();
+        ScenarioManager.load();
+        if (ScenarioManager.data.avatarId) {
+          ScenarioManager.openMapScreen();
+        } else {
+          ScenarioManager.openAvatarSelectScreen();
+        }
       };
     }
   },
@@ -5446,11 +5392,6 @@ const StartSetupManager = {
     const textEl = document.getElementById('setup-guidance-text');
     if (!textEl) return;
 
-    if (this.selectedMode === 'scenario') {
-      textEl.textContent = '📜 シナリオモード：下のボタンから物語画面へ進み、勝負師を選択してください';
-      return;
-    }
-
     const hasPlayer = !!this.selectedPlayerCharId;
     const oppoCount = this.selectedOpponentIds.length;
 
@@ -5468,14 +5409,6 @@ const StartSetupManager = {
     const icon = document.getElementById('btn-start-icon');
     const text = document.getElementById('btn-start-text');
     if (!btn) return;
-
-    if (this.selectedMode === 'scenario') {
-      btn.disabled = false;
-      if (icon) icon.textContent = '📜';
-      if (text) text.textContent = 'シナリオモードへ進む（専用画面へ） ⚔️';
-      this.updateGuidanceMessage();
-      return;
-    }
 
     const hasPlayer = !!this.selectedPlayerCharId;
     const oppoCount = this.selectedOpponentIds.length;
@@ -5503,16 +5436,6 @@ const StartSetupManager = {
   startConfiguredGame() {
     soundMgr.playSelect();
     terminateCurrentSession();
-
-    if (this.selectedMode === 'scenario') {
-      ScenarioManager.load();
-      if (ScenarioManager.data.avatarId) {
-        ScenarioManager.openMapScreen();
-      } else {
-        ScenarioManager.openAvatarSelectScreen();
-      }
-      return;
-    }
 
     const mode = this.selectedMode;
     const isExchange = (this.selectedExchange === 'yes');
@@ -5811,7 +5734,9 @@ const MatchSeriesManager = {
       wImg.onerror = () => { wImg.src = 'king.png'; };
     }
 
-    if (wName) wName.textContent = champion.name;
+    if (wName) {
+      wName.textContent = (champion.id === 'GILGAMESH') ? 'ギルガメッシュ' : champion.name;
+    }
     if (wTitle) wTitle.textContent = `${this.mode === 'auto' ? '🤖 SPECTATE' : '👑 TOURNAMENT'} CHAMPION`;
 
     document.querySelectorAll('.champion-particle').forEach(p => p.remove());
@@ -5850,7 +5775,8 @@ const MatchSeriesManager = {
       const isPlayer = item.isPlayer;
       const rowStyle = isPlayer ? ' style="background: rgba(212,175,55,0.18); font-weight: bold;"' : '';
       const avatarEl = `<img src="${CHAR_IMAGES[item.id] || 'fugo-絵柄/king.png'}" onerror="this.onerror=null; this.src='${item.id.toLowerCase()}.png';" style="width: 20px; aspect-ratio: 2/3; border-radius: 3px; border: 1px solid rgba(212,175,55,0.4);" alt="">`;
-      const displayName = isPlayer ? getPlayerDisplayName('player', true) : `${item.icon} ${item.name}`;
+      const formalName = (item.id === 'GILGAMESH') ? 'ギルガメッシュ' : item.name;
+      const displayName = isPlayer ? getPlayerDisplayName('player', true) : `${item.icon} ${formalName}`;
       const foulSuffix = (typeof foulPlayers !== 'undefined' && foulPlayers[isPlayer ? 'player' : PLAYERS.find(pl => assignedCharacters[pl]?.id === item.id)]) ? ` <span class="foul-badge">(${foulPlayers[isPlayer ? 'player' : PLAYERS.find(pl => assignedCharacters[pl]?.id === item.id)]})</span>` : '';
 
       html += `
@@ -5907,7 +5833,8 @@ const MatchSeriesManager = {
     const list = this.getSortedResults();
     let text = `【ROYAL DAIFUGO ${this.mode === 'auto' ? '観戦' : '練習'}結果（全${this.totalGames}試合）】\n`;
     list.forEach((item, idx) => {
-      text += `${idx + 1}位: ${item.name} (平均 ${item.avg}位 / 大富豪:${item.df} 富豪:${item.f} 貧民:${item.h} 大貧民:${item.dh})\n`;
+      const formalName = (item.id === 'GILGAMESH') ? 'ギルガメッシュ' : item.name;
+      text += `${idx + 1}位: ${formalName} (平均 ${item.avg}位 / 大富豪:${item.df} 富豪:${item.f} 貧民:${item.h} 大貧民:${item.dh})\n`;
     });
 
     navigator.clipboard.writeText(text).then(() => {
@@ -5927,7 +5854,8 @@ const MatchSeriesManager = {
     const list = this.getSortedResults();
     let csv = '順位,キャラクター名,平均順位,大富豪率(%),大富豪,富豪,貧民,大貧民\n';
     list.forEach((item, idx) => {
-      csv += `${idx + 1},"${item.name}",${item.avg},${item.winRate},${item.df},${item.f},${item.h},${item.dh}\n`;
+      const formalName = (item.id === 'GILGAMESH') ? 'ギルガメッシュ' : item.name;
+      csv += `${idx + 1},"${formalName}",${item.avg},${item.winRate},${item.df},${item.f},${item.h},${item.dh}\n`;
     });
 
     const fileName = `match_ranking_${this.mode}_${this.totalGames}games_${getFormattedTimestamp()}.csv`;
@@ -5944,7 +5872,6 @@ const MatchSeriesManager = {
         }
       }
     });
-    updateFullscreenButtonsUI();
   },
 
   async downloadLogs() {
@@ -5980,7 +5907,6 @@ const MatchSeriesManager = {
         }
       }
     });
-    updateFullscreenButtonsUI();
   },
 
   closeAndEnd() {
@@ -6005,6 +5931,8 @@ const MatchSeriesManager = {
     bgmMgr.setBattleBaseSrc('bgm_normal.mp3');
     bgmMgr.setCharSelectPhase(true);
     document.getElementById('char-select-overlay').classList.add('active');
+
+    if (typeof isFullscreenToggling !== 'undefined') isFullscreenToggling = false;
     updateFullscreenButtonsUI();
   }
 };
@@ -6040,7 +5968,9 @@ const SaveLoadManager = {
       display: rank,
       rank: rank,
       isJoker: isJoker,
-      jokerId: jId
+      jokerId: jId,
+      isReceivedCard: !!c.isReceivedCard,
+      isGivingCard: !!c.isGivingCard
     };
   },
 
@@ -6058,6 +5988,7 @@ const SaveLoadManager = {
     });
 
     const cleanField = (fieldCards || []).map(c => this.sanitizeCardForSave(c)).filter(Boolean);
+    const cleanPendingReceived = (pendingReceivedCards || []).map(c => this.sanitizeCardForSave(c)).filter(Boolean);
 
     const cleanAssigned = {};
     PLAYERS.forEach(p => {
@@ -6094,6 +6025,7 @@ const SaveLoadManager = {
       playerPassCounts: { ...playerPassCounts },
       hasPassedInRound: { ...hasPassedInRound },
       fieldCards: cleanField,
+      pendingReceivedCards: cleanPendingReceived,
       lastPlayedPlayer: lastPlayedPlayer,
       currentTurnIndex: currentTurnIndex,
       consecutivePasses: consecutivePasses,
@@ -6175,6 +6107,15 @@ const SaveLoadManager = {
         return false;
       }
       const data = JSON.parse(raw);
+
+      if (typeof ScenarioManager !== 'undefined') {
+        ScenarioManager.isActive = false;
+        const sMap = document.getElementById('screen-map');
+        const sAvatar = document.getElementById('screen-avatar-select');
+        if (sMap) { sMap.classList.add('is-hidden'); sMap.classList.remove('active'); }
+        if (sAvatar) { sAvatar.classList.add('is-hidden'); sAvatar.classList.remove('active'); }
+      }
+
       GameTimer.clearAll();
       isProcessing = false;
 
@@ -6212,6 +6153,7 @@ const SaveLoadManager = {
       });
 
       fieldCards = (data.fieldCards || []).map(c => this.sanitizeCardForSave(c)).filter(Boolean);
+      pendingReceivedCards = (data.pendingReceivedCards || []).map(c => this.sanitizeCardForSave(c)).filter(Boolean);
 
       playerPassCounts = data.playerPassCounts || { player: 0, cpu1: 0, cpu2: 0, cpu3: 0 };
       hasPassedInRound = data.hasPassedInRound || { player: false, cpu1: false, cpu2: false, cpu3: false };
@@ -6228,7 +6170,6 @@ const SaveLoadManager = {
       isPreExchangePhase = !!data.isPreExchangePhase;
       isExchangeTransitioning = false;
       requiredExchangeCount = data.requiredExchangeCount || 0;
-      pendingReceivedCards = [];
       pendingForbiddenConfirmation = false;
       foulPlayers = {};
 
@@ -6324,7 +6265,7 @@ const SaveLoadManager = {
       if (msgBox) {
         msgBox.innerHTML = `● 前回の対局（第${resumeTurn}手）から再開しました`;
         msgBox.classList.add('message-resume-active');
-        setTimeout(() => msgBox.classList.remove('message-resume-active'), 2500);
+        setTimeout(() => msgBox.classList.remove('message-resume-active'), 2505);
       }
 
       soundMgr.playWin();
@@ -6358,6 +6299,7 @@ const SaveLoadManager = {
         checkTurn();
       }
 
+      if (typeof isFullscreenToggling !== 'undefined') isFullscreenToggling = false;
       updateFullscreenButtonsUI();
       return true;
     } catch (e) {
@@ -6500,7 +6442,7 @@ const OpeningManager = {
           if (cursor < candidates.length) {
             tryPlay();
           } else {
-            console.warn('初回BGM自動再生ブロック（ユーザー操作待機）:', err);
+            console.warn('初回BGM自動再生ブロック:', err);
           }
         });
       };
@@ -6522,8 +6464,7 @@ const OpeningManager = {
       const req = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
       if (req && !isFullscreenActive()) {
         req.call(docEl).catch(() => {});
-      
-    }
+      }
     } catch (e) {}
   },
 
@@ -6673,6 +6614,7 @@ const OpeningManager = {
       screen.classList.add('is-hidden');
     }
 
+    if (typeof isFullscreenToggling !== 'undefined') isFullscreenToggling = false;
     updateFullscreenButtonsUI();
 
     if (bgmMgr && !isSoundMuted) {
@@ -6766,7 +6708,7 @@ const OpeningManager = {
 };
 
 /* ============================================================
- * 12. イベントリスナー初期化 ＆ アプリ起動（完全再配線版）
+ * 12. イベントリスナー初期化 ＆ アプリ起動
  * ============================================================ */
 function initEvents() {
   if (window._hasInitEvents) return;
@@ -6781,9 +6723,7 @@ function initEvents() {
   const versionModal = document.getElementById('version-modal');
   const logViewerModal = document.getElementById('log-viewer-modal');
   const debugLogModal = document.getElementById('debug-log-modal');
-  const practiceInterimModal = document.getElementById('practice-interim-modal');
 
-  // ★全画面ボタンの確実な配線（全画面ボタンすべてに一括登録）
   document.querySelectorAll('.btn-fullscreen-toggle, #fullscreen-btn, #char-select-fullscreen-btn, #btn-fullscreen-toggle, #btn-map-fullscreen-toggle, #practice-finish-fullscreen-btn, #next-game-fullscreen-btn, #stage-clear-fullscreen-btn').forEach(b => {
     b.onclick = (e) => {
       e.stopPropagation();
@@ -6791,7 +6731,6 @@ function initEvents() {
     };
   });
 
-  // ★メイン操作ボタンの確実な配線
   const playBtn = document.getElementById('play-btn');
   if (playBtn) {
     playBtn.onclick = (e) => {
@@ -6917,25 +6856,6 @@ function initEvents() {
         resetGame(false, enableCardExchange);
       }
     };
-  }
-
-  if (practiceInterimModal) {
-    const pCloseX = document.getElementById('modal-practice-interim-close-x');
-    if (pCloseX) {
-      pCloseX.onclick = () => {
-        soundMgr.playDeselect();
-        practiceInterimModal.classList.remove('active');
-        updateFullscreenButtonsUI();
-      };
-    }
-    const pCloseBtn = document.getElementById('btn-practice-interim-close');
-    if (pCloseBtn) {
-      pCloseBtn.onclick = () => {
-        soundMgr.playDeselect();
-        practiceInterimModal.classList.remove('active');
-        updateFullscreenButtonsUI();
-      };
-    }
   }
 
   const practiceJsonlBtn = document.getElementById('btn-download-practice-jsonl');
@@ -7093,13 +7013,9 @@ function initEvents() {
   if (statsBtn) {
     statsBtn.onclick = () => {
       soundMgr.playSelect();
-      const isScenarioActive = (typeof ScenarioManager !== 'undefined' && ScenarioManager.isActive);
-      const isSeriesActive = (MatchSeriesManager && MatchSeriesManager.isActive);
-
-      currentStatsTab = (isScenarioActive || isSeriesActive) ? 'practice' : 'my';
-
+      currentStatsTab = 'my';
       document.querySelectorAll('.modal-tab-btn').forEach(b => b.classList.remove('active'));
-      const targetTabBtn = document.getElementById((isScenarioActive || isSeriesActive) ? 'tab-practice-btn' : 'tab-my-stats-btn');
+      const targetTabBtn = document.getElementById('tab-my-stats-btn');
       if (targetTabBtn) targetTabBtn.classList.add('active');
 
       renderRankingModalContent();
@@ -7112,17 +7028,6 @@ function initEvents() {
   if (mStatsCloseBtn) mStatsCloseBtn.onclick = () => { soundMgr.playDeselect(); if (statsModal) statsModal.classList.remove('active'); updateFullscreenButtonsUI(); };
   const mStatsCloseX = document.getElementById('modal-stats-close-x');
   if (mStatsCloseX) mStatsCloseX.onclick = () => { soundMgr.playDeselect(); if (statsModal) statsModal.classList.remove('active'); updateFullscreenButtonsUI(); };
-
-  const tabPracticeBtn = document.getElementById('tab-practice-btn');
-  if (tabPracticeBtn) {
-    tabPracticeBtn.onclick = () => {
-      soundMgr.playSelect();
-      currentStatsTab = 'practice';
-      document.querySelectorAll('.modal-tab-btn').forEach(b => b.classList.remove('active'));
-      tabPracticeBtn.classList.add('active');
-      renderRankingModalContent();
-    };
-  }
 
   const tabMyStatsBtn = document.getElementById('tab-my-stats-btn');
   if (tabMyStatsBtn) {
@@ -7173,7 +7078,6 @@ function initEvents() {
       this.classList.add('active');
       const spd = parseInt(this.getAttribute('data-speed'), 10);
       currentSpeed = !isNaN(spd) ? spd : 1;
-      console.log(`[SPEED] 速度切替: ${currentSpeed}x (倍率: ${getSpeedMultiplier()})`);
     });
   });
 
@@ -7210,6 +7114,7 @@ function initEvents() {
         currentSpeed = 1;
         document.querySelectorAll('.btn-speed').forEach(b => b.classList.toggle('active', b.getAttribute('data-speed') === '1'));
         isProcessing = false;
+        AIStatusUI.clearBrainDot('player');
       }
 
       updateCharacterUI();
@@ -7230,6 +7135,7 @@ function initEvents() {
       } else {
         if (PLAYERS[Number(currentTurnIndex)] === 'player' && !gameEnded && !isExchangeTransitioning) {
           isProcessing = false;
+          AIStatusUI.clearBrainDot('player');
           render(false);
         }
       }
@@ -7246,7 +7152,6 @@ function initEvents() {
       }
 
       soundMgr.playSelect();
-
       terminateCurrentSession();
 
       if (ScenarioManager && ScenarioManager.isActive) {
@@ -7271,7 +7176,6 @@ function initEvents() {
       }
 
       previousRanks = {};
-
       bgmMgr.setBattleBaseSrc('bgm_normal.mp3');
       bgmMgr.setCharSelectPhase(true);
       SaveLoadManager.updateLoadButtonState();
@@ -7279,6 +7183,7 @@ function initEvents() {
       StartSetupManager.renderOpponentsGrid();
       document.getElementById('char-select-overlay').classList.add('active');
 
+      if (typeof isFullscreenToggling !== 'undefined') isFullscreenToggling = false;
       updateFullscreenButtonsUI();
     };
   }
@@ -7367,6 +7272,7 @@ function initEvents() {
       document.getElementById('char-select-overlay').classList.add('active');
       bgmMgr.setBattleBaseSrc('bgm_normal.mp3');
       bgmMgr.setCharSelectPhase(true);
+      if (typeof isFullscreenToggling !== 'undefined') isFullscreenToggling = false;
       updateFullscreenButtonsUI();
     };
   }
@@ -7385,6 +7291,7 @@ function initEvents() {
       document.getElementById('char-select-overlay').classList.add('active');
       bgmMgr.setBattleBaseSrc('bgm_normal.mp3');
       bgmMgr.setCharSelectPhase(true);
+      if (typeof isFullscreenToggling !== 'undefined') isFullscreenToggling = false;
       updateFullscreenButtonsUI();
     };
   }
@@ -7426,6 +7333,7 @@ function initEvents() {
   if (btnRuleHelp2) btnRuleHelp2.onclick = () => ScenarioManager.openRulesModal();
   if (btnMapRuleHelp) btnMapRuleHelp.onclick = () => ScenarioManager.openRulesModal();
 
+/* === 【第3部 結合部】 === */
   const mScenarioCharsCloseX = document.getElementById('modal-scenario-chars-close-x');
   const btnScenarioCharsClose = document.getElementById('btn-scenario-chars-close');
   if (mScenarioCharsCloseX) mScenarioCharsCloseX.onclick = () => { soundMgr.playDeselect(); const m = document.getElementById('modal-scenario-chars'); if (m) m.classList.remove('active'); updateFullscreenButtonsUI(); };
@@ -7461,6 +7369,7 @@ function initEvents() {
           false
         );
       }
+      if (typeof isFullscreenToggling !== 'undefined') isFullscreenToggling = false;
       updateFullscreenButtonsUI();
     }, 100);
   });
@@ -7516,6 +7425,7 @@ function startApp() {
       }
     });
 
+    if (typeof isFullscreenToggling !== 'undefined') isFullscreenToggling = false;
     updateFullscreenButtonsUI();
     console.log(`[SYSTEM] アプリ初期化完了（${APP_VERSION} モジュール分割・完全整合版）`);
   } catch (err) {

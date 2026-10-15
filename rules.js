@@ -29,6 +29,15 @@ function getActiveGameRules(customRules = null) {
 }
 
 /* ----------------------------------------------------
+ * 0.1 実質逆転状態（革命 ⊕ 11バック）判定ヘルパー
+ * ---------------------------------------------------- */
+function effectiveReverse() {
+  const rev = (typeof isRevolution !== 'undefined') ? !!isRevolution : false;
+  const eb = (typeof isElevenBack !== 'undefined') ? !!isElevenBack : false;
+  return rev !== eb;
+}
+
+/* ----------------------------------------------------
  * 1. カードランク絶対正規化アーキテクチャ（Sanitization Engine）
  * ---------------------------------------------------- */
 function normalizeCardRank(card) {

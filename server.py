@@ -10,15 +10,16 @@
 # ＆ 🔮 聖徳太子【天意の刻・勝ち確親権強奪＆完全傾聴】
 # ＆ 🛡️ アレク王【ファランクス突撃・殿確保＆深さ7詰み】
 # ＆ 確定シンプル統一反則判定（11バック通常扱い・スペ3共通化・純粋革命フラグ完全整合）
-# ＆ ログ一括直接格納（logs/フォルダ完全防壁API・スマホ/PC透過対応版）
+# ＆ 高速MCTS（差分クローン最適化） ＆ 直感モデルAPEX-v3完全統一版
+# ＆ ログ一括直接格納（PC logs/ フォルダ完全直結版）
 # ==============================================================================
 
 import os
 import sys
 import json
 import time
-import random
 import math
+import random
 from collections import defaultdict
 
 try:
@@ -33,7 +34,7 @@ from flask import Flask, request, jsonify, send_from_directory, abort
 from flask_cors import CORS
 
 # ----------------------------------------------------
-# 1. PyTorchモデルの定義 ＆ 三刀流モデル並行ロード機構
+# 1. PyTorchモデルの定義 ＆ APEX-v3 直感モデル統一ロード機構
 # ----------------------------------------------------
 class ImprovedDaifugoModel(nn.Module):
     """163次元 / 159次元 対応モデル: 6層全結合 + BatchNorm + Dropout対応"""
@@ -115,39 +116,21 @@ def load_flexible_model(target_filenames, default_dim=163, model_role="超級AI"
             print(f"⚠️ モデルロード例外 ({fname}): {e}", flush=True)
     return None, False, None, default_dim
 
-# 三刀流モデル並行ロード機構
-model_hi2, model_hi2_loaded, hi2_name, hi2_in_dim = load_flexible_model(
-    ['daifugou_ai_hi2.pth', 'daifugou_ai_apex_v2.pth', 'daifugo_ai_163dim.pth'],
-    default_dim=163, model_role="Model-1 [hi2/標準]"
+model_apex, model_apex_loaded, apex_name, apex_in_dim = load_flexible_model(
+    ['daifugou_ai_apex_v3.pth', 'daifugou_ai_apex.pth', 'daifugou_ai_hi2.pth'],
+    default_dim=163, model_role="基幹直感モデル [APEX-v3統一]"
 )
 
 model_gilgamesh, model_gilgamesh_loaded, gilgamesh_name, gilgamesh_in_dim = load_flexible_model(
-    ['daifugou_ai_gilgamesh.pth', 'daifugou_ai_hi2.pth'],
-    default_dim=163, model_role="Model-2 [gilgamesh/特化]"
+    ['daifugou_ai_gilgamesh.pth', 'daifugou_ai_apex_v3.pth'],
+    default_dim=163, model_role="特化探索モデル [gilgamesh]"
 )
 
-model_apex, model_apex_loaded, apex_name, apex_in_dim = load_flexible_model(
-    ['daifugou_ai_apex_v3.pth', 'daifugou_ai_apex.pth', 'daifugou_ai_hi2.pth'],
-    default_dim=163, model_role="Model-3 [apex/覚醒新王・王専用]"
-)
-
-if not model_gilgamesh_loaded and model_hi2_loaded:
-    model_gilgamesh = model_hi2
+if not model_gilgamesh_loaded and model_apex_loaded:
+    model_gilgamesh = model_apex
     model_gilgamesh_loaded = True
-    gilgamesh_name = hi2_name
-    gilgamesh_in_dim = hi2_in_dim
-
-if not model_apex_loaded and model_hi2_loaded:
-    model_apex = model_hi2
-    model_apex_loaded = True
-    apex_name = hi2_name
-    apex_in_dim = hi2_in_dim
-
-if not model_hi2_loaded and model_gilgamesh_loaded:
-    model_hi2 = model_gilgamesh
-    model_hi2_loaded = True
-    hi2_name = gilgamesh_name
-    hi2_in_dim = gilgamesh_in_dim
+    gilgamesh_name = apex_name
+    gilgamesh_in_dim = apex_in_dim
 
 # ----------------------------------------------------
 # 2. キャラクター別 定石パーセント設定値
@@ -302,18 +285,20 @@ RANK_VALUE_MAP = {r: i + 1 for i, r in enumerate(RANKS)}
 RANK_VALUE_MAP['JOKER'] = 14
 
 class Card:
-    __slots__ = ('suit', 'display', 'is_joker', 'joker_id')
+    __slots__ = ('suit', 'display', 'is_joker', 'joker_id', 'card_val', '_hash')
     def __init__(self, suit, display, is_joker=False, joker_id=None):
         self.suit = suit
         self.display = display
         self.is_joker = is_joker
         self.joker_id = joker_id
+        self.card_val = 14 if is_joker else RANK_VALUE_MAP[display]
+        self._hash = hash((self.suit, self.display, self.is_joker, self.joker_id))
 
     def key(self): return 'JOKER' if self.is_joker else self.display
-    def val(self): return 14 if self.is_joker else RANK_VALUE_MAP[self.display]
+    def val(self): return self.card_val
     def strength(self, rev=False):
         if self.is_joker: return 9999
-        v = self.val()
+        v = self.card_val
         return (14 - v) if rev else v
 
     def __eq__(self, o):
@@ -323,7 +308,7 @@ class Card:
         return self.suit == o.suit and self.display == o.display
 
     def __hash__(self):
-        return hash((self.suit, self.display, self.is_joker, self.joker_id))
+        return self._hash
 
 def parse_card_obj(c):
     if not c: return None
@@ -374,35 +359,18 @@ def build_input_vector(hand, field, required_dim=163, is_rev=False, is_eb=False,
     full_vec = h_vec + f_vec + c_vec + flags
     return full_vec[:159] if required_dim == 159 else full_vec
 
-# ----------------------------------------------------
-# 【本格競技ルール】確定シンプル統一禁止あがり判定 ＆ 逆算保護
-# ※ 11バック時は通常扱い、スペ3は他の3と完全に同等
-# ----------------------------------------------------
 def is_forbidden_finish_move(move, current_rev=False):
     if not move: return False
     if any(c.is_joker for c in move): return True
     if any(c.display == '8' for c in move): return True
 
-    # 4枚出しによる革命反転の先読み（11バックは除外）
     final_rev = (not current_rev) if len(move) >= 4 else current_rev
     forbidden_rank = '3' if final_rev else '2'
 
-    # スペ3の個別扱いは撤廃し、他の3と同等に判定
     if any(c.display == forbidden_rank for c in move):
         return True
     return False
 
-def will_leave_only_forbidden_cards(move, hand, current_rev=False):
-    if not move or hand is None: return False
-    if len(move) >= len(hand): return False
-
-    rem_hand = [c for c in hand if c not in move]
-    if not rem_hand: return False
-
-    final_rev = (not current_rev) if len(move) >= 4 else current_rev
-    return all(is_forbidden_finish_move([c], final_rev) for c in rem_hand)
-
-# ★多重安全弁: 反則負け確定トラップの厳格検知（手札残り2〜4枚時の逆算脱出保護）
 def will_lead_to_forbidden_trap(move, hand, current_rev=False):
     if not move or hand is None: return False
     rem_hand = [c for c in hand if c not in move]
@@ -424,7 +392,6 @@ def will_lead_to_forbidden_trap(move, hand, current_rev=False):
             return True
     return False
 
-# ★JOKER安売り・低ランクペア浪費の合理的判定
 def is_joker_waste_move(move, hand):
     if not move or hand is None: return False
     if len(move) == len(hand): return False
@@ -812,16 +779,17 @@ def solve_endgame_winning_sequence(hand, current_field, unrevealed, rev=False, m
     return None
 
 # ----------------------------------------------------
-# 4. 探索コア ＆ MCTSエンジン
+# 4. 高速探索コア ＆ 高速MCTSエンジン（差分クローン版）
 # ----------------------------------------------------
 def get_unrevealed_cards(my_hand, field, cleared):
     known = set(my_hand) | set(field) | set(cleared or [])
     full_deck = create_deck()
     return [c for c in full_deck if c not in known]
 
-class SimGame:
-    def __init__(self, hands, field, rev, eb, last_p, passes, finished, p_keys=[0,1,2,3]):
-        self.p_keys = list(p_keys)
+class FastSimGame:
+    __slots__ = ('p_keys', 'hands', 'field', 'rev', 'eb', 'last_p', 'passes', 'finished')
+    def __init__(self, hands, field, rev, eb, last_p, passes, finished, p_keys=(0,1,2,3)):
+        self.p_keys = p_keys
         self.hands = {p: [parse_card_obj(c) for c in hands.get(p, [])] for p in self.p_keys}
         self.field = [parse_card_obj(c) for c in field]
         self.rev = rev
@@ -831,19 +799,28 @@ class SimGame:
         self.finished = list(finished)
 
     def clone(self):
-        return SimGame(self.hands, self.field, self.rev, self.eb, self.last_p, self.passes, self.finished, self.p_keys)
+        g = FastSimGame.__new__(FastSimGame)
+        g.p_keys = self.p_keys
+        g.hands = {0: self.hands[0][:], 1: self.hands[1][:], 2: self.hands[2][:], 3: self.hands[3][:]}
+        g.field = self.field[:]
+        g.rev = self.rev
+        g.eb = self.eb
+        g.last_p = self.last_p
+        g.passes = self.passes
+        g.finished = self.finished[:]
+        return g
 
     def eff_rev(self): return self.rev != self.eb
 
     def get_valid_moves(self, p):
-        return get_all_valid_moves(self.hands.get(p, []), self.field, self.eff_rev())
+        return get_all_valid_moves(self.hands[p], self.field, self.eff_rev())
 
     def do_move(self, p, move):
         h = self.hands[p]
         for c in move:
-            for hc in list(h):
-                if hc == c:
-                    h.remove(hc)
+            for i in range(len(h)):
+                if h[i] == c:
+                    del h[i]
                     break
         self.field = list(move)
         self.last_p = p
@@ -856,22 +833,22 @@ class SimGame:
     def do_pass(self): self.passes += 1
 
     def advance_turn(self, curr_idx, was_8):
-        active = [p for p in self.p_keys if p not in self.finished]
-        if was_8 or (self.last_p is not None and (self.passes >= len(active) - 1 or self.passes >= 3)):
+        active_cnt = 4 - len(self.finished)
+        if was_8 or (self.last_p is not None and (self.passes >= active_cnt - 1 or self.passes >= 3)):
             self.field = []
             self.eb = False
             self.passes = 0
             next_p = curr_idx if was_8 else self.p_keys.index(self.last_p)
             g = 0
-            while self.p_keys[next_p] in self.finished and g < 8:
-                next_p = (next_p + 1) % len(self.p_keys)
+            while self.p_keys[next_p] in self.finished and g < 4:
+                next_p = (next_p + 1) % 4
                 g += 1
             return next_p
 
-        next_p = (curr_idx + 1) % len(self.p_keys)
+        next_p = (curr_idx + 1) % 4
         g = 0
-        while self.p_keys[next_p] in self.finished and g < 8:
-            next_p = (next_p + 1) % len(self.p_keys)
+        while self.p_keys[next_p] in self.finished and g < 4:
+            next_p = (next_p + 1) % 4
             g += 1
         return next_p
 
@@ -935,6 +912,7 @@ def king_solve_exact(sim, king_p, depth=0, max_depth=7, budget=None):
     return False, None
 
 class MCTSNode:
+    __slots__ = ('move', 'parent', 'player_idx', 'children', 'visits', 'total_score', 'unexpanded_moves')
     def __init__(self, move, parent, player_idx):
         self.move = move
         self.parent = parent
@@ -968,7 +946,10 @@ def king_evaluate_state(sim, king_p):
     my_turns = estimate_turns_to_win(k_hand, rev)
 
     score -= my_turns * 6000.0
-    score -= len(k_hand) * 120.0  # 大貧民回避の手札減量重視
+    score -= len(k_hand) * 120.0
+
+    if not sim.field and sim.last_p == king_p:
+        score += 3500.0
 
     for p in sim.p_keys:
         if p == king_p: continue
@@ -990,8 +971,6 @@ def heuristic_rollout_choice(valid_moves, hand, current_rev):
     non_finish = [m for m in valid_moves if len(m) < len(hand)]
     safe_moves = [m for m in non_finish if not is_joker_waste_move(m, hand) and not will_lead_to_forbidden_trap(m, hand, current_rev)]
     pool = safe_moves if safe_moves else (non_finish if non_finish else valid_moves)
-
-    pool.sort(key=lambda m: (len(m) * 20) - m[0].strength(current_rev), reverse=True)
     return pool[0] if pool else random.choice(valid_moves)
 
 def run_mcts_core(seat, hand, field, rev, eb, hands_for_sim, finished, last_p, pass_cnt, max_iters=5000, time_budget=0.10):
@@ -1006,12 +985,12 @@ def run_mcts_core(seat, hand, field, rev, eb, hands_for_sim, finished, last_p, p
     trap_free_moves = [m for m in valid_moves if not will_lead_to_forbidden_trap(m, hand, rev)]
     use_moves = trap_free_moves if trap_free_moves else valid_moves
 
-    base_sim = SimGame(hands_for_sim, field, rev, eb, last_p, pass_cnt, finished)
+    base_sim = FastSimGame(hands_for_sim, field, rev, eb, last_p, pass_cnt, finished)
     root = MCTSNode(None, None, seat)
     cands = sorted(use_moves, key=lambda m: evaluate_move_default(m, hand, not field, rev), reverse=True)
     root.unexpanded_moves = list(cands)
     if can_pass:
-        root.unexpanded_moves.insert(0, None)
+        root.unexpanded_moves.append(None)
 
     start_t = time.perf_counter()
     iters = 0
@@ -1023,11 +1002,12 @@ def run_mcts_core(seat, hand, field, rev, eb, hands_for_sim, finished, last_p, p
 
         while node.unexpanded_moves is not None and len(node.unexpanded_moves) == 0 and len(node.children) > 0:
             best_child, best_ucb = None, -float('inf')
+            log_n = math.log(node.visits)
             for child in node.children:
                 if child.visits == 0:
                     best_child = child
                     break
-                ucb = (child.total_score / child.visits) + 1.414 * math.sqrt(math.log(node.visits) / child.visits)
+                ucb = (child.total_score / child.visits) + 1.414 * math.sqrt(log_n / child.visits)
                 if ucb > best_ucb:
                     best_ucb = ucb
                     best_child = child
@@ -1055,13 +1035,13 @@ def run_mcts_core(seat, hand, field, rev, eb, hands_for_sim, finished, last_p, p
 
         depth = 0
         curr_p = node.player_idx
-        while depth < 4 and len(sim.finished) < 3:
+        while depth < 3 and len(sim.finished) < 3:
             p = sim.p_keys[curr_p]
             c_moves = sim.get_valid_moves(p)
             if not c_moves:
                 sim.do_pass()
             else:
-                ch = heuristic_rollout_choice(c_moves, sim.hands.get(p, []), sim.rev)
+                ch = heuristic_rollout_choice(c_moves, sim.hands[p], sim.rev)
                 sim.do_move(p, ch)
                 curr_p = sim.advance_turn(curr_p, ch is not None and any(c.display == '8' for c in ch))
             depth += 1
@@ -1077,16 +1057,9 @@ def run_mcts_core(seat, hand, field, rev, eb, hands_for_sim, finished, last_p, p
     best_child = max(root.children, key=lambda c: c.visits) if root.children else None
     return best_child.move if best_child else cands[0]
 
-def get_nn_scores(hand, field, rev=False, eb=False, cleared=None, model_choice='hi2'):
-    if model_choice in ['apex_v3', 'apex'] and model_apex_loaded:
-        target_model = model_apex
-        in_dim = apex_in_dim
-    elif model_choice == 'gilgamesh' and model_gilgamesh_loaded:
-        target_model = model_gilgamesh
-        in_dim = gilgamesh_in_dim
-    else:
-        target_model = model_hi2
-        in_dim = hi2_in_dim
+def get_nn_scores(hand, field, rev=False, eb=False, cleared=None, model_choice='apex'):
+    target_model = model_apex
+    in_dim = apex_in_dim
 
     if target_model is None:
         return [evaluate_move_default([c], hand, not field) for c in hand]
@@ -1104,7 +1077,7 @@ def get_nn_scores(hand, field, rev=False, eb=False, cleared=None, model_choice='
 # 5. キャラクター別 本番思考ルーチン
 # ----------------------------------------------------
 
-# [0] 👑 ギルガメッシュ (反則トラップ完全回避・親権強奪型)
+# [0] 👑 ギルガメッシュ
 def decide_gilgamesh(seat, hand, field, valid, rev, eb, cleared, all_hands, finished, last_p, pass_cnt):
     hand = [parse_card_obj(c) for c in hand]
     field = [parse_card_obj(c) for c in field]
@@ -1114,17 +1087,14 @@ def decide_gilgamesh(seat, hand, field, valid, rev, eb, cleared, all_hands, fini
     hand_len = len(hand)
     is_field_empty = (len(field) == 0)
 
-    # 1. 即あがり可能な安全手
     instant_win = next((m for m in valid if len(m) == hand_len and not is_forbidden_finish_move(m, rev)), None)
     if instant_win: return instant_win
 
-    # 2. 候補手フィルタ（反則および反則トラップの排除）
     safe_valid = [m for m in valid if not (len(m) == hand_len and is_forbidden_finish_move(m, rev)) and not will_lead_to_forbidden_trap(m, hand, rev)]
     use_valid = safe_valid if safe_valid else [m for m in valid if not (len(m) == hand_len and is_forbidden_finish_move(m, rev))]
     if not use_valid: use_valid = valid
 
-    # ★【完全版アンカー逆算ルーチン】: 親番・追従問わず、手札残り2〜3枚時は反則札を先に消費
-    if hand_len in [2, 3]:
+    if hand_len in (2, 3):
         non_forbidden = [c for c in hand if not is_forbidden_finish_move([c], rev)]
         if len(non_forbidden) >= 1:
             dump_trap_moves = [
@@ -1149,7 +1119,7 @@ def decide_gilgamesh(seat, hand, field, valid, rev, eb, cleared, all_hands, fini
     is_opp_reach = (min_opp_len <= 2)
 
     if hand_len <= 8 or min_opp_len <= 3:
-        base_sim = SimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
+        base_sim = FastSimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
         win, exact_m = king_solve_exact(base_sim, seat, depth=0, max_depth=8, budget=[4000])
         if win and exact_m and not will_lead_to_forbidden_trap(exact_m, hand, rev): return exact_m
 
@@ -1180,7 +1150,7 @@ def decide_gilgamesh(seat, hand, field, valid, rev, eb, cleared, all_hands, fini
     pool.sort(key=lambda m: (len(m) * 100) - m[0].strength(eff_rev), reverse=True)
     return pool[0]
 
-# [1] 🤴 覚醒新王 (AWAKENED_KING)
+# [1] 🤴 覚醒新王
 def decide_awakened_young_king(seat, hand, field, valid, rev, eb, cleared, all_hands, finished, last_p, pass_cnt):
     hand = [parse_card_obj(c) for c in hand]
     field = [parse_card_obj(c) for c in field]
@@ -1198,8 +1168,7 @@ def decide_awakened_young_king(seat, hand, field, valid, rev, eb, cleared, all_h
     use_valid = safe_valid if safe_valid else [m for m in valid if not (len(m) == hand_len and is_forbidden_finish_move(m, rev))]
     if not use_valid: use_valid = valid
 
-    # ★完全版アンカー逆算
-    if hand_len in [2, 3]:
+    if hand_len in (2, 3):
         non_forbidden = [c for c in hand if not is_forbidden_finish_move([c], rev)]
         if len(non_forbidden) >= 1:
             dump_trap_moves = [
@@ -1223,7 +1192,7 @@ def decide_awakened_young_king(seat, hand, field, valid, rev, eb, cleared, all_h
     min_opp_len = min(other_lens) if other_lens else 99
 
     if hand_len <= 7 or min_opp_len <= 3:
-        base_sim = SimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
+        base_sim = FastSimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
         win, exact_m = king_solve_exact(base_sim, seat, depth=0, max_depth=7)
         if win and exact_m and not will_lead_to_forbidden_trap(exact_m, hand, rev): return exact_m
 
@@ -1264,7 +1233,7 @@ def decide_awakened_young_king(seat, hand, field, valid, rev, eb, cleared, all_h
         return None
     return chosen
 
-# [2] 👸 女王 (SUPER_AI - MCTS全権委任 ＆ 着順確保 ＆ 完全版アンカー逆算)
+# [2] 👸 女王 (SUPER_AI)
 def decide_queen_mcts_fair(seat, hand, field, rev, eb, cleared, all_hands, finished, last_p, pass_cnt):
     hand = [parse_card_obj(c) for c in hand]
     field = [parse_card_obj(c) for c in field]
@@ -1282,8 +1251,7 @@ def decide_queen_mcts_fair(seat, hand, field, rev, eb, cleared, all_hands, finis
     use_valid = safe_valid if safe_valid else [m for m in valid if not (len(m) == hand_len and is_forbidden_finish_move(m, rev))]
     if not use_valid: use_valid = valid
 
-    # ★完全版アンカー逆算
-    if hand_len in [2, 3]:
+    if hand_len in (2, 3):
         non_forbidden = [c for c in hand if not is_forbidden_finish_move([c], rev)]
         if len(non_forbidden) >= 1:
             dump_trap_moves = [
@@ -1314,7 +1282,7 @@ def decide_queen_mcts_fair(seat, hand, field, rev, eb, cleared, all_hands, finis
 
     active_others = [p for p in range(4) if p != seat and p not in finished]
     if len(hand) <= 6 or any(len(all_hands.get(p, [])) <= 3 for p in active_others):
-        base_sim = SimGame(sim_hands, field, rev, eb, last_p, pass_cnt, finished)
+        base_sim = FastSimGame(sim_hands, field, rev, eb, last_p, pass_cnt, finished)
         win, em = king_solve_exact(base_sim, seat, 0, 7)
         if win and em and not will_lead_to_forbidden_trap(em, hand, rev): return em
 
@@ -1331,7 +1299,6 @@ def decide_queen_mcts_fair(seat, hand, field, rev, eb, cleared, all_hands, finis
             if not (len(mcts_res) == hand_len and is_forbidden_finish_move(mcts_res, rev)) and not will_lead_to_forbidden_trap(mcts_res, hand, rev):
                 return mcts_res
 
-    # 大貧民回避と確実な手札減量を重視
     pool.sort(key=lambda m: (
         evaluate_move_default(m, hand, is_field_empty, rev, min_opp_len) +
         (len(m) * 15.0) +
@@ -1343,7 +1310,7 @@ def decide_queen_mcts_fair(seat, hand, field, rev, eb, cleared, all_hands, finis
         return None
     return chosen
 
-# [3] 🏰 王 (KING)
+# [3] 🏰 王
 def decide_king_apex_direct(seat, hand, field, valid, rev, eb, cleared, all_hands, finished, last_p, pass_cnt):
     hand = [parse_card_obj(c) for c in hand]
     field = [parse_card_obj(c) for c in field]
@@ -1360,7 +1327,7 @@ def decide_king_apex_direct(seat, hand, field, valid, rev, eb, cleared, all_hand
     use_valid = safe_valid if safe_valid else [m for m in valid if not (len(m) == hand_len and is_forbidden_finish_move(m, rev))]
     if not use_valid: use_valid = valid
 
-    if hand_len in [2, 3]:
+    if hand_len in (2, 3):
         non_forbidden = [c for c in hand if not is_forbidden_finish_move([c], rev)]
         if len(non_forbidden) >= 1:
             dump_trap_moves = [
@@ -1385,7 +1352,7 @@ def decide_king_apex_direct(seat, hand, field, valid, rev, eb, cleared, all_hand
     is_opp_reach = (min_opp_len <= 2)
 
     if hand_len <= 6 or min_opp_len <= 3:
-        base_sim = SimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
+        base_sim = FastSimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
         win, exact_m = king_solve_exact(base_sim, seat, depth=0, max_depth=5)
         if win and exact_m and not will_lead_to_forbidden_trap(exact_m, hand, rev): return exact_m
 
@@ -1450,7 +1417,7 @@ def decide_king_apex_direct(seat, hand, field, valid, rev, eb, cleared, all_hand
         return None
     return chosen
 
-# [4] ⚔️ 織田信長 (NOBUNAGA)
+# [4] ⚔️ 織田信長
 def decide_nobunaga(seat, hand, field, valid, rev, eb, cleared, all_hands, finished, last_p, pass_cnt):
     hand = [parse_card_obj(c) for c in hand]
     field = [parse_card_obj(c) for c in field]
@@ -1467,7 +1434,7 @@ def decide_nobunaga(seat, hand, field, valid, rev, eb, cleared, all_hands, finis
     use_valid = safe_valid if safe_valid else [m for m in valid if not (len(m) == hand_len and is_forbidden_finish_move(m, rev))]
     if not use_valid: use_valid = valid
 
-    if hand_len in [2, 3]:
+    if hand_len in (2, 3):
         non_forbidden = [c for c in hand if not is_forbidden_finish_move([c], rev)]
         if len(non_forbidden) >= 1:
             dump_trap_moves = [
@@ -1491,7 +1458,7 @@ def decide_nobunaga(seat, hand, field, valid, rev, eb, cleared, all_hands, finis
     min_opp_len = min(other_lens) if other_lens else 99
 
     if hand_len <= 6 or min_opp_len <= 3:
-        base_sim = SimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
+        base_sim = FastSimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
         win, em = king_solve_exact(base_sim, seat, 0, 5)
         if win and em and not will_lead_to_forbidden_trap(em, hand, rev): return em
 
@@ -1534,7 +1501,7 @@ def decide_nobunaga(seat, hand, field, valid, rev, eb, cleared, all_hands, finis
             pairs.sort(key=lambda m: m[0].strength(eff_rev))
             return pairs[0]
 
-    scores = get_nn_scores(hand, field, rev, eb, cleared, model_choice='hi2')
+    scores = get_nn_scores(hand, field, rev, eb, cleared, model_choice='apex')
     cands = use_valid
 
     best_m, best_s = None, -float('inf')
@@ -1567,7 +1534,7 @@ def decide_nobunaga(seat, hand, field, valid, rev, eb, cleared, all_hands, finis
         return None
     return chosen
 
-# [5] 🏛️ 秦の始皇帝 (SHI_HUANGDI)
+# [5] 🏛️ 秦の始皇帝
 def decide_shi_huangdi(seat, hand, field, valid, rev, eb, cleared, all_hands, finished, last_p, pass_cnt):
     hand = [parse_card_obj(c) for c in hand]
     field = [parse_card_obj(c) for c in field]
@@ -1584,7 +1551,7 @@ def decide_shi_huangdi(seat, hand, field, valid, rev, eb, cleared, all_hands, fi
     use_valid = safe_valid if safe_valid else [m for m in valid if not (len(m) == hand_len and is_forbidden_finish_move(m, rev))]
     if not use_valid: use_valid = valid
 
-    if hand_len in [2, 3]:
+    if hand_len in (2, 3):
         non_forbidden = [c for c in hand if not is_forbidden_finish_move([c], rev)]
         if len(non_forbidden) >= 1:
             dump_trap_moves = [
@@ -1609,7 +1576,7 @@ def decide_shi_huangdi(seat, hand, field, valid, rev, eb, cleared, all_hands, fi
     is_opp_reach = (min_opp_len <= 2)
 
     if hand_len <= 6 or min_opp_len <= 3:
-        base_sim = SimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
+        base_sim = FastSimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
         win, em = king_solve_exact(base_sim, seat, 0, 6)
         if win and em and not will_lead_to_forbidden_trap(em, hand, rev): return em
 
@@ -1651,7 +1618,7 @@ def decide_shi_huangdi(seat, hand, field, valid, rev, eb, cleared, all_hands, fi
             pairs.sort(key=lambda m: m[0].strength(eff_rev))
             return pairs[0]
 
-    scores = get_nn_scores(hand, field, rev, eb, cleared, model_choice='gilgamesh')
+    scores = get_nn_scores(hand, field, rev, eb, cleared, model_choice='apex')
     exit_t = identify_exit_ticket(hand)
 
     cands = use_valid
@@ -1693,11 +1660,11 @@ def decide_shi_huangdi(seat, hand, field, valid, rev, eb, cleared, all_hands, fi
         return None
     return chosen
 
-# [6] 🔮 聖徳太子 (SHOTOKU)
-def decide_shotoku(seat, hand, field, rev, allHands, finished, played, other_lens, last_p, pass_cnt, cleared=None):
+# [6] 🔮 聖徳太子
+def decide_shotoku(seat, hand, field, rev, allHands, finished, played, other_lens, last_p, pass_cnt, cleared=None, is_eb=False):
     hand = [parse_card_obj(c) for c in hand]
     field = [parse_card_obj(c) for c in field]
-    eff_rev = rev
+    eff_rev = (rev != is_eb)
     valid = get_all_valid_moves(hand, field, eff_rev)
     if not valid: return None
 
@@ -1711,7 +1678,7 @@ def decide_shotoku(seat, hand, field, rev, allHands, finished, played, other_len
     use_valid = safe_valid if safe_valid else [m for m in valid if not (len(m) == hand_len and is_forbidden_finish_move(m, rev))]
     if not use_valid: use_valid = valid
 
-    if hand_len in [2, 3]:
+    if hand_len in (2, 3):
         non_forbidden = [c for c in hand if not is_forbidden_finish_move([c], rev)]
         if len(non_forbidden) >= 1:
             dump_trap_moves = [
@@ -1735,7 +1702,7 @@ def decide_shotoku(seat, hand, field, rev, allHands, finished, played, other_len
     is_opp_reach = (min_len <= 2)
 
     if hand_len <= 6 or min_len <= 3:
-        base_sim = SimGame(allHands, field, rev, False, last_p, pass_cnt, finished)
+        base_sim = FastSimGame(allHands, field, rev, is_eb, last_p, pass_cnt, finished)
         win, em = king_solve_exact(base_sim, seat, 0, 7)
         if win and em and not will_lead_to_forbidden_trap(em, hand, rev): return em
 
@@ -1763,11 +1730,11 @@ def decide_shotoku(seat, hand, field, rev, allHands, finished, played, other_len
         if min_len <= 2:
             multi = [m for m in use_valid if len(m) >= 2]
             if multi:
-                multi.sort(key=lambda m: (len(m), -m[0].strength(rev)), reverse=True)
+                multi.sort(key=lambda m: (len(m), -m[0].strength(eff_rev)), reverse=True)
                 return multi[0]
         pairs = [m for m in use_valid if len(m) >= 2]
         if pairs:
-            pairs.sort(key=lambda m: m[0].strength(rev))
+            pairs.sort(key=lambda m: m[0].strength(eff_rev))
             return pairs[0]
 
     if is_opp_reach and field:
@@ -1780,19 +1747,19 @@ def decide_shotoku(seat, hand, field, rev, allHands, finished, played, other_len
 
     best_m, best_s = None, -float('inf')
     for m in cands:
-        s = (len(m) * 100) - m[0].strength(rev)
+        s = (len(m) * 100) - m[0].strength(eff_rev)
         s += evaluate_eight_bridge(m, hand, min_len, is_opp_reach, is_field_empty, rev)
-        s += evaluate_eleven_back_balance(m, hand, rev)
+        s += evaluate_eleven_back_balance(m, hand, eff_rev)
         if s > best_s:
             best_s = s
             best_m = m
 
     chosen = best_m or cands[0]
-    if field and should_strategic_pass_on_high_card(chosen, hand, field, rev, min_len):
+    if field and should_strategic_pass_on_high_card(chosen, hand, field, eff_rev, min_len):
         return None
     return chosen
 
-# [7] 🛡️ アレク王 (ALEXANDER)
+# [7] 🛡️ アレク王
 def decide_alexander_hybrid(seat, hand, field, rev, eb, cleared, all_hands, finished, played, last_p, pass_cnt):
     hand = [parse_card_obj(c) for c in hand]
     field = [parse_card_obj(c) for c in field]
@@ -1810,7 +1777,7 @@ def decide_alexander_hybrid(seat, hand, field, rev, eb, cleared, all_hands, fini
     use_valid = safe_valid if safe_valid else [m for m in valid if not (len(m) == hand_len and is_forbidden_finish_move(m, rev))]
     if not use_valid: use_valid = valid
 
-    if hand_len in [2, 3]:
+    if hand_len in (2, 3):
         non_forbidden = [c for c in hand if not is_forbidden_finish_move([c], rev)]
         if len(non_forbidden) >= 1:
             dump_trap_moves = [
@@ -1835,7 +1802,7 @@ def decide_alexander_hybrid(seat, hand, field, rev, eb, cleared, all_hands, fini
     is_opp_reach = (min_opp_len <= 2)
 
     if hand_len <= 6 or min_opp_len <= 3:
-        base_sim = SimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
+        base_sim = FastSimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
         win, exact_m = king_solve_exact(base_sim, seat, depth=0, max_depth=7)
         if win and exact_m and not will_lead_to_forbidden_trap(exact_m, hand, rev): return exact_m
 
@@ -1882,7 +1849,7 @@ def decide_alexander_hybrid(seat, hand, field, rev, eb, cleared, all_hands, fini
             pairs.sort(key=lambda m: m[0].strength(eff_rev))
             return pairs[0]
 
-    scores = get_nn_scores(hand, field, rev, eb, cleared, model_choice='gilgamesh')
+    scores = get_nn_scores(hand, field, rev, eb, cleared, model_choice='apex')
     cands = [m for m in use_valid if not (len(m) == 1 and not m[0].is_joker and len(groups[m[0].display]) >= 2 and hand_len > 2)]
     if not cands: cands = use_valid
 
@@ -1914,7 +1881,7 @@ def decide_alexander_hybrid(seat, hand, field, rev, eb, cleared, all_hands, fini
         return None
     return chosen
 
-# [8] 🤴 新王 (BEGINNER_AI)
+# [8] 🤴 新王
 def decide_young_king(seat, hand, field, valid, rev, eb, cleared, all_hands, finished, last_p, pass_cnt):
     hand = [parse_card_obj(c) for c in hand]
     field = [parse_card_obj(c) for c in field]
@@ -1931,7 +1898,7 @@ def decide_young_king(seat, hand, field, valid, rev, eb, cleared, all_hands, fin
     use_valid = safe_valid if safe_valid else [m for m in valid if not (len(m) == hand_len and is_forbidden_finish_move(m, rev))]
     if not use_valid: use_valid = valid
 
-    if hand_len in [2, 3]:
+    if hand_len in (2, 3):
         non_forbidden = [c for c in hand if not is_forbidden_finish_move([c], rev)]
         if len(non_forbidden) >= 1:
             dump_trap_moves = [
@@ -1951,7 +1918,7 @@ def decide_young_king(seat, hand, field, valid, rev, eb, cleared, all_hands, fin
     min_opp_len = min(other_lens) if other_lens else 99
 
     if hand_len <= 6 or min_opp_len <= 3:
-        base_sim = SimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
+        base_sim = FastSimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
         win, exact_m = king_solve_exact(base_sim, seat, depth=0, max_depth=5)
         if win and exact_m and not will_lead_to_forbidden_trap(exact_m, hand, rev): return exact_m
 
@@ -1971,7 +1938,7 @@ def decide_young_king(seat, hand, field, valid, rev, eb, cleared, all_hands, fin
             pairs.sort(key=lambda m: m[0].val())
             return pairs[0]
 
-    scores = get_nn_scores(hand, field, rev, eb, cleared, model_choice='hi2')
+    scores = get_nn_scores(hand, field, rev, eb, cleared, model_choice='apex')
     exit_ticket = identify_exit_ticket(hand)
 
     cands = [m for m in use_valid if not (len(m) == 1 and not m[0].is_joker and len(groups[m[0].display]) >= 2 and hand_len > 2)]
@@ -2011,10 +1978,10 @@ def decide_young_king(seat, hand, field, valid, rev, eb, cleared, all_hands, fin
     return chosen
 
 # ----------------------------------------------------
-# 6. Web API エンドポイント ＆ PC logs/ 格納API
+# 6. Web API エンドポイント ＆ PC logs/ 完全直結API
 # ----------------------------------------------------
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 ALLOWED_STATIC_EXTENSIONS = {
     '.html', '.htm', '.js', '.css', '.png', '.jpg', '.jpeg', '.gif',
@@ -2030,12 +1997,11 @@ FORBIDDEN_KEYWORDS = {
 def health():
     return jsonify({
         "status": "ok",
-        "model_hi2_loaded": model_hi2_loaded,
-        "hi2_name": hi2_name,
-        "model_gilgamesh_loaded": model_gilgamesh_loaded,
-        "gilgamesh_name": gilgamesh_name,
         "model_apex_loaded": model_apex_loaded,
         "apex_name": apex_name,
+        "model_gilgamesh_loaded": model_gilgamesh_loaded,
+        "gilgamesh_name": gilgamesh_name,
+        "model_unified": "APEX-v3",
         "active_characters": list(CHARACTER_NAMES.keys())
     })
 
@@ -2092,7 +2058,7 @@ def predict():
             best_move = decide_shi_huangdi(my_seat, hand, field, valid_moves, is_rev, is_eb, cleared, all_hands, finished, last_seat, pass_cnt)
         elif char_key == 'SHOTOKU':
             other_lens = [len(all_hands[s]) for s in range(4) if s != my_seat and s not in finished]
-            best_move = decide_shotoku(my_seat, hand, field, is_rev, all_hands, finished, played_history, other_lens, last_seat, pass_cnt, cleared)
+            best_move = decide_shotoku(my_seat, hand, field, is_rev, all_hands, finished, played_history, other_lens, last_seat, pass_cnt, cleared, is_eb)
         elif char_key == 'ALEXANDER':
             best_move = decide_alexander_hybrid(my_seat, hand, field, is_rev, is_eb, cleared, all_hands, finished, played_history, last_seat, pass_cnt)
         elif char_key in ['BEGINNER_AI', 'YOUNG_KING']:
@@ -2107,7 +2073,7 @@ def predict():
                 if endgame_m and not will_lead_to_forbidden_trap(endgame_m, hand, is_rev):
                     best_move = endgame_m
                 else:
-                    sc = get_nn_scores(hand, field, is_rev, is_eb, cleared, model_choice='hi2')
+                    sc = get_nn_scores(hand, field, is_rev, is_eb, cleared, model_choice='apex')
                     cand = max(cands, key=lambda m: sum([sc[card_to_idx(c)] for c in m if 0 <= card_to_idx(c) < 53]))
                     other_lens = [len(all_hands[s]) for s in range(4) if s != my_seat and s not in finished]
                     min_opp = min(other_lens) if other_lens else 99
@@ -2116,7 +2082,7 @@ def predict():
                     else:
                         best_move = cand
             else:
-                sc = get_nn_scores(hand, field, is_rev, is_eb, cleared, model_choice='hi2')
+                sc = get_nn_scores(hand, field, is_rev, is_eb, cleared, model_choice='apex')
                 cand = max(cands, key=lambda m: sum([sc[card_to_idx(c)] for c in m if 0 <= card_to_idx(c) < 53]))
                 other_lens = [len(all_hands[s]) for s in range(4) if s != my_seat and s not in finished]
                 min_opp = min(other_lens) if other_lens else 99
@@ -2163,13 +2129,13 @@ def save_practice_log():
         logs_dir = os.path.join(BASE_DIR, 'logs')
         os.makedirs(logs_dir, exist_ok=True)
         save_path = os.path.join(logs_dir, safe_filename)
-        
+
         with open(save_path, 'w', encoding='utf-8') as f:
             f.write(content)
 
         file_bytes = len(content.encode('utf-8'))
         print(f"💾 [PC直接保存完了] '{safe_filename}' ({file_bytes} bytes) -> logs/ フォルダへ格納", flush=True)
-        
+
         return jsonify({
             "status": "success",
             "filename": safe_filename,
@@ -2197,7 +2163,7 @@ def serve_static(path):
 
     _, ext = os.path.splitext(normalized)
     ext_lower = ext.lower()
-    
+
     if ext_lower and ext_lower not in ALLOWED_STATIC_EXTENSIONS:
         abort(403)
 
@@ -2213,8 +2179,8 @@ def serve_static(path):
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     print("=======================================================", flush=True)
-    print("👑 大富豪 ROYAL CARD GAME サーバー (本格競技ルール ＆ APEX-v3対応版)", flush=True)
-    print(f"   ポート: {port} で稼働開始", flush=True)
-    print(f"   💾 ログ格納先: {os.path.join(BASE_DIR, 'logs')} (PC直接保存完全防壁)", flush=True)
+    print("👑 大富豪 ROYAL CARD GAME サーバー (直感APEX-v3統一 ＆ 高速MCTS版)", flush=True)
+    print(f"   ポート: {port} で稼働開始 (全インターフェース 0.0.0.0 バインド)", flush=True)
+    print(f"   💾 ログ格納先: {os.path.join(BASE_DIR, 'logs')} (PC直接保存完全直結)", flush=True)
     print("=======================================================", flush=True)
     app.run(host='0.0.0.0', port=port, debug=False)

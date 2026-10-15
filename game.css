@@ -1,6 +1,6 @@
 /* ====================================================================
  * ROYAL DAIFUGO - game.css
- * [CSS Version: v4.1.0 - 拡大版カルーセル・優美3Dイージング・全画面維持オープニング統合版]
+ * [CSS Version: v4.1.4 - 対戦盤面・トランプ・演出・スマホ極小画面完全適正化版]
  * ==================================================================== */
 
 /* ============================================================
@@ -396,7 +396,7 @@
 }
 
 /* ============================================================
- * 6. ゲーム盤面 ＆ プレイヤーボックス
+ * 6. ゲーム盤面 ＆ プレイヤーボックス（基本構造）
  * ============================================================ */
 #game-board {
   display: grid;
@@ -431,7 +431,8 @@
 }
 
 .char-portrait {
-  width: clamp(58px, 9.2vh, 70px);
+  width: 58px;
+  height: 87px;
   aspect-ratio: 2 / 3;
   object-fit: cover;
   border-radius: 6px;
@@ -703,7 +704,7 @@
 .player-box.active-turn .turn-badge { visibility: visible; opacity: 1; }
 
 /* ============================================================
- * 7. 各プレイヤー固有レイアウト ＆ 禁止あがり・都落ち事前警告バッジ
+ * 7. 各プレイヤー固有レイアウト ＆ 禁止あがり事前警告バッジ
  * ============================================================ */
 #cpu2 {
   grid-row: 1;
@@ -753,13 +754,11 @@
 #cpu1 {
   grid-row: 2;
   grid-column: 1;
-  transform: translateX(12px);
 }
 
 #cpu3 {
   grid-row: 2;
   grid-column: 3;
-  transform: translateX(-12px);
 }
 
 #cpu1 .char-row, #cpu3 .char-row {
@@ -973,9 +972,6 @@
   }
 }
 
-/* ============================================================
- * ★ 禁止あがり・都落ち事前警告バッジ
- * ============================================================ */
 .player-foul-alert {
   position: absolute;
   top: calc(50% + 120px);
@@ -1022,71 +1018,6 @@
     transform: translate(-50%, -50%) scale(1.05);
     filter: brightness(1.22);
     border-color: #ffd700;
-  }
-}
-
-@media (max-width: 600px) {
-  .player-layout-plate.fixed-player-anchor {
-    min-width: 172px;
-    gap: 6px;
-  }
-
-  .player-info-col.fixed-player-info {
-    width: 124px;
-    padding-left: 8px;
-    align-items: center;
-  }
-
-  .player-info-col .turn-badge-container {
-    width: 114px;
-    min-width: 110px;
-    max-width: 118px;
-    justify-content: center;
-  }
-
-  .player-info-col .name-rank-stack {
-    width: 114px;
-    min-width: 110px;
-    max-width: 118px;
-    align-items: center;
-  }
-
-  .player-info-col .char-badge-container {
-    width: 114px;
-    min-width: 110px;
-    max-width: 118px;
-    justify-content: center;
-  }
-
-  .player-info-col .char-badge {
-    font-size: 10px;
-    padding: 0 4px;
-    justify-content: center;
-    text-align: center;
-  }
-
-  .your-turn-badge {
-    font-size: 10px;
-    padding: 1px 3px;
-  }
-
-  .your-turn-badge.is-exchange-prompt {
-    font-size: 9.5px !important;
-    padding: 1px 2px !important;
-  }
-
-  .player-info-col .rank-badge {
-    width: 90px !important;
-    max-width: 90px !important;
-    align-self: center;
-  }
-
-  .player-foul-alert {
-    top: calc(50% + 104px);
-    font-size: 11px;
-    padding: 4px 10px;
-    max-width: 88vw;
-    line-height: 1.2;
   }
 }
 
@@ -1154,13 +1085,13 @@
 }
 
 /* ============================================================
- * 8.1 CPUカード束
+ * 8.1 CPUカード束（基本構造）
  * ============================================================ */
 .cpu-card-stack {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 2px 0;
+  margin: 2px auto;
   min-height: calc(var(--card-height) * 0.55);
   width: 100%;
   gap: 0;
@@ -1208,7 +1139,7 @@
 }
 
 /* ============================================================
- * 9. 中央のゲームフィールド（祭壇・完全見切れ防止・柔軟伸張構造）
+ * 9. 中央のゲームフィールド（祭壇）
  * ============================================================ */
 #field-area {
   grid-row: 2;
@@ -1393,7 +1324,8 @@
 
 .field-container {
   width: 100%;
-  height: calc(var(--card-height) + 6px);
+  height: calc(var(--card-height) + 12px);
+  min-height: 80px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2059,9 +1991,6 @@
   box-shadow: 0 0 8px rgba(212, 175, 55, 0.8);
 }
 
-/* ============================================================
- * スタート設定画面 フッター用 控えめなプロローグボタン
- * ============================================================ */
 .btn-prologue-mini {
   background: rgba(18, 28, 44, 0.7);
   border: 1px solid rgba(212, 175, 55, 0.45);
@@ -2110,54 +2039,45 @@
 #version-badge:hover { color: #ffd700; }
 
 /* ============================================================
- * 12.2 ゲーム終了・途中決着ダイアログ（折れ線グラフ＆本格集計表完全内蔵版）
+ * 12.2 試合終了・途中決着ダイアログ
  * ============================================================ */
 .modal-next-game-compact {
   max-width: 640px !important;
   width: 95% !important;
-  max-height: 90vh;
-  max-height: 90dvh;
-  overflow-y: auto;
+  max-height: 86dvh !important;
+  overflow-y: auto !important;
   -webkit-overflow-scrolling: touch;
-  padding: 12px 14px 24px 14px;
+  padding: 10px 14px 24px 14px;
   position: relative;
-  margin-top: 90px;
+  margin-top: clamp(42px, 6vh, 54px);
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 215, 0, 0.75) rgba(8, 14, 24, 0.75);
 }
 
-.modal-winner-plate {
-  position: absolute;
-  bottom: calc(100% + 14px);
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(100% - 10px);
-  max-width: 580px;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  background: linear-gradient(180deg, rgba(36, 26, 10, 0.98) 0%, rgba(14, 18, 28, 0.99) 100%);
-  border: 2px solid var(--color-gold-bright);
-  border-radius: 10px;
-  padding: 6px 16px;
-  box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.95), 0 0 25px rgba(212, 175, 55, 0.75), inset 0 0 14px rgba(255, 215, 0, 0.2);
-  min-height: 96px;
-  z-index: 100;
-  margin: 0;
-  box-sizing: border-box;
+.modal-next-game-compact::-webkit-scrollbar {
+  width: 6px;
+}
+.modal-next-game-compact::-webkit-scrollbar-track {
+  background: rgba(8, 14, 24, 0.75);
+  border-radius: 3px;
+}
+.modal-next-game-compact::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #d4af37 0%, #ffd700 50%, #b8860b 100%);
+  border-radius: 3px;
+  box-shadow: 0 0 6px rgba(255, 215, 0, 0.75);
 }
 
 .modal-winner-img {
-  width: 66px;
-  height: 99px;
+  width: 58px;
+  height: 87px;
   aspect-ratio: 2 / 3;
   object-fit: cover;
   border-radius: 6px;
   border: 2px solid #ffd700;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.9), 0 0 12px rgba(255, 215, 0, 0.9);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.9), 0 0 10px rgba(255, 215, 0, 0.85);
   flex-shrink: 0;
-  margin-left: -2px;
+  margin: 0;
 }
 
 .modal-winner-info-col {
@@ -2165,15 +2085,15 @@
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: 3px;
+  gap: 2px;
   text-align: left;
   min-width: 0;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
 }
 
 .modal-winner-title {
   font-family: 'Cinzel', serif;
-  font-size: clamp(12px, 2.3vw, 14px);
+  font-size: clamp(11.5px, 2.2vw, 13.5px);
   font-weight: 900;
   color: #ffd700;
   letter-spacing: 1px;
@@ -2186,7 +2106,7 @@
 }
 
 .modal-winner-name {
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 800;
   color: #fffadb;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
@@ -2201,12 +2121,13 @@
   border: 1.2px solid rgba(212, 175, 55, 0.55);
   border-radius: 6px;
   padding: 4px 10px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   font-size: 11.5px;
   color: #fff3a8;
   font-weight: 800;
   text-align: center;
   box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+  flex-shrink: 0;
 }
 
 .final-ranking-list {
@@ -2283,9 +2204,10 @@
 
 .next-game-prompt {
   font-size: 11px;
-  margin-top: 6px;
+  margin-top: 5px;
   color: #cbd5e1;
   text-align: center;
+  flex-shrink: 0;
 }
 
 .next-game-footer {
@@ -2293,17 +2215,18 @@
   flex-direction: column;
   justify-content: center;
   align-items: stretch;
-  gap: 6px;
+  gap: 5px;
   width: 100%;
-  margin-top: 8px;
+  margin-top: 6px;
   border-top: none;
   padding-top: 0;
+  flex-shrink: 0;
 }
 
 .btn-next-match-seat {
   width: 100%;
-  min-height: 42px;
-  padding: 6px 12px;
+  min-height: 40px;
+  padding: 5px 12px;
   border-radius: 7px;
   font-size: 13.5px;
   letter-spacing: 0.8px;
@@ -2322,20 +2245,21 @@
 }
 
 /* ============================================================
- * 12.3 練習試合・順位推移Canvasチャート ＆ シナリオ保存UI
+ * 12.3 練習試合・順位推移Canvasチャート
  * ============================================================ */
 .practice-chart-wrapper {
   background: linear-gradient(180deg, rgba(14, 22, 36, 0.96) 0%, rgba(8, 12, 20, 0.98) 100%);
   border: 1.5px solid var(--color-border-gold);
   border-radius: 8px;
-  padding: 8px 10px;
-  margin-bottom: 8px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.85), inset 0 0 12px rgba(212, 175, 55, 0.1);
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
   width: 100%;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .practice-chart-header {
@@ -2345,7 +2269,7 @@
   flex-wrap: wrap;
   gap: 4px;
   border-bottom: 1px solid rgba(212, 175, 55, 0.25);
-  padding-bottom: 4px;
+  padding-bottom: 3px;
 }
 
 .practice-chart-title {
@@ -2383,8 +2307,8 @@
 
 .practice-canvas-container {
   width: 100%;
-  height: 145px;
-  min-height: 140px;
+  height: 135px;
+  min-height: 130px;
   position: relative;
   overflow: hidden;
   background: rgba(4, 7, 12, 0.6);
@@ -2402,10 +2326,11 @@
 .practice-result-save-actions {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 12px;
-  padding-top: 10px;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 6px;
   border-top: 1px solid rgba(212, 175, 55, 0.3);
+  flex-shrink: 0;
 }
 
 .result-copy-csv-row {
@@ -2416,8 +2341,8 @@
 
 .btn-result-act {
   flex: 1;
-  height: 34px;
-  font-size: 11.5px;
+  height: 32px;
+  font-size: 11px;
   font-weight: 700;
   background: linear-gradient(180deg, #24354f 0%, #121c2c 100%);
   color: #fff3a8;
@@ -2440,8 +2365,8 @@
 
 .btn-practice-download-gold {
   width: 100%;
-  height: 40px;
-  font-size: 13px;
+  height: 38px;
+  font-size: 12.5px;
   border-radius: 7px;
   cursor: pointer;
   touch-action: manipulation;
@@ -2454,19 +2379,19 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   position: relative;
   z-index: 20;
 }
 
 .practice-save-status-msg {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
   color: #6ee7b7;
   background: rgba(6, 78, 59, 0.85);
   border: 1px solid #059669;
   border-radius: 5px;
-  padding: 6px 12px;
+  padding: 5px 10px;
   text-align: center;
   box-shadow: 0 0 10px rgba(5, 150, 105, 0.6);
   animation: fadeInDown 0.25s ease;
@@ -2525,7 +2450,7 @@
 }
 
 /* ============================================================
- * 13. 対局リプレイ ＆ 勝敗因分析（振り返りモード）専用スタイル
+ * 13. 対局リプレイ ＆ 勝敗因分析専用スタイル
  * ============================================================ */
 .modal-overlay#replay-modal {
   z-index: 3500 !important;
@@ -2536,6 +2461,7 @@
 .replay-modal-content {
   max-width: 740px;
   width: 95%;
+  max-height: 86dvh;
   padding: 12px 14px;
   background:
     radial-gradient(circle at 50% 20%, rgba(20, 36, 62, 0.92) 0%, rgba(6, 12, 22, 0.98) 100%),
@@ -2546,12 +2472,15 @@
     0 16px 50px rgba(0, 0, 0, 0.95),
     0 0 40px rgba(212, 175, 55, 0.65),
     inset 0 0 20px rgba(212, 175, 55, 0.15);
+  display: flex;
+  flex-direction: column;
 }
 
 .replay-header {
   border-bottom: 1.5px solid rgba(212, 175, 55, 0.4);
   padding-bottom: 6px;
   margin-bottom: 6px;
+  flex-shrink: 0;
 }
 
 .replay-modal-body {
@@ -2559,10 +2488,10 @@
   flex-direction: column;
   gap: 6px;
   padding: 0;
-  padding-bottom: 30px;
-  max-height: 80vh;
+  padding-bottom: 24px;
   overflow-y: auto;
   box-sizing: border-box;
+  flex: 1 1 auto;
 }
 
 .replay-game-selector-bar {
@@ -2900,6 +2829,19 @@
   flex-wrap: wrap;
   width: 100%;
   min-height: 24px;
+  position: relative;
+}
+
+.replay-foul-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 5, 5, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+  border-radius: 4px;
+  pointer-events: none;
 }
 
 .replay-seat-top {
@@ -2939,6 +2881,7 @@
   padding: 2px 0;
   width: 100%;
   min-height: 52px;
+  position: relative;
 }
 
 .replay-status-foul {
@@ -3268,46 +3211,7 @@
 }
 
 /* ============================================================
- * 14. シナリオ階位チャンピオン装飾（Tier 1/2/3 完全復元）
- * ============================================================ */
-.modal-winner-plate.is-champion-plate {
-  position: relative;
-  overflow: visible;
-}
-
-.modal-winner-plate.is-tier1-champion {
-  border-color: #ffd700 !important;
-  box-shadow: 0 0 25px rgba(212, 175, 55, 0.8), inset 0 0 14px rgba(255, 215, 0, 0.3) !important;
-}
-
-.modal-winner-plate.is-tier2-champion {
-  border-color: #38bdf8 !important;
-  box-shadow: 0 0 30px rgba(14, 165, 233, 0.85), inset 0 0 16px rgba(56, 189, 248, 0.35) !important;
-}
-.modal-winner-plate.is-tier2-champion .modal-winner-title {
-  color: #7dd3fc !important;
-  text-shadow: 0 0 12px rgba(56, 189, 248, 0.9) !important;
-}
-
-.modal-winner-plate.is-tier3-champion {
-  border-color: #ffd700 !important;
-  background: linear-gradient(180deg, rgba(60, 20, 20, 0.98) 0%, rgba(20, 10, 25, 0.99) 100%) !important;
-  box-shadow: 0 0 45px rgba(255, 215, 0, 0.95), 0 0 35px rgba(239, 68, 68, 0.8), inset 0 0 20px rgba(255, 215, 0, 0.4) !important;
-  animation: championPlateGlow 1.8s infinite alternate ease-in-out;
-}
-.modal-winner-plate.is-tier3-champion .modal-winner-title {
-  color: #fffadb !important;
-  text-shadow: 0 0 15px rgba(255, 215, 0, 1), 0 0 25px rgba(255, 87, 34, 0.8) !important;
-}
-
-@keyframes championPlateGlow {
-  0% { transform: scale(1); filter: brightness(1); }
-  100% { transform: scale(1.02); filter: brightness(1.2); }
-}
-
-/* ============================================================
  * 15. 統合オープニング専用スタイル
- * ★拡大版カルーセル・優美な3Dイージング・ゴージャス演出完全統合
  * ============================================================ */
 .opening-screen-overlay {
   position: fixed;
@@ -3608,7 +3512,6 @@
   margin-bottom: 6px;
 }
 
-/* ★一回り〜二回り拡大 ＆ 優雅な3Dモーションカルーセル★ */
 .carousel-view {
   width: 100%;
   max-width: 620px;
@@ -3692,7 +3595,7 @@
   width: 100%;
   max-width: 620px;
   background: linear-gradient(90deg, rgba(20, 10, 5, 0.92) 0%, rgba(45, 28, 12, 0.95) 50%, rgba(20, 10, 5, 0.92) 100%);
-  border: 1.5px solid var(--gold-bright);
+  border: 1.5px solid var(--color-gold-bright);
   border-radius: 6px;
   padding: 6px 14px;
   margin-bottom: 6px;
@@ -3815,7 +3718,202 @@
   100% { transform: translateY(105vh); opacity: 0; }
 }
 
-@media (max-width: 600px) {
+/* ============================================================
+ * 16. スマートフォン専用ブロック（幅599px以下：対戦盤面完全絶対固定化版）
+ * ============================================================ */
+@media (max-width: 599px) {
+  /* ① 対戦盤面のグリッド列を絶対固定（中央220px・左右均等均等割） */
+  #game-board {
+    grid-template-columns: calc((100% - 220px) / 2) 220px calc((100% - 220px) / 2) !important;
+    gap: 0 !important;
+    padding: 0 2px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* ② 全プレイヤー肖像画寸法の完全統一 */
+  .char-portrait,
+  #cpu1 .char-portrait,
+  #cpu2-portrait,
+  #cpu3 .char-portrait,
+  #player-portrait {
+    width: 58px !important;
+    height: 87px !important;
+    aspect-ratio: 2 / 3 !important;
+  }
+
+  /* ③ CPU1（左）：極小画面（360px等）でも左右はみ出しを起こさない寸法に適正化 */
+  #cpu1 {
+    grid-row: 2 !important;
+    grid-column: 1 !important;
+    justify-self: center !important;
+    margin: 0 auto !important;
+    transform: none !important;
+    width: 100% !important;
+    min-width: 68px !important;
+    max-width: 76px !important;
+    padding-top: 1px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* ④ CPU3（右）：極小画面（360px等）でも左右はみ出しを起こさない寸法に適正化 */
+  #cpu3 {
+    grid-row: 2 !important;
+    grid-column: 3 !important;
+    justify-self: center !important;
+    margin: 0 auto !important;
+    transform: none !important;
+    width: 100% !important;
+    min-width: 68px !important;
+    max-width: 76px !important;
+    padding-top: 1px !important;
+    box-sizing: border-box !important;
+  }
+
+  #cpu1 .name-rank-stack, #cpu3 .name-rank-stack,
+  #cpu1 .turn-badge-container, #cpu3 .turn-badge-container {
+    width: 100% !important;
+    min-width: 68px !important;
+    max-width: 76px !important;
+  }
+
+  #cpu1 .char-badge, #cpu3 .char-badge {
+    font-size: 10px !important;
+    height: 20px !important;
+    padding: 0 2px !important;
+  }
+
+  #cpu1 .rank-badge, #cpu3 .rank-badge {
+    width: 100% !important;
+    max-width: 74px !important;
+    height: 19px !important;
+    font-size: 10px !important;
+  }
+
+  /* ⑤ CPU1・CPU3カード束：幅72pxに是正し画面外突き破りを完全防止 */
+  #cpu1-stack, #cpu3-stack {
+    width: 100% !important;
+    max-width: 74px !important;
+    overflow: visible !important;
+    margin: 2px auto !important;
+    justify-content: center !important;
+  }
+
+  #cpu1-stack .card-back,
+  #cpu3-stack .card-back {
+    width: 24px !important;
+    height: 36px !important;
+    margin-left: -17px !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(212, 175, 55, 0.6) !important;
+  }
+  #cpu1-stack .card-back:first-child,
+  #cpu3-stack .card-back:first-child {
+    margin-left: 0 !important;
+  }
+
+  /* ⑥ 中央祭壇：カード上下切れを完全解消（高さを88pxに拡張＆overflowをvisibleに設定） */
+  .field-altar {
+    width: 220px !important;
+    min-width: 220px !important;
+    max-width: 220px !important;
+    height: 224px !important;
+    min-height: 224px !important;
+    max-height: 224px !important;
+    padding: 2px 5px 4px 5px !important;
+    gap: 1px !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+  }
+
+  .field-container {
+    height: 88px !important;
+    min-height: 88px !important;
+    max-height: 88px !important;
+    overflow: visible !important;
+    flex-shrink: 0 !important;
+    margin: 1px 0 !important;
+  }
+
+  .status-badge {
+    font-size: 12.5px !important;
+    padding: 2px 10px !important;
+  }
+
+  #message-text {
+    font-size: 10px !important;
+    height: 46px !important;
+    min-height: 46px !important;
+    max-height: 46px !important;
+    padding: 2px 4px !important;
+    box-sizing: border-box !important;
+    margin-top: 1px !important;
+  }
+
+  /* ⑦ プレイヤー情報エリア */
+  .player-layout-plate.fixed-player-anchor {
+    min-width: 172px;
+    gap: 6px;
+  }
+
+  .player-info-col.fixed-player-info {
+    width: 124px;
+    padding-left: 8px;
+    align-items: center;
+  }
+
+  .player-info-col .turn-badge-container {
+    width: 114px;
+    min-width: 110px;
+    max-width: 118px;
+    justify-content: center;
+  }
+
+  .player-info-col .name-rank-stack {
+    width: 114px;
+    min-width: 110px;
+    max-width: 118px;
+    align-items: center;
+  }
+
+  .player-info-col .char-badge-container {
+    width: 114px;
+    min-width: 110px;
+    max-width: 118px;
+    justify-content: center;
+  }
+
+  .player-info-col .char-badge {
+    font-size: 10px;
+    padding: 0 4px;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .your-turn-badge {
+    font-size: 10px;
+    padding: 1px 3px;
+  }
+
+  .your-turn-badge.is-exchange-prompt {
+    font-size: 9.5px !important;
+    padding: 1px 2px !important;
+  }
+
+  .player-info-col .rank-badge {
+    width: 90px !important;
+    max-width: 90px !important;
+    align-self: center;
+  }
+
+  .player-foul-alert {
+    top: calc(50% + 104px);
+    font-size: 11px;
+    padding: 4px 10px;
+    max-width: 88vw;
+    line-height: 1.2;
+  }
+
   .scene-title { font-size: 17.5px; }
   .caption-main { font-size: 11.5px; }
   .carousel-view { height: clamp(145px, 23vh, 175px); }
@@ -3825,19 +3923,163 @@
   .plaque-box.pos-right { transform: translateX(105px) translateZ(-40px) scale(0.85); }
 
   .modal-next-game-compact {
-    max-height: 88vh;
-    max-height: 88dvh;
-    padding: 10px 10px 28px 10px;
-    margin-top: 80px;
+    max-height: 86dvh !important;
+    padding: 8px 10px 24px 10px;
+    margin-top: clamp(38px, 5.5vh, 48px);
   }
 
   .btn-practice-download-gold {
-    height: 44px;
-    font-size: 12.5px;
+    height: 42px;
+    font-size: 12px;
   }
 
   .scenario-grand-save-box {
-    margin-top: 12px !important;
+    margin-top: 8px !important;
     padding-bottom: 4px;
+  }
+}
+
+/* ============================================================
+ * 17. タブレット専用ブロック（幅600px以上：画面いっぱいに伸び伸びと表示）
+ * ============================================================ */
+@media (min-width: 600px) {
+  .battle-header-plate,
+  #rules-panel,
+  .bottom-console-frame,
+  #app-footer-bar {
+    max-width: 680px !important;
+  }
+
+  #game-board {
+    max-width: 960px !important;
+    grid-template-columns: 120px 1fr 120px !important;
+    gap: 12px !important;
+    padding: 4px 12px !important;
+  }
+
+  .char-portrait,
+  #cpu1 .char-portrait,
+  #cpu2-portrait,
+  #cpu3 .char-portrait,
+  #player-portrait {
+    width: 76px !important;
+    height: 114px !important;
+    aspect-ratio: 2 / 3 !important;
+    border-radius: 8px !important;
+  }
+
+  #cpu1, #cpu3 {
+    width: 116px !important;
+    transform: none !important;
+  }
+
+  #cpu1 { justify-self: center !important; }
+  #cpu3 { justify-self: center !important; }
+
+  /* タブレット時：CPU1・CPU3のカード束をキャラ名プレート幅（114px）いっぱいにゆったり展開 */
+  #cpu1-stack, #cpu3-stack {
+    width: 114px !important;
+    max-width: 114px !important;
+    overflow: visible !important;
+    margin: 4px auto !important;
+    justify-content: center !important;
+  }
+
+  #cpu1-stack .card-back,
+  #cpu3-stack .card-back {
+    width: 32px !important;
+    height: 48px !important;
+    margin-left: var(--cpu-overlap, -10px) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.75), inset 0 0 0 1px rgba(212, 175, 55, 0.5) !important;
+  }
+  #cpu1-stack .card-back:first-child,
+  #cpu3-stack .card-back:first-child {
+    margin-left: 0 !important;
+  }
+
+  .name-rank-stack,
+  .turn-badge-container {
+    width: 110px !important;
+    min-width: 104px !important;
+    max-width: 116px !important;
+  }
+
+  .char-badge {
+    font-size: 12px !important;
+    height: 25px !important;
+  }
+
+  .rank-badge {
+    font-size: 12.5px !important;
+    width: 100px !important;
+    height: 24px !important;
+  }
+
+  .cpu2-info-col {
+    width: 140px !important;
+    gap: 3px !important;
+  }
+  .cpu2-info-col .turn-badge-container,
+  .cpu2-info-col .name-rank-stack {
+    width: 110px !important;
+  }
+
+  .player-info-col.fixed-player-info {
+    width: 170px !important;
+    gap: 3px !important;
+  }
+  .player-info-col .turn-badge-container,
+  .player-info-col .name-rank-stack,
+  .player-info-col .char-badge-container {
+    width: 146px !important;
+    max-width: 154px !important;
+  }
+
+  .field-altar {
+    max-width: 420px !important;
+    min-height: 260px !important;
+    padding: 8px 12px !important;
+    gap: 6px !important;
+    margin: 0 auto !important;
+  }
+
+  .status-badge {
+    font-size: 16px !important;
+    padding: 3px 18px !important;
+  }
+
+  #message-text {
+    font-size: 12.5px !important;
+    min-height: 50px !important;
+    max-height: 64px !important;
+    padding: 5px 10px !important;
+  }
+
+  .btn-play-main {
+    height: 48px !important;
+    font-size: 15px !important;
+  }
+
+  .btn-pass-sub {
+    height: 48px !important;
+    font-size: 14px !important;
+  }
+
+  .btn-sub {
+    height: 30px !important;
+    font-size: 11px !important;
+    padding: 0 10px !important;
+  }
+
+  .card-count-badge {
+    font-size: 10.5px !important;
+    height: 18px !important;
+    padding: 1px 5px !important;
+  }
+
+  .pass-count-badge {
+    font-size: 10px !important;
+    height: 18px !important;
+    width: 44px !important;
   }
 }

@@ -1,6 +1,6 @@
 /* ====================================================================
  * ROYAL DAIFUGO - scenario.js
- * [Version: v4.1.0 - ステージクリア時折れ線グラフ完全連動・PCログ直接格納＆自動退避版]
+ * [Version: v4.1.3 - 定義原本一元化・直通エピローグ＆周回完全復旧・完全版]
  * ==================================================================== */
 
 const GUIDE_SPEAKER = '宮廷案内役';
@@ -17,84 +17,63 @@ const ScenarioManager = {
   isActive: false,
   isInitialized: false,
   currentSeatRoster: null,
+  SCENARIO_STEPS_STORAGE_KEY: 'royalScenarioCumulativeSteps_v1',
 
   AVATARS: {
-    boy: { id: 'boy', name: '少年 (Leo)', shortName: '少年', gender: 'male', type: '若き天才系', image: 'fugo-絵柄/boy.png', desc: '若くして頭角を現した天才勝負師。知性と野心を秘めたクールで鋭い眼差し。' },
-    girl: { id: 'girl', name: '少女 (Iris)', shortName: '少女', gender: 'female', type: 'ミステリアス系', image: 'fugo-絵柄/girl.png', desc: '神秘的な瞳と淡いアッシュヘアの勝負師。場の流れを完全に見透かす直感を持つ。' },
-    guy: { id: 'guy', name: '歴戦の男 (Gale)', shortName: '歴戦の男', gender: 'male', type: '熟練の勝負師系', image: 'fugo-絵柄/guy.png', desc: '数多の修羅場を潜り抜けてきたベテラン。渋みと包容力のある歴戦の顔つき。' },
-    lady: { id: 'lady', name: '麗人 (Carmilla)', shortName: '麗人', gender: 'female', type: '妖艶ギャンブラー系', image: 'fugo-絵柄/lady.png', desc: '深紅とゴールドのドレスを纏う大人の女性。卓越した話術と駆け引きで勝負を支配する。' }
+    boy: { id: 'boy', name: '少年 (Leo)', shortName: '少年', icon: '👦', gender: 'male', type: '若き天才系', image: 'fugo-絵柄/boy.png', desc: '若くして頭角を現した天才勝負師。知性と野心を秘めたクールで鋭い眼差し。' },
+    girl: { id: 'girl', name: '少女 (Iris)', shortName: '少女', icon: '👧', gender: 'female', type: 'ミステリアス系', image: 'fugo-絵柄/girl.png', desc: '神秘的な瞳と淡いアッシュヘアの勝負師。場の流れを完全に見透かす直感を持つ。' },
+    guy: { id: 'guy', name: '歴戦の男 (Gale)', shortName: '歴戦の男', icon: '🧔', gender: 'male', type: '熟練の勝負師系', image: 'fugo-絵柄/guy.png', desc: '数多の修羅場を潜り抜けてきたベテラン。渋みと包容力のある歴戦の顔つき。' },
+    lady: { id: 'lady', name: '麗人 (Carmilla)', shortName: '麗人', icon: '💃', gender: 'female', type: '妖艶ギャンブラー系', image: 'fugo-絵柄/lady.png', desc: '深紅とゴールドのドレスを纏う大人の女性。卓越した話術と駆け引きで勝負を支配する。' }
   },
 
-  PRELIM_NOBLES: [
-    {
-      id: 'MARQUIS', name: '侯爵', gender: 'female', role: 'スマートパス重視派', icon: '🍷', img: 'fugo-絵柄/marquis.png',
-      desc: 'ワインを嗜みながら優雅に立ち回る。無理な競り合いを避け、終盤に鋭い手を打つ。',
-      startLine: 'ふふ、若き挑戦者さん。ワインを傾けながら優雅に参りましょう。無理な背伸びは火傷をなさいますわよ？',
-      defeatLine: 'あら……スマートに流すつもりが、完全に押し切られてしまいましたわ。お見事ね。'
-    },
-    {
-      id: 'COUNT', name: '伯爵', gender: 'male', role: 'フェーズ可変策略家', icon: '📜', img: 'fugo-絵柄/count.png',
-      desc: '序盤は力を温存し、手札が減ると一気に牙を剥く。計算高い老練な策略家。',
-      startLine: 'フッ、我が策略の盤面へようこそ。序盤の手応えだけで勝った気にならぬことだな。',
-      defeatLine: 'まさか、我が後半の罠をすべて見切っていたというのか……！ 貴殿、只者ではないな。'
-    },
-    {
-      id: 'DUKE', name: '公爵', gender: 'male', role: '強カード温存慎重派', icon: '👑', img: 'fugo-絵柄/duke.png',
-      desc: '家門の誇りを胸に、ジョーカーや強カードを最後まで温存して手堅く勝機を狙う。',
-      startLine: '我が公爵家の伝統に泥を塗るわけにはいかん。手堅く、そして揺るぎなき一手で迎え撃とう。',
-      defeatLine: 'ぐぬっ……我が温存の防壁を破られるとは。名門の意地を上回る太刀筋、天晴れである！'
-    },
-    {
-      id: 'STRATEGIST', name: '軍師', gender: 'male', role: '親権妨害コントロール', icon: '♟️', img: 'fugo-絵柄/strategist.png',
-      desc: '相手の独走を絶対に許さない。的確な8切りと支配札で場の流れを支配する。',
-      startLine: '盤上という戦場、勝敗は布陣の段階で決する。貴殿の思い通りには一歩も進ませぬよ。',
-      defeatLine: '我が張り巡らせた包囲網がことごとく崩されたか……見事な戦術眼であった。'
-    },
-    {
-      id: 'REVOLUTIONARY', name: '革命家', gender: 'male', role: '革命・8切り特化', icon: '🔥', img: 'fugo-絵柄/revolutionary.png',
-      desc: '古い身分制度を覆すことに執念を燃やす。4枚出し革命と8切りを果敢に仕掛ける。',
-      startLine: '古い秩序に守られた玉座など焼き尽くすまでだ！ 俺たちの変革の炎、消せると思うなよ！',
-      defeatLine: 'ぐあああッ！ だがこの敗北すらも次の革命の種火よ……王宮の分厚い壁、必ずブチ破ってくれ！'
-    },
-    {
-      id: 'KNIGHT', name: '騎士', gender: 'male', role: '愚直最弱順勝負', icon: '⚔️', img: 'fugo-絵柄/knight.png',
-      desc: '騎士道精神に則り、愚直に弱いカードから真っ向勝負を挑む熱血漢。',
-      startLine: '我が剣に誓って、小細工なしの真っ向勝負！ 騎士の誇り、受けて立つが良い！',
-      defeatLine: '見事な一太刀であった……我が完敗だ！ 貴殿の武運が王宮まで続くことを祈る！'
-    },
-    {
-      id: 'MERCHANT', name: '商人', gender: 'male', role: 'ペア至上主義商人', icon: '⚖️', img: 'fugo-絵柄/merchant.png',
-      desc: 'ペアや3カードを崩さず大切に扱う。親番からまとめ出しで手札を一気に圧縮する。',
-      startLine: 'へっへっへ、商売繁盛！ 損得勘定なら誰にも負けませんよ。手札を束ねてがっぽり稼がせてもらいます！',
-      defeatLine: 'あいたたた、大赤字だ！ まさかこれほど鋭い値踏み（読み）をなさるとは……参りました！'
-    },
-    {
-      id: 'JESTER', name: '道化師', gender: 'male', role: '予測不能トリッキー', icon: '🤡', img: 'fugo-絵柄/jester.png',
-      desc: '定石を無視した奇抜な手を連発。場の空気をかき乱して対戦相手を翻弄する。',
-      startLine: 'ヒャッハ〜！ 堅苦しいルールなんてつまんないよ〜？ 予測不能のサーカスを見せてあげる！',
-      defeatLine: 'キャハハ！ 転んじゃった〜！ でもすっごく楽しかったよ！ 次のショーでも遊ぼうね〜！'
-    },
-    {
-      id: 'SCHOLAR', name: '学者', gender: 'male', role: '確定勝ち観察分析', icon: '📖', img: 'fugo-絵柄/scholar.png',
-      desc: '残存カードを冷静にカウンティング。勝率100%の確定ルートを導き出して勝利する。',
-      startLine: 'カードは確率と論理の産物に過ぎません。あなたの打牌パターン、すべて解析させていただきます。',
-      defeatLine: '私の計算式にない変数を見事に突かれた……実に興味深く、美しい敗北です。'
-    }
-  ],
-
-  ROYAL_BOSSES: {
-    YOUNG_KING: { id: 'BEGINNER_AI', name: '新王 (Young King)', title: '若き王子・玉座の間第一の試練', icon: '🤴', img: 'fugo-絵柄/young_king.png', secretImg: 'fugo-絵柄/young_bl.png', desc: '国王の愛息にして若き王子。父王への謁見を求める挑戦者の器を測るべく、玉座の間にて堂々と立ちはだかる。' },
-    KING: { id: 'KING', name: '王 (King)', title: '宮廷の絶対君主・父', icon: '🏰', img: 'fugo-絵柄/king.png', desc: '宮廷の絶対君主にして新王の父。163次元APEX完全直感と詰み探索を操り、王者の威厳を振るう。' },
-    QUEEN: { id: 'SUPER_AI', name: '女王 (Queen)', title: '宮廷の真の実力者・母', icon: '👸', img: 'fugo-絵柄/queen.png', secretImg: 'fugo-絵柄/queen_bl.png', desc: '宮廷の真の主にして母。研ぎ澄まされた冷徹な大局観を駆使し、氷のような厳格さで君臨する最高峰の実力者。' },
-    AWAKENED_KING: { id: 'AWAKENED_KING', name: '覚醒新王 (Awakened King)', title: '過酷な修練を経て覚醒せし若き王', icon: '👑', img: 'fugo-絵柄/awakened_king.png', secretImg: 'fugo-絵柄/young_bl.png', desc: '両親の敗北を一身に背負い、髭を蓄えて真の君主として再誕した姿。深奥なる探索と冷徹な意志を融合させた王族の最高到達点。' }
+  /* config.js の原本から動的に初期貴族リストを解決 */
+  get PRELIM_NOBLES() {
+    const nobleDefs = [
+      { id: 'MARQUIS', gender: 'female', startLine: 'ふふ、若き挑戦者さん。ワインを傾けながら優雅に参りましょう。無理な背伸びは火傷をなさいますわよ？', defeatLine: 'あら……スマートに流すつもりが、完全に押し切られてしまいましたわ。お見事ね。' },
+      { id: 'COUNT', gender: 'male', startLine: 'フッ、我が策略の盤面へようこそ。序盤の手応えだけで勝った気にならぬことだな。', defeatLine: 'まさか、我が後半の罠をすべて見切っていたというのか……！ 貴殿、只者ではないな。' },
+      { id: 'DUKE', gender: 'male', startLine: '我が公爵家の伝統に泥を塗るわけにはいかん。手堅く、そして揺るぎなき一手で迎え撃とう。', defeatLine: 'ぐぬっ……我が温存の防壁を破られるとは。名門の意地を上回る太刀筋、天晴れである！' },
+      { id: 'STRATEGIST', gender: 'male', startLine: '盤上という戦場、勝敗は布陣の段階で決する。貴殿の思い通りには一歩も進ませぬよ。', defeatLine: '我が張り巡らせた包囲網がことごとく崩されたか……見事な戦術眼であった。' },
+      { id: 'REVOLUTIONARY', gender: 'male', startLine: '古い秩序に守られた玉座など焼き尽くすまでだ！ 俺たちの変革の炎、消せると思うなよ！', defeatLine: 'ぐあああッ！ だがこの敗北すらも次の革命の種火よ……王宮の分厚い壁、必ずブチ破ってくれ！' },
+      { id: 'KNIGHT', gender: 'male', startLine: '我が剣に誓って、小細工なしの真っ向勝負！ 騎士の誇り、受けて立つが良い！', defeatLine: '見事な一太刀であった……我が完敗だ！ 貴殿の武運が王宮まで続くことを祈る！' },
+      { id: 'MERCHANT', gender: 'male', startLine: 'へっへっへ、商売繁盛！ 損得勘定なら誰にも負けませんよ。手札を束ねてがっぽり稼がせてもらいます！', defeatLine: 'あいたたた、大赤字だ！ まさかこれほど鋭い値踏み（読み）をなさるとは……参りました！' },
+      { id: 'JESTER', gender: 'male', startLine: 'ヒャッハ〜！ 堅苦しいルールなんてつまんないよ〜？ 予測不能のサーカスを見せてあげる！', defeatLine: 'キャハハ！ 転んじゃった〜！ でもすっごく楽しかったよ！ 次のショーでも遊ぼうね〜！' },
+      { id: 'SCHOLAR', gender: 'male', startLine: 'カードは確率と論理の産物に過ぎません。あなたの打牌パターン、すべて解析させていただきます。', defeatLine: '私の計算式にない変数を見事に突かれた……実に興味深く、美しい敗北です。' }
+    ];
+    return nobleDefs.map(n => {
+      const def = CHARACTER_DEFS[n.id] || {};
+      return {
+        id: n.id,
+        name: def.name || n.id,
+        gender: n.gender,
+        role: CHAR_SHORT_DESC[n.id] || '',
+        icon: def.icon || '👤',
+        img: CHAR_IMAGES[n.id] || '',
+        desc: CHAR_SHORT_DESC[n.id] || '',
+        startLine: n.startLine,
+        defeatLine: n.defeatLine
+      };
+    });
   },
 
-  HEROIC_BOSSES: {
-    NOBUNAGA: { id: 'NOBUNAGA', name: '織田信長', title: '第六天魔王', icon: '⚔️', img: 'fugo-絵柄/nobunaga.png', desc: '天下布武を掲げる戦国の覇王。苛烈な三段撃ち連打と、親番を奪還する即死の8切りキルコンボを誇る。' },
-    SHOTOKU: { id: 'SHOTOKU', name: '聖徳太子', title: '十人の声を聴く賢者', icon: '🔮', img: 'fugo-絵柄/shotoku.png', desc: '古代日本の大賢人。場に出たカードと未出カードを完璧に把握し、革命を瞬時に収める「大調和」を発動する。' },
-    SHI_HUANGDI: { id: 'SHI_HUANGDI', name: '秦の始皇帝', title: '初代皇帝・法家統制', icon: '🏛️', img: 'fugo-絵柄/shi_huangdi.png', desc: '中華全土を統一した絶対の専制君主。無駄な手出しを法で禁じ、鉄壁の手札規格化と支配札の温存で圧勝する。' },
-    ALEXANDER: { id: 'ALEXANDER', name: 'アレクサンダー大王', title: '不敗の征服王', icon: '🛡️', img: 'fugo-絵柄/alexander.png', desc: '世界の果てまで駆け抜けた若き覇王。ファランクス陣形による面制圧と電撃速攻で対局を瞬殺する。' },
-    GILGAMESH: { id: 'GILGAMESH', name: 'ギルガメッシュ', title: '原初の覇王・神話の頂点', icon: '👑', img: 'fugo-絵柄/gilgamesh.png', desc: '人類最古の叙事詩に名を刻む神話の覇王。太古の宝器を統べる絶対者として、圧倒的な威光で人の子を迎え撃つ。' }
+  /* 王族ボス定義 */
+  get ROYAL_BOSSES() {
+    return {
+      YOUNG_KING: { id: 'BEGINNER_AI', name: '新王 (Young King)', title: '若き王子・玉座の間第一の試練', icon: '🤴', img: CHAR_IMAGES.BEGINNER_AI, secretImg: 'fugo-絵柄/young_bl.png', desc: '国王の愛息にして若き王子。父王への謁見を求める挑戦者の器を測るべく、玉座の間にて堂々と立ちはだかる。' },
+      KING: { id: 'KING', name: '王 (King)', title: '宮廷の絶対君主・父', icon: '🏰', img: CHAR_IMAGES.KING, desc: '宮廷の絶対君主にして新王の父。163次元APEX完全直感と詰み探索を操り、王者の威厳を振るう。' },
+      QUEEN: { id: 'SUPER_AI', name: '女王 (Queen)', title: '宮廷の真の実力者・母', icon: '👸', img: CHAR_IMAGES.SUPER_AI, secretImg: 'fugo-絵柄/queen_bl.png', desc: '宮廷の真の主にして母。研ぎ澄まされた冷徹な大局観を駆使し、氷のような厳格さで君臨する最高峰の実力者。' },
+      AWAKENED_KING: { id: 'AWAKENED_KING', name: '覚醒新王 (Awakened King)', title: '過酷な修練を経て覚醒せし若き王', icon: '👑', img: CHAR_IMAGES.AWAKENED_KING, secretImg: 'fugo-絵柄/young_bl.png', desc: '両親の敗北を一身に背負い、髭を蓄えて真の君主として再誕した姿。深奥なる探索と冷徹な意志を融合させた王族の最高到達点。' }
+    };
+  },
+
+  /* 歴史の英傑ボス定義 */
+  get HEROIC_BOSSES() {
+    return {
+      NOBUNAGA: { id: 'NOBUNAGA', name: '織田信長', title: '第六天魔王', icon: '⚔️', img: CHAR_IMAGES.NOBUNAGA, desc: '天下布武を掲げる戦国の覇王。苛烈な三段撃ち連打と、親番を奪還する即死の8切りキルコンボを誇る。' },
+      SHOTOKU: { id: 'SHOTOKU', name: '聖徳太子', title: '十人の声を聴く賢者', icon: '🔮', img: CHAR_IMAGES.SHOTOKU, desc: '古代日本の大賢人。場に出たカードと未出カードを完璧に把握し、革命を瞬時に収める「大調和」を発動する。' },
+      SHI_HUANGDI: { id: 'SHI_HUANGDI', name: '秦の始皇帝', title: '初代皇帝・法家統制', icon: '🏛️', img: CHAR_IMAGES.SHI_HUANGDI, desc: '中華全土を統一した絶対の専制君主。無駄な手出しを法で禁じ、鉄壁の手札規格化と支配札の温存で圧勝する。' },
+      ALEXANDER: { id: 'ALEXANDER', name: 'アレクサンダー大王', title: '不敗の征服王', icon: '🛡️', img: CHAR_IMAGES.ALEXANDER, desc: '世界の果てまで駆け抜けた若き覇王。ファランクス陣形による面制圧と電撃速攻で対局を瞬殺する。' },
+      GILGAMESH: { id: 'GILGAMESH', name: 'ギルガメッシュ', title: '原初の覇王・神話の頂点', icon: '👑', img: CHAR_IMAGES.GILGAMESH, desc: '人類最古の叙事詩に名を刻む神話の覇王。太古の宝器を統べる絶対者として、圧倒的な威光で人の子を迎え撃つ。' }
+    };
   },
 
   STORIES: {
@@ -341,6 +320,10 @@ const ScenarioManager = {
 
   reset() {
     localStorage.removeItem(this.SAVE_KEY);
+    try {
+      localStorage.removeItem(this.SCENARIO_STEPS_STORAGE_KEY);
+    } catch (e) {}
+
     this.currentSeatRoster = null;
     if (typeof pendingReceivedCards !== 'undefined') pendingReceivedCards = [];
     previousRanks = {};
@@ -413,7 +396,7 @@ const ScenarioManager = {
     if (screenMap) { screenMap.classList.add('is-hidden'); screenMap.classList.remove('active'); }
     const screenAvatar = document.getElementById('screen-avatar-select');
     if (screenAvatar) { screenAvatar.classList.remove('is-hidden'); screenAvatar.classList.add('active'); }
-    
+
     bgmMgr.setCharSelectPhase(true);
 
     isAutoPlayMode = false;
@@ -552,7 +535,7 @@ const ScenarioManager = {
       msgEl.innerHTML = `
         <div class="honor-medal-badge gold-dual">🏆 ALL STAGES CLEARED 🏆 全宮廷・歴史英傑 完全制覇</div>
         <div style="margin-top:6px; line-height:1.5;">全宮廷の貴族、王族、そして時空を超えた歴史の英雄たちをすべて討ち果たし、真の【大富豪王】に輝かれました！ 心より称賛と祝福を贈ります。</div>
-        <div style="margin-top:8px; font-size:11.5px; color:#ffd700; font-weight:bold;">🏆 あなたが歩んだ栄光の軌跡（全対戦打牌ログ）を学習データとして記録しますか？</div>
+        <div style="margin-top:8px; font-size:11.5px; color:#ffd700; font-weight:bold;">🏆 あなたが歩んだ栄光の軌跡（全対戦打牌ログ）をパソコンの logs/ フォルダに直接保存しますか？</div>
       `;
     }
 
@@ -565,7 +548,10 @@ const ScenarioManager = {
     if (restartBtn) restartBtn.classList.add('is-hidden');
 
     if (returnBtn) {
-      returnBtn.querySelector('.btn-text').textContent = '🏆 別の勝負師で最初から挑む（周回）';
+      const btnTextEl = returnBtn.querySelector('.btn-text');
+      if (btnTextEl) btnTextEl.textContent = '🏆 別の勝負師で最初から挑む（周回）';
+      else returnBtn.textContent = '🏆 別の勝負師で最初から挑む（周回）';
+
       returnBtn.onclick = () => {
         if (clearModal) clearModal.classList.remove('active');
         this.reset();
@@ -586,14 +572,34 @@ const ScenarioManager = {
     }
   },
 
-  // ★PC logs/ 直接格納 ＆ 手元完全フォールバック ＆ 画面上直貼りワンタップコピー完全連携
   async downloadLogs() {
-    let steps = AIDataLogger.stepLogs.filter(st => st.pattern === 'SCENARIO_BATTLE');
-    // フィルターの空振りを完全防止（最新の対局ステップが存在すれば全件を確実に取得）
-    if (!steps || steps.length === 0) {
-      steps = AIDataLogger.stepLogs;
+    let steps = [];
+    try {
+      const rawStored = localStorage.getItem(this.SCENARIO_STEPS_STORAGE_KEY);
+      if (rawStored) {
+        const parsed = JSON.parse(rawStored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          steps = parsed;
+        }
+      }
+    } catch (e) {}
+
+    const memSteps = (AIDataLogger && AIDataLogger.stepLogs)
+      ? AIDataLogger.stepLogs.filter(st => st.pattern === 'SCENARIO_BATTLE')
+      : [];
+
+    if (memSteps.length > 0) {
+      const existingKeys = new Set(steps.map(s => `${s.gameId}_${s.turnNumber}`));
+      memSteps.forEach(st => {
+        const k = `${st.gameId}_${st.turnNumber}`;
+        if (!existingKeys.has(k)) {
+          steps.push(st);
+          existingKeys.add(k);
+        }
+      });
     }
-    if (!steps || steps.length === 0) {
+
+    if (steps.length === 0) {
       alert('保存可能な対戦ログが記録されていません。');
       return;
     }
@@ -611,7 +617,6 @@ const ScenarioManager = {
       setTimeout(() => { if (statusEl) statusEl.classList.add('is-hidden'); }, 7000);
     };
 
-    // AIDataLoggerの統合保存関数を呼び出し（サーバー保存＋ファイルDL試行＋最前面直コピー完全展開）
     await AIDataLogger.saveLogFile(jsonl, fileName, (msg, isSuccess) => {
       showMsg(msg, isSuccess);
     });
@@ -642,7 +647,7 @@ const ScenarioManager = {
       gContainer.innerHTML = '';
       ['A', 'B', 'C'].forEach(gKey => {
         const nobleIds = data.prelimGroups[gKey];
-        const members = nobleIds.map(id => this.PRELIM_NOBLES.find(n => n.id === id));
+        const members = nobleIds.map(id => this.PRELIM_NOBLES.find(n => n.id === id)).filter(Boolean);
         const isCleared = !!data.clearedPrelimGroups[gKey];
         const isSelected = isStage1Phase && (data.selectedPrelimGroup === gKey);
 
@@ -653,7 +658,7 @@ const ScenarioManager = {
         card.innerHTML = `
           <div class="group-card-title"><span>グループ ${gKey}</span></div>
           <div class="group-members-row">
-            ${members.map(m => `<img class="group-member-thumb" src="${m.img}" onerror="this.onerror=null; this.src='${m.id.toLowerCase()}.png';" title="${m.name}" alt="">`).join('')}
+            ${members.map(m => `<img class="group-member-thumb" src="${m.img}" onerror="this.onerror=null; this.src='fugo-絵柄/king.png';" title="${m.name}" alt="">`).join('')}
           </div>
           <span class="group-status-badge ${isCleared ? 'status-cleared' : (isSelected ? 'status-ready' : '')}">
             ${isCleared ? '✅ 制覇済' : (isSelected ? '⚔️ 挑戦中' : '選択可')}
@@ -686,7 +691,6 @@ const ScenarioManager = {
       stage2El.classList.toggle('active', isStage2Reached);
     }
 
-    // ① 新王 (YOUNG_KING)
     const ykCard = document.getElementById('boss-card-young-king');
     const ykImg = document.getElementById('boss-img-young-king');
     const ykTag = document.getElementById('boss-tag-young-king');
@@ -711,7 +715,6 @@ const ScenarioManager = {
       }
     }
 
-    // ② 王 (KING)
     const kingCard = document.getElementById('boss-card-king');
     const kingTag = document.getElementById('boss-tag-king');
     const isKingCleared = (p === 'STAGE_2_QUEEN' || p === 'STAGE_2_AWAKENED_KING' || p.startsWith('STAGE_3_') || p === 'COMPLETED');
@@ -730,7 +733,6 @@ const ScenarioManager = {
       }
     }
 
-    // ③ 女王 (QUEEN)
     const qCard = document.getElementById('boss-card-queen');
     const qImg = document.getElementById('boss-img-queen');
     const qTag = document.getElementById('boss-tag-queen');
@@ -762,7 +764,6 @@ const ScenarioManager = {
       }
     }
 
-    // ④ 覚醒新王 (AWAKENED_KING)
     const akCard = document.getElementById('boss-card-awakened-king');
     const akImg = document.getElementById('boss-img-awakened-king');
     const akTag = document.getElementById('boss-tag-awakened-king');
@@ -777,7 +778,7 @@ const ScenarioManager = {
         if (akName) akName.textContent = this.ROYAL_BOSSES.AWAKENED_KING.name;
         if (akRole) akRole.textContent = this.ROYAL_BOSSES.AWAKENED_KING.title;
         if (isAwakenedCleared) {
-          if (akTag) qTag.textContent = '✅ 制覇済';
+          if (akTag) akTag.textContent = '✅ 制覇済';
           akCard.classList.add('cleared');
         } else if (isAwakenedActive) {
           if (akTag) akTag.textContent = '⚔️ 挑戦中';
@@ -837,24 +838,26 @@ const ScenarioManager = {
     const curIdx = phaseOrder.indexOf(p);
 
     let latestCardEl = null;
-    for (let i = 0; i <= Math.min(curIdx, 4); i++) {
+    const maxRender = (p === 'COMPLETED') ? 5 : Math.min(curIdx + 1, 5);
+
+    for (let i = 0; i < maxRender; i++) {
       const item = heroSequence[i];
-      const isCleared = (i < curIdx);
-      const isCurrent = (i === curIdx);
+      const isCleared = (p === 'COMPLETED') ? true : (i < curIdx);
+      const isCurrent = (p !== 'COMPLETED') && (i === curIdx);
       const isLast = (item.key === 'GILGAMESH');
 
       const card = document.createElement('div');
       card.className = `map-boss-card${isCleared ? ' cleared' : ''}${isCurrent ? ' active' : ''}${isLast ? ' boss-card-last' : ''}`;
       card.innerHTML = `
         <div class="boss-card-img-wrap">
-          <img src="${item.obj.img}" onerror="this.onerror=null; this.src='${item.key.toLowerCase()}.png';" alt="${item.obj.name}">
+          <img src="${item.obj.img}" onerror="this.onerror=null; this.src='fugo-絵柄/king.png';" alt="${item.obj.name}">
           <span class="boss-status-tag">${isCleared ? '✅ 制覇済' : '⚔️ 挑戦中'}</span>
         </div>
         <div class="boss-card-name">${item.obj.icon} ${item.obj.name}</div>
         <div class="boss-card-role">${item.obj.title}</div>
       `;
       container.appendChild(card);
-      if (isCurrent || isLast) latestCardEl = card;
+      if (isCurrent || (isLast && isCleared)) latestCardEl = card;
     }
 
     if (latestCardEl && curIdx >= 2) {
@@ -949,7 +952,7 @@ const ScenarioManager = {
         launchBtn.innerHTML = '<span>出陣する ⚔️</span>';
         launchBtn.onclick = () => this.launchScenarioBattle();
       }
-    } else if (p === 'STAGE_3_GILGAMESH' || p === 'COMPLETED') {
+    } else if (p === 'STAGE_3_GILGAMESH') {
       if (stageLabel) stageLabel.textContent = `最終神話決戦：原初の覇王「ギルガメッシュ」 ${condDesc}`;
       if (ruleLabel) ruleLabel.textContent = `神話の覇王を討ち果たし、伝説となれ！`;
       if (userStatus) userStatus.textContent = '最終決戦：ギルガメッシュ';
@@ -958,14 +961,12 @@ const ScenarioManager = {
         launchBtn.onclick = () => this.launchScenarioBattle();
       }
     } else if (p === 'COMPLETED') {
-      if (stageLabel) stageLabel.textContent = `👑 全シナリオ完全制覇！ 殿堂入り達成！`;
-      if (ruleLabel) ruleLabel.textContent = `歴史にその名を刻みました。別の勝負師を選んで新たな覇権へ挑みましょう！`;
-      if (userStatus) userStatus.textContent = '殿堂入り：宮廷真王';
+      if (stageLabel) stageLabel.textContent = `👑 全シナリオ完全制覇！ 殿堂入り達成`;
+      if (ruleLabel) ruleLabel.textContent = `すべての試練を突破しました。別の勝負師を選んで何度でも周回挑戦が可能です！`;
+      if (userStatus) userStatus.textContent = '殿堂入り覇者（全ステージ制覇）';
       if (launchBtn) {
-        launchBtn.innerHTML = '<span>🏆 別の勝負師で最初から挑む ⚔️</span>';
-        launchBtn.onclick = () => {
-          this.reset();
-        };
+        launchBtn.innerHTML = '<span>🏆 殿堂入りリザルトを表示</span>';
+        launchBtn.onclick = () => this.showGrandEndingClearModal();
       }
     }
   },
@@ -995,7 +996,7 @@ const ScenarioManager = {
     if (playerImg) playerImg.src = currentAvatar.image;
     if (bossImg && bossImgSrc) {
       bossImg.src = bossImgSrc;
-      bossImg.onerror = () => { bossImg.src = 'king.png'; };
+      bossImg.onerror = () => { bossImg.src = 'fugo-絵柄/king.png'; };
     }
 
     overlay.classList.remove('is-hidden');
@@ -1044,7 +1045,7 @@ const ScenarioManager = {
       if (isGuideTalking) {
         if (bossActor) bossActor.classList.add('is-hidden');
         if (guideActor) {
-          guideActor.classList.remove('is-hidden', 'is-idle');
+          guideActor.classList.remove('is-hidden', 'is-guide-speaking');
           guideActor.classList.add('is-guide-speaking');
         }
         if (playerActor) {
@@ -1325,7 +1326,7 @@ const ScenarioManager = {
     assignedCharacters.player = {
       id: this.data.avatarId || 'boy',
       name: this.getCurrentAvatar().shortName || this.getCurrentAvatar().name,
-      icon: '👤'
+      icon: this.getCurrentAvatar().icon || '👤'
     };
     assignedCharacters.cpu1 = cpu1Def;
     assignedCharacters.cpu2 = cpu2Def;
@@ -1361,8 +1362,6 @@ const ScenarioManager = {
     const myRank = rankValues[statusMap.player] || 4;
 
     previousRanks = { ...statusMap };
-
-    // グラフ描画用にプレイヤーおよび各CPUのキャラIDベースで順位を完全記録
     const thisGameRanks = {};
 
     PLAYERS.forEach(p => {
@@ -1378,7 +1377,7 @@ const ScenarioManager = {
         this.data.stageMatchStats[charId] = {
           charId: charId,
           name: isMe ? getPlayerDisplayName('player') : assignedCharacters[p]?.name,
-          icon: isMe ? '👤' : (assignedCharacters[p]?.icon || '👤'),
+          icon: isMe ? (this.getCurrentAvatar().icon || '👤') : (assignedCharacters[p]?.icon || '👤'),
           isPlayer: isMe,
           df: 0, f: 0, h: 0, dh: 0, rankSum: 0, games: 0,
           eightCuts: 0, revolutions: 0,
@@ -1414,12 +1413,30 @@ const ScenarioManager = {
       ranks: thisGameRanks
     });
 
-    this.save();
-
-    // ★万一のブラウザ終了に備え、localStorageへ直前対局ステップを自動永久バックアップ
     try {
-      localStorage.setItem('royalScenarioLastMatchStepsBackup', JSON.stringify(AIDataLogger.stepLogs));
+      const memSteps = (AIDataLogger && AIDataLogger.stepLogs)
+        ? AIDataLogger.stepLogs.filter(st => st.pattern === 'SCENARIO_BATTLE')
+        : [];
+      
+      let existingAll = [];
+      const rawStored = localStorage.getItem(this.SCENARIO_STEPS_STORAGE_KEY);
+      if (rawStored) {
+        try { existingAll = JSON.parse(rawStored) || []; } catch (e) {}
+      }
+
+      const existingKeys = new Set(existingAll.map(s => `${s.gameId}_${s.turnNumber}`));
+      memSteps.forEach(st => {
+        const k = `${st.gameId}_${st.turnNumber}`;
+        if (!existingKeys.has(k)) {
+          existingAll.push(st);
+          existingKeys.add(k);
+        }
+      });
+
+      localStorage.setItem(this.SCENARIO_STEPS_STORAGE_KEY, JSON.stringify(existingAll));
     } catch (e) {}
+
+    this.save();
 
     const curM = this.data.currentMatchIndex || 1;
     const totM = this.data.matchesPerStage || 1;
@@ -1509,6 +1526,18 @@ const ScenarioManager = {
   },
 
   handleFinalStageOutcome(outcome, lastMatchWinnerSeat) {
+    const isCleared = outcome.isCleared;
+    const curPhase = this.data.currentPhase;
+
+    /* ギルガメッシュ撃破直後：直接エピローグADV会話を再生し、その後にGRAND FINALEを表示 */
+    if (isCleared && (curPhase === 'STAGE_3_GILGAMESH' || curPhase === 'COMPLETED')) {
+      this.advancePhase();
+      this.playDialogue(this.STORIES.ENDING, this.HEROIC_BOSSES.GILGAMESH.img, () => {
+        this.showGrandEndingClearModal();
+      });
+      return;
+    }
+
     const clearModal = document.getElementById('modal-stage-clear');
     const iconEl = document.getElementById('clear-result-icon');
     const titleEl = document.getElementById('clear-result-title');
@@ -1523,21 +1552,22 @@ const ScenarioManager = {
     const winnerPlate = document.getElementById('stage-clear-winner-plate');
     const grandSaveBox = document.getElementById('scenario-grand-save-box');
 
-    // ★【上部見切れ解消・縦スクロール対応】モーダル内部コンテナのスタイル保証
+    const rankHistorySnapshot = [...(this.data.stageRankHistory || [])];
+    const totalStageMatches = this.data.matchesPerStage || 1;
+
     if (clearModal) {
       const modalContent = clearModal.querySelector('.modal-content') || clearModal.firstElementChild || clearModal;
       if (modalContent) {
-        modalContent.style.maxHeight = '88vh';
+        modalContent.style.maxHeight = '88dvh';
         modalContent.style.overflowY = 'auto';
         modalContent.style.webkitOverflowScrolling = 'touch';
         modalContent.style.overscrollBehavior = 'contain';
         modalContent.style.paddingBottom = '32px';
         modalContent.style.boxSizing = 'border-box';
-        modalContent.scrollTop = 0; // 最上部へリセット
+        modalContent.scrollTop = 0;
       }
     }
 
-    // ★【下部ボタン群の均等化配置】
     const buttonsWrap = returnBtn ? returnBtn.parentElement : null;
     if (buttonsWrap) {
       buttonsWrap.style.display = 'flex';
@@ -1547,7 +1577,6 @@ const ScenarioManager = {
       buttonsWrap.style.boxSizing = 'border-box';
     }
 
-    // ★【敗北時（DEFEAT）も含めたログ保存ボタンの常時展開】
     if (grandSaveBox) {
       grandSaveBox.classList.remove('is-hidden');
       grandSaveBox.style.width = '100%';
@@ -1555,12 +1584,10 @@ const ScenarioManager = {
       this.bindScenarioLogSaveActions();
     }
 
-    const isCleared = outcome.isCleared;
     const pAvatar = this.getCurrentAvatar();
-    const curPhase = this.data.currentPhase;
 
     let tier = 1;
-    if (curPhase.startsWith('STAGE_3_') || curPhase === 'COMPLETED') tier = 3;
+    if (curPhase.startsWith('STAGE_3_')) tier = 3;
     else if (curPhase.startsWith('STAGE_2_')) tier = 2;
 
     document.querySelectorAll('.champion-particle').forEach(p => p.remove());
@@ -1665,6 +1692,9 @@ const ScenarioManager = {
     if (returnBtn) {
       returnBtn.style.width = '100%';
       returnBtn.style.margin = '0';
+      const btnTextEl = returnBtn.querySelector('.btn-text');
+      if (btnTextEl) btnTextEl.textContent = '🗺️ シナリオマップへ進む';
+
       returnBtn.onclick = () => {
         if (clearModal) clearModal.classList.remove('active');
         this.isActive = false;
@@ -1680,7 +1710,7 @@ const ScenarioManager = {
     if (scoresTable) {
       let html = `
         <div class="stage-result-summary-header">
-          【全${this.data.matchesPerStage}試合 トータル関門突破判定】
+          【全${totalStageMatches}試合 トータル関門突破判定】
         </div>
         <div class="ranking-table-container">
           <table class="ranking-table">
@@ -1721,7 +1751,7 @@ const ScenarioManager = {
             <td style="text-align: center;">${statusBadge}</td>
             <td>
               <div style="display: flex; align-items: center; gap: 4px;">
-                <img src="${avatarSrc}" onerror="this.onerror=null; this.src='boy.png';" style="width: 20px; aspect-ratio: 2/3; border-radius: 3px; border: 1px solid rgba(212,175,55,0.4);" alt="">
+                <img src="${avatarSrc}" onerror="this.onerror=null; this.src='fugo-絵柄/king.png';" style="width: 20px; aspect-ratio: 2/3; border-radius: 3px; border: 1px solid rgba(212,175,55,0.4);" alt="">
                 <span style="color: ${isMe ? '#fff3a8' : '#e0e6ed'};">${displayName}</span>
               </div>
             </td>
@@ -1755,7 +1785,6 @@ const ScenarioManager = {
 
     if (clearModal) clearModal.classList.add('active');
 
-    // ★【シナリオ関門突破 折れ線グラフ描画完全連動（英傑名凡例の完全同期）】
     setTimeout(() => {
       const chartCanvas = document.getElementById('stage-clear-chart');
       const chartLegend = document.getElementById('stage-clear-chart-legend');
@@ -1768,8 +1797,8 @@ const ScenarioManager = {
         renderSharedRankChart(
           chartCanvas,
           chartLegend,
-          this.data.stageRankHistory || [],
-          this.data.matchesPerStage || 1,
+          rankHistorySnapshot,
+          totalStageMatches,
           'player',
           opponentKeys,
           true
@@ -1895,7 +1924,7 @@ const ScenarioManager = {
           const card = document.createElement('div');
           card.className = 'scenario-rival-card is-currently-battling';
           card.innerHTML = `
-            <img class="scenario-rival-thumb" src="${CHAR_IMAGES[opp.id] || ''}" onerror="this.onerror=null; this.src='${opp.id.toLowerCase()}.png';" alt="${opp.name}">
+            <img class="scenario-rival-thumb" src="${CHAR_IMAGES[opp.id] || ''}" onerror="this.onerror=null; this.src='fugo-絵柄/king.png';" alt="${opp.name}">
             <div class="scenario-rival-info">
               <div class="scenario-rival-name">${opp.icon || '⚔️'} ${opp.name} <span style="font-size:9px; color:#ffd700;">(対戦中)</span></div>
               <div class="scenario-rival-role">${CHAR_SHORT_DESC[opp.id] || '対戦相手'}</div>
@@ -1916,7 +1945,7 @@ const ScenarioManager = {
         const card = document.createElement('div');
         card.className = `scenario-char-info-card${isBattling ? ' is-currently-battling' : ''}`;
         card.innerHTML = `
-          <img class="scenario-char-thumb" src="${c.img}" onerror="this.onerror=null; this.src='${c.id.toLowerCase()}.png';" alt="${c.name}">
+          <img class="scenario-char-thumb" src="${c.img}" onerror="this.onerror=null; this.src='fugo-絵柄/king.png';" alt="${c.name}">
           <div class="scenario-char-text-col">
             <div class="scenario-char-name-line">
               <span class="scenario-char-name">${c.icon} ${c.name} ${isBattling ? '<span style="font-size:9px; color:#ffd700;">⚔️対戦中</span>' : ''}</span>
@@ -1952,7 +1981,7 @@ const ScenarioManager = {
         const card = document.createElement('div');
         card.className = `scenario-char-info-card${isBattling ? ' is-currently-battling' : ''}`;
         card.innerHTML = `
-          <img class="scenario-char-thumb" src="${dispImg}" onerror="this.onerror=null; this.src='${c.id.toLowerCase()}.png';" alt="${dispName}">
+          <img class="scenario-char-thumb" src="${dispImg}" onerror="this.onerror=null; this.src='fugo-絵柄/king.png';" alt="${dispName}">
           <div class="scenario-char-text-col">
             <div class="scenario-char-name-line">
               <span class="scenario-char-name">${c.icon} ${dispName} ${isBattling ? '<span style="font-size:9px; color:#ffd700;">⚔️対戦中</span>' : ''}</span>
@@ -1985,13 +2014,14 @@ const ScenarioManager = {
       if (heroesSection) heroesSection.classList.remove('is-hidden');
       if (gridHeroes) {
         gridHeroes.innerHTML = '';
-        for (let i = 0; i <= Math.min(curPhaseIdx, 4); i++) {
+        const maxHeroes = (curPhase === 'COMPLETED') ? 5 : Math.min(curPhaseIdx + 1, 5);
+        for (let i = 0; i < maxHeroes; i++) {
           const item = heroSequence[i];
           const isBattling = this.isActive && battlingCharIds.includes(item.obj.id);
           const card = document.createElement('div');
           card.className = `scenario-char-info-card is-epic-hero${isBattling ? ' is-currently-battling' : ''}`;
           card.innerHTML = `
-            <img class="scenario-char-thumb" src="${item.obj.img}" onerror="this.onerror=null; this.src='${item.obj.id.toLowerCase()}.png';" alt="${item.obj.name}">
+            <img class="scenario-char-thumb" src="${item.obj.img}" onerror="this.onerror=null; this.src='fugo-絵柄/king.png';" alt="${item.obj.name}">
             <div class="scenario-char-text-col">
               <div class="scenario-char-name-line">
                 <span class="scenario-char-name">${item.obj.icon} ${item.obj.name} ${isBattling ? '<span style="font-size:9px; color:#ffd700;">⚔️対戦中</span>' : ''}</span>

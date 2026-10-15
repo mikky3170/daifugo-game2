@@ -1,6 +1,6 @@
 /* ============================================================
  * ROYAL DAIFUGO - common.css
- * [CSS Version: v4.1.0 - 共通基盤・変数・モーダル・最適化ボタン]
+ * [CSS Version: v4.1.2 - 共通基盤・変数・モーダル2タブ化・王者基盤統合]
  * ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap');
@@ -36,7 +36,6 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ブラウザのデフォルトボタンによる白背景露出を完全根絶 */
 button {
   background: transparent;
   border: none;
@@ -70,7 +69,6 @@ body {
 
 /* ============================================================
  * 【完全遮断ルール】スタート画面 / シナリオ画面表示時に対戦画面UIを非表示化
- * （システムの絶対安定のため意図的に !important を保持）
  * ============================================================ */
 .char-select-overlay.active ~ #header-area,
 .char-select-overlay.active ~ #game-board,
@@ -108,9 +106,7 @@ button, .btn, .btn-sub, .btn-play-main, .btn-pass-sub, .btn-exchange-main,
   letter-spacing: 0.5px;
 }
 
-/* ============================================================
- * 2.0 最高級ゴールドボタン共通スタイル（!importantを安全削減）
- * ============================================================ */
+/* 最高級ゴールドボタン共通スタイル */
 button.btn-gold,
 .btn.btn-gold,
 button.btn-launch-battle,
@@ -163,9 +159,7 @@ button.btn-next-match-seat:disabled {
   opacity: 0.6;
 }
 
-/* ============================================================
- * 2.1 ゲームイベント演出バナー
- * ============================================================ */
+/* ゲームイベント演出バナー */
 .event-banner {
   position: absolute;
   top: 42%;
@@ -266,7 +260,7 @@ button.btn-next-match-seat:disabled {
 }
 
 /* ============================================================
- * 3.1 スタート画面パネル（ジャストフィット＆1画面集約最適化）
+ * 3.1 スタート画面パネル（共通基本構造）
  * ============================================================ */
 .char-select-overlay {
   position: absolute;
@@ -292,7 +286,6 @@ button.btn-next-match-seat:disabled {
 
 .char-select-panel {
   width: 100%;
-  max-width: 500px;
   min-height: min-content;
   display: flex;
   flex-direction: column;
@@ -440,8 +433,6 @@ button.btn-next-match-seat:disabled {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 8px rgba(255, 215, 0, 0.4);
   white-space: normal;
   word-break: break-word;
-  overflow: visible;
-  text-overflow: clip;
 }
 
 /* 設定スクロール領域 */
@@ -584,78 +575,6 @@ button.btn-next-match-seat:disabled {
   font-weight: bold;
 }
 
-/* シナリオ選択時専用：宮廷案内プレート */
-.setup-scenario-info-plate {
-  width: 100%;
-  background: linear-gradient(180deg, rgba(32, 20, 10, 0.95) 0%, rgba(14, 16, 26, 0.98) 100%);
-  border: 1.8px solid #ffd700;
-  border-radius: 8px;
-  padding: 8px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.85), 0 0 16px rgba(255, 215, 0, 0.35), inset 0 0 10px rgba(212, 175, 55, 0.2);
-  box-sizing: border-box;
-  animation: fadeInDown 0.25s ease;
-}
-
-.scenario-plate-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border-bottom: 1px solid rgba(255, 215, 0, 0.4);
-  padding-bottom: 4px;
-}
-.scenario-plate-icon { font-size: 15px; }
-.scenario-plate-title {
-  font-family: 'Cinzel', 'Noto Serif JP', serif;
-  font-size: 12.5px;
-  font-weight: 900;
-  color: #ffd700;
-  letter-spacing: 0.8px;
-}
-
-.scenario-plate-desc {
-  font-size: 10.5px;
-  color: #e2e8f0;
-  line-height: 1.45;
-}
-
-.scenario-plate-features {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 5px;
-  margin: 1px 0;
-}
-
-.scenario-feat-item {
-  background: rgba(10, 16, 26, 0.85);
-  border: 1px solid rgba(212, 175, 55, 0.35);
-  border-radius: 5px;
-  padding: 3px 2px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 1px;
-}
-.scenario-feat-item .feat-icon { font-size: 13px; line-height: 1; }
-.scenario-feat-item .feat-text {
-  font-size: 8.5px;
-  font-weight: 800;
-  color: #fffadb;
-  letter-spacing: 0.2px;
-}
-
-.scenario-plate-note {
-  font-size: 9px;
-  color: #fff3a8;
-  font-style: italic;
-  text-align: center;
-  border-top: 1px dashed rgba(212, 175, 55, 0.3);
-  padding-top: 4px;
-}
-
 .setup-practice-options-wrap {
   width: 100%;
   display: flex;
@@ -672,9 +591,6 @@ button.btn-next-match-seat:disabled {
   justify-content: flex-start;
 }
 
-/* ============================================================
- * ★ 試合数グリッド（横1列・完全1段組・全画面ジャストフィット版）
- * ============================================================ */
 .practice-games-cards-grid {
   display: grid !important;
   grid-template-columns: repeat(5, 1fr) !important;
@@ -775,12 +691,15 @@ button.btn-next-match-seat:disabled {
 .char-select-version-badge:hover { color: #ffd700; text-shadow: 0 0 6px rgba(255, 215, 0, 0.8); }
 
 /* ============================================================
- * 12. モーダル共通 ＆ 3タブ構成（!importantを整理・削減）
+ * 12. モーダル共通 ＆ 2タブ構成（完全スクロール保証・見切れ撲滅版）
  * ============================================================ */
 .modal-overlay {
   display: none;
   position: fixed;
   inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
   background: rgba(3, 6, 12, 0.88);
   backdrop-filter: blur(6px);
   z-index: 3000;
@@ -789,11 +708,16 @@ button.btn-next-match-seat:disabled {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s ease;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: max(10px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px));
+  box-sizing: border-box;
 }
 .modal-overlay.active { display: flex; opacity: 1; pointer-events: auto; }
 
 #stats-modal { z-index: 3200; }
-#practice-finish-modal, #practice-interim-modal, #modal-stage-clear, #modal-scenario-next-match { z-index: 3250; }
+#practice-finish-modal, #modal-stage-clear, #modal-scenario-next-match { z-index: 3250; }
 #eval-modal { z-index: 3280; }
 #log-viewer-modal, #modal-scenario-chars, #modal-scenario-rules { z-index: 3300; }
 #debug-log-modal { z-index: 3400; }
@@ -806,11 +730,17 @@ button.btn-next-match-seat:disabled {
   border-radius: 12px;
   width: 94%;
   max-width: 680px;
+  max-height: 86dvh;
   padding: 14px;
   box-shadow:
     0 16px 50px rgba(0, 0, 0, 0.95),
     0 0 30px rgba(212, 175, 55, 0.35),
     inset 0 0 20px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin: auto;
+  box-sizing: border-box;
 }
 
 .modal-wide { max-width: 680px; width: 95%; }
@@ -824,6 +754,7 @@ button.btn-next-match-seat:disabled {
   border-bottom: 1.5px solid var(--color-border-gold);
   padding-bottom: 8px;
   margin-bottom: 10px;
+  flex-shrink: 0;
 }
 
 .modal-header-with-actions {
@@ -831,6 +762,7 @@ button.btn-next-match-seat:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .modal-header-btns {
@@ -858,14 +790,15 @@ button.btn-next-match-seat:disabled {
   font-size: 13px;
   color: #d0d7de;
   line-height: 1.6;
-  max-height: 62vh;
+  max-height: 60vh;
   overflow-y: auto;
   padding-right: 4px;
+  flex: 1 1 auto;
 }
 
-.modal-body-log { padding: 4px 0; max-height: 62vh; overflow: hidden; }
-.modal-body-debug { padding: 0; max-height: 58vh; }
-.modal-body-next-game { text-align: center; padding: 4px 0; overflow: visible; }
+.modal-body-log { padding: 4px 0; max-height: 60vh; overflow: hidden; flex: 1 1 auto; }
+.modal-body-debug { padding: 0; max-height: 56vh; flex: 1 1 auto; }
+.modal-body-next-game { text-align: center; padding: 4px 0; overflow-y: auto; flex: 1 1 auto; }
 
 .modal-footer {
   display: flex;
@@ -873,9 +806,10 @@ button.btn-next-match-seat:disabled {
   align-items: center;
   gap: 8px;
   width: 100%;
-  margin-top: 12px;
+  margin-top: 10px;
   padding-top: 8px;
   border-top: 1px solid rgba(212, 175, 55, 0.25);
+  flex-shrink: 0;
 }
 
 .btn-left { margin-right: auto; }
@@ -911,17 +845,19 @@ button.btn-modal-close:hover {
 }
 .btn-modal-danger:hover { background: #ad2d2d; color: #fff; box-shadow: 0 0 8px rgba(244, 67, 54, 0.6); }
 
+/* 戦績モーダル 2タブ構成（2分割均等） */
 .modal-tabs {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
   margin-bottom: 12px;
   width: 100%;
+  flex-shrink: 0;
 }
 
 button.modal-tab-btn {
-  padding: 8px 4px;
-  font-size: 11.5px;
+  padding: 8px 6px;
+  font-size: 12px;
   font-weight: 700;
   background: linear-gradient(180deg, #121c2e 0%, #0a111c 100%);
   color: #c5b593;
@@ -974,6 +910,7 @@ button.modal-tab-btn.active::after {
   font-size: 11px;
   color: #cbd5e1;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  flex-shrink: 0;
 }
 .user-overall-summary-badge strong { color: #ffd700; }
 
@@ -1164,6 +1101,7 @@ button.modal-tab-btn.active::after {
   padding: 10px 12px;
   margin-bottom: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.75), inset 0 0 10px rgba(212, 175, 55, 0.1);
+  flex-shrink: 0;
 }
 
 .eval-balance-title-row {
@@ -1317,6 +1255,7 @@ button.modal-tab-btn.active::after {
   display: flex;
   justify-content: space-around;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .eval-keycard-badge {
@@ -1337,6 +1276,7 @@ button.modal-tab-btn.active::after {
   padding: 10px 12px;
   border-radius: 6px;
   border-left: 3px solid #ffd700;
+  flex-shrink: 0;
 }
 
 .eval-advisor-header {
@@ -1470,6 +1410,7 @@ button.modal-tab-btn.active::after {
   margin-bottom: 10px;
   width: 100%;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .log-viewer-nav-controls {
@@ -1714,7 +1655,7 @@ button.modal-tab-btn.active::after {
 }
 
 /* ============================================================
- * 13. キャラクターカルーセル
+ * 13. キャラクターカルーセル（基本構造）
  * ============================================================ */
 .char-picker-compact-grid {
   display: flex;
@@ -1727,6 +1668,7 @@ button.modal-tab-btn.active::after {
   border: 1px solid rgba(212, 175, 55, 0.22);
   min-width: 0;
   width: 100%;
+  align-items: center;
   box-sizing: border-box;
   touch-action: pan-x;
   -webkit-overflow-scrolling: touch;
@@ -1759,8 +1701,6 @@ button.modal-tab-btn.active::after {
   cursor: pointer;
   transition: all 0.22s ease;
   user-select: none;
-  flex-shrink: 0;
-  gap: 2px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
   box-sizing: border-box;
   touch-action: pan-x;
@@ -1794,6 +1734,7 @@ button.modal-tab-btn.active::after {
   border: 1.5px solid #d4af37;
   flex-shrink: 0;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.85);
+  box-sizing: border-box;
 }
 
 .compact-char-item.is-selected img {
@@ -1802,7 +1743,6 @@ button.modal-tab-btn.active::after {
 }
 
 .compact-char-item .c-name {
-  font-size: 10px;
   font-weight: 800;
   color: #fffadb;
   white-space: nowrap;
@@ -1810,28 +1750,83 @@ button.modal-tab-btn.active::after {
   text-overflow: ellipsis;
   width: 100%;
   text-align: center;
-  line-height: 1.2;
   letter-spacing: -0.3px;
 }
 .compact-char-item.is-selected .c-name { color: #ffd700; }
 
 .compact-char-item .c-desc {
-  font-size: 8.5px;
   color: #cbd5e1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   width: 100%;
   text-align: center;
-  line-height: 1.1;
   letter-spacing: -0.2px;
   opacity: 0.88;
 }
 .compact-char-item.is-selected .c-desc { color: #fff3a8; opacity: 1; font-weight: 600; }
 
 /* ============================================================
- * 14.2 金粉パーティクル演出
+ * 14. 王者装飾 ＆ 金粉パーティクル基盤
  * ============================================================ */
+.modal-winner-plate {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 10px);
+  max-width: 580px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: linear-gradient(180deg, rgba(36, 26, 10, 0.98) 0%, rgba(14, 18, 28, 0.99) 100%);
+  border: 2px solid var(--color-gold-bright);
+  border-radius: 10px;
+  padding: 4px 14px;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.95), 0 0 20px rgba(212, 175, 55, 0.75), inset 0 0 12px rgba(255, 215, 0, 0.2);
+  min-height: 84px;
+  z-index: 100;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.modal-winner-plate.is-champion-plate {
+  position: relative;
+  overflow: visible;
+}
+
+.modal-winner-plate.is-tier1-champion {
+  border-color: #ffd700 !important;
+  box-shadow: 0 0 25px rgba(212, 175, 55, 0.8), inset 0 0 14px rgba(255, 215, 0, 0.3) !important;
+}
+
+.modal-winner-plate.is-tier2-champion {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 30px rgba(14, 165, 233, 0.85), inset 0 0 16px rgba(56, 189, 248, 0.35) !important;
+}
+.modal-winner-plate.is-tier2-champion .modal-winner-title {
+  color: #7dd3fc !important;
+  text-shadow: 0 0 12px rgba(56, 189, 248, 0.9) !important;
+}
+
+.modal-winner-plate.is-tier3-champion {
+  border-color: #ffd700 !important;
+  background: linear-gradient(180deg, rgba(60, 20, 20, 0.98) 0%, rgba(20, 10, 25, 0.99) 100%) !important;
+  box-shadow: 0 0 45px rgba(255, 215, 0, 0.95), 0 0 35px rgba(239, 68, 68, 0.8), inset 0 0 20px rgba(255, 215, 0, 0.4) !important;
+  animation: championPlateGlow 1.8s infinite alternate ease-in-out;
+}
+.modal-winner-plate.is-tier3-champion .modal-winner-title {
+  color: #fffadb !important;
+  text-shadow: 0 0 15px rgba(255, 215, 0, 1), 0 0 25px rgba(255, 87, 34, 0.8) !important;
+}
+
+@keyframes championPlateGlow {
+  0% { transform: scale(1); filter: brightness(1); }
+  100% { transform: scale(1.02); filter: brightness(1.2); }
+}
+
 .champion-particle {
   position: absolute;
   top: -12px;
@@ -1857,4 +1852,156 @@ button.modal-tab-btn.active::after {
   20% { opacity: 1; }
   80% { opacity: 0.85; }
   100% { transform: translateY(440px) rotate(360deg) scale(1.1); opacity: 0; }
+}
+
+/* ============================================================
+ * 16. スマートフォン専用ブロック（幅599px以下：4人ジャストフィット表示）
+ * ============================================================ */
+@media (max-width: 599px) {
+  .char-select-panel {
+    max-width: 500px !important;
+    gap: 4px !important;
+    padding: 0 2px 4px 2px !important;
+  }
+
+  .char-picker-compact-grid {
+    height: 130px !important;
+    min-height: 130px !important;
+    max-height: 130px !important;
+    padding: 4px 5px !important;
+    gap: 5px !important;
+  }
+
+  .compact-char-item {
+    flex: 0 0 calc((100% - 15px) / 4) !important;
+    width: calc((100% - 15px) / 4) !important;
+    min-width: 80px !important;
+    max-width: 86px !important;
+    height: 122px !important;
+    padding: 3px 2px !important;
+    gap: 2px !important;
+  }
+
+  .compact-char-item img {
+    width: 62px !important;
+    height: 93px !important;
+    aspect-ratio: 2 / 3 !important;
+  }
+
+  .compact-char-item .c-name {
+    font-size: 9.5px !important;
+    line-height: 1.15 !important;
+  }
+
+  .compact-char-item .c-desc {
+    font-size: 8px !important;
+    line-height: 1.1 !important;
+  }
+
+  .btn-start-match-main {
+    height: clamp(38px, 4.8vh, 44px) !important;
+    font-size: clamp(12.5px, 2.5vw, 14.5px) !important;
+  }
+}
+
+/* ============================================================
+ * 17. タブレット専用ブロック（幅600px以上：画面いっぱいに伸び伸びと表示）
+ * ============================================================ */
+@media (min-width: 600px) {
+  .char-select-panel {
+    max-width: 860px !important;
+    gap: 8px !important;
+    padding: 0 8px 8px 8px !important;
+  }
+
+  .char-select-header-plate {
+    padding: 6px 16px 8px 16px !important;
+  }
+
+  .btn-load-game {
+    height: 34px !important;
+    font-size: 13px !important;
+  }
+  .btn-load-game .btn-icon { font-size: 15px !important; }
+
+  .setup-guidance-bar {
+    min-height: 36px !important;
+    padding: 6px 14px !important;
+  }
+  .guidance-icon { font-size: 16px !important; }
+  .guidance-text { font-size: 13px !important; }
+
+  .setup-card-box {
+    padding: 6px 12px !important;
+    gap: 6px !important;
+  }
+
+  .setup-box-title {
+    font-size: 12px !important;
+    padding-bottom: 4px !important;
+  }
+  .setup-sub-note { font-size: 10px !important; }
+  .setup-selected-badge { font-size: 10px !important; padding: 2px 7px !important; }
+  .btn-setup-random { font-size: 10.5px !important; padding: 2px 8px !important; }
+
+  .btn-setup-toggle {
+    padding: 5px 2px !important;
+    gap: 2px !important;
+  }
+  .btn-setup-toggle .toggle-icon { font-size: 14px !important; }
+  .btn-setup-toggle .toggle-text { font-size: 11px !important; }
+  .btn-setup-toggle small { font-size: 8.5px !important; }
+
+  .practice-game-card {
+    min-height: 34px !important;
+    padding: 4px 2px !important;
+  }
+  .practice-game-card .pgc-num { font-size: 14px !important; }
+  .practice-game-card .pgc-label { font-size: 9px !important; }
+
+  .char-picker-compact-grid {
+    height: 150px !important;
+    min-height: 150px !important;
+    max-height: 150px !important;
+    padding: 6px 10px !important;
+    gap: 8px !important;
+  }
+
+  .compact-char-item {
+    flex: 0 0 105px !important;
+    width: 105px !important;
+    min-width: 105px !important;
+    max-width: 105px !important;
+    height: 140px !important;
+    padding: 5px 3px !important;
+    gap: 3px !important;
+  }
+
+  .compact-char-item img {
+    width: 76px !important;
+    height: 114px !important;
+    aspect-ratio: 2 / 3 !important;
+  }
+
+  .compact-char-item .c-name {
+    font-size: 11.5px !important;
+  }
+
+  .compact-char-item .c-desc {
+    font-size: 9.5px !important;
+  }
+
+  .btn-start-match-main {
+    height: 50px !important;
+    font-size: 16px !important;
+    border-radius: 9px !important;
+  }
+
+  .char-select-footer-bar {
+    font-size: 10px !important;
+    padding: 3px 6px !important;
+  }
+  .char-select-version-badge {
+    font-size: 10px !important;
+  }
 }
