@@ -1,6 +1,6 @@
 /* ====================================================================
  * ROYAL DAIFUGO - main.js 【第1部 / 全3回】
- * [Version: v4.1.4 - 全画面制御・カード交換完全セーブ保護・排他ロック安全版]
+ * [Version: v4.1.5 - 幼姫＆科学者（あなた）完全対応・音響アンロック堅牢版]
  * ※ファイル先頭（1行目）から「5. カード交換処理（confirmExchange末尾）」まで。
  * ==================================================================== */
 
@@ -45,7 +45,7 @@ let assignedCharacters = { player: null, cpu1: null, cpu2: null, cpu3: null };
 let playedCardsHistory = [];
 let currentRoundCards = [];
 let clearedCardsHistory = [];
-let cpuCooldowns = { cpu1: 0, cpu2: 0, cpu3: 0 };
+let cpuCooldowns = { player: 0, cpu1: 0, cpu2: 0, cpu3: 0 };
 
 let scenarioMatchActionStats = {
   player: { eightCuts: 0, revolutions: 0, finishCard: null },
@@ -310,12 +310,12 @@ function terminateCurrentSession() {
       pt.classList.remove('portrait-talk');
       if (pt.timeoutId) GameTimer.clear(pt.timeoutId);
     }
-    const bubble = document.querySelector(`#${p} .dialogue-bubble`);
+    const bubble = document.querySelector(`#${p} .dialogue-bubble, #${p}-area .dialogue-bubble`);
     if (bubble) {
       bubble.classList.remove('show');
       if (bubble.timeoutId) GameTimer.clear(bubble.timeoutId);
     }
-    const box = document.getElementById(p);
+    const box = document.getElementById(p === 'player' ? 'player-area' : p);
     if (box) box.classList.remove('is-speaking-parent');
   });
 
@@ -484,6 +484,14 @@ function resetGame(reshuffle = false, keepRanks = false) {
 function startNewGame() {
   terminateCurrentSession();
 
+  try {
+    if (typeof soundMgr !== 'undefined') soundMgr.init();
+    if (typeof bgmMgr !== 'undefined' && !isSoundMuted) {
+      bgmMgr.setCharSelectPhase(false);
+      bgmMgr.update(isRevolution, isElevenBack);
+    }
+  } catch (e) {}
+
   const isSpectate = (typeof MatchSeriesManager !== 'undefined' && MatchSeriesManager.isActive && MatchSeriesManager.mode === 'auto');
   if (!isAutoPlayMode && !isSpectate) {
     currentSpeed = 1;
@@ -502,7 +510,7 @@ function startNewGame() {
   playedCardsHistory = [];
   currentRoundCards = [];
   clearedCardsHistory = [];
-  cpuCooldowns = { cpu1: 0, cpu2: 0, cpu3: 0 };
+  cpuCooldowns = { player: 0, cpu1: 0, cpu2: 0, cpu3: 0 };
   hasPlayerUsedAutoInMatch = isAutoPlayMode;
   lastTurnActivityTimestamp = Date.now();
   pendingReceivedCards = [];
@@ -590,6 +598,7 @@ function setFirstTurnByDiamond3() {
   const pName = getPlayerDisplayName('player');
   if (leaderPlayer === 'player') {
     setMessage(`ゲーム開始！${pName}が「♦3」を持っています。最初に出すカードを選んでください。`);
+    checkAndTriggerDialogue('player', 'GAME_START');
   } else {
     setMessage(`${getPlayerDisplayName(leaderPlayer)}が「♦3」を持っています。${getPlayerDisplayName(leaderPlayer)}からスタート！`);
   }
@@ -634,7 +643,6 @@ function proceedToExchange() {
       if (previousRanks[p] === '大貧民') daihinmin = p;
     });
 
-    // 役職重複・欠落時の自動整合性修復ガード
     const assignedSeats = [daifugo, fugo, hinmin, daihinmin].filter(Boolean);
     if (assignedSeats.length < 4 || new Set(assignedSeats).size < 4) {
       const unassigned = PLAYERS.filter(p => !assignedSeats.includes(p));
@@ -656,7 +664,6 @@ function proceedToExchange() {
     const isPlayerTribute = (daihinmin === 'player' || hinmin === 'player');
 
     if (isPlayerTribute) {
-      // 大貧民・貧民（プレイヤー）：自動献上
       isExchangePhase = false;
       sortHand(hands.player, false);
       const tributeCount = (daihinmin === 'player') ? 2 : 1;
@@ -701,7 +708,6 @@ function safeSelectExchangeCards(hand, count) {
       console.warn('[CARD SELECT FALLBACK] selectExchangeCardsSmart例外:', e);
     }
   }
-  // 安全フォールバック：弱い順（先頭から）不要カードを選択
   const sorted = [...hand].sort((a, b) => (a.rankValue || 0) - (b.rankValue || 0));
   return sorted.slice(0, Math.min(count, sorted.length));
 }
@@ -811,7 +817,6 @@ function executeTributeExchange(daifugo, fugo, hinmin, daihinmin) {
         render(true);
       }
     } else {
-      // プレイヤーが大貧民・貧民の場合：交換完了演出を経て次局開始
       isExchangePhase = false;
       isExchangeTransitioning = true;
       PLAYERS.forEach(p => sortHand(hands[p], false));
@@ -916,7 +921,7 @@ function confirmExchange() {
 }
 /* ====================================================================
  * ROYAL DAIFUGO - main.js 【第2部 / 全3回】
- * [Version: v4.1.4 - 全画面制御・打牌即時応答・警告バナー残留根絶完全修復版]
+ * [Version: v4.1.5 - 幼姫＆科学者（あなた）完全対応・音響アンロック堅牢版]
  * ※「6. プレイヤー操作 ＆ 打牌処理」から「renderSharedRankChart末尾」まで。
  * ==================================================================== */
 
@@ -1147,6 +1152,7 @@ function playerPass() {
   updateControlsOnly();
 
   soundMgr.playPass();
+  checkAndTriggerDialogue('player', 'PASS');
   processPass('player');
 }
 
@@ -1357,7 +1363,7 @@ function playCardSuccess(player, cards, needFullRedraw = false, playedIndices = 
       scenarioMatchActionStats[player].finishCard = cards[0];
       soundMgr.playWin();
       actionText += `<br>${getPlayerDisplayName(player)}が上がり！<br>【${playerStatusMap[player]}】確定！`;
-      if (player !== 'player') checkAndTriggerDialogue(player, 'WIN');
+      checkAndTriggerDialogue(player, 'WIN');
     }
 
     if (finishEvaluation.capitalFallVictim) {
@@ -1367,7 +1373,7 @@ function playCardSuccess(player, cards, needFullRedraw = false, playedIndices = 
         playerStatusMap[victim] = '大貧民';
         foulPlayers[victim] = '都落ち';
         actionText += `<br><span style="color:#ffd700; font-weight:bold;">🏛️ 【都落ち】前大富豪（${getPlayerDisplayName(victim)}）が1位になれなかったため失格・大貧民転落！</span>`;
-        if (victim !== 'player') checkAndTriggerDialogue(victim, 'LOSE');
+        checkAndTriggerDialogue(victim, 'LOSE');
 
         if (victim === 'player') {
           hasPlayerCapitalFallen = true;
@@ -1388,7 +1394,7 @@ function playCardSuccess(player, cards, needFullRedraw = false, playedIndices = 
   bgmMgr.update(isRevolution, isElevenBack);
 
   const hasWon = hands[player].length === 0;
-  if (!hasWon && player !== 'player') {
+  if (!hasWon) {
     checkAndTriggerDialogue(player, specialType || 'PLAY_CARD', cards);
   }
 
@@ -1474,7 +1480,7 @@ function nextTurn() {
       const last = active[0];
       finishedPlayers.push(last);
       assignWinRank(last);
-      if (last !== 'player') checkAndTriggerDialogue(last, 'LOSE');
+      checkAndTriggerDialogue(last, 'LOSE');
     }
     gameEnded = true;
     previousRanks = { ...playerStatusMap };
@@ -1482,7 +1488,7 @@ function nextTurn() {
     PLAYERS.forEach(p => {
       const pt = document.getElementById(`${p}-portrait`);
       if (pt) pt.classList.remove('portrait-talk');
-      const bubble = document.querySelector(`#${p} .dialogue-bubble`);
+      const bubble = document.querySelector(`#${p} .dialogue-bubble, #${p}-area .dialogue-bubble`);
       if (bubble) bubble.classList.remove('show');
       AIStatusUI.clearBrainDot(p);
     });
@@ -2071,7 +2077,7 @@ function showVictoryPopup(player) {
   PLAYERS.forEach(p => {
     const pt = document.getElementById(`${p}-portrait`);
     if (pt) pt.classList.remove('portrait-talk');
-    const bubble = document.querySelector(`#${p} .dialogue-bubble`);
+    const bubble = document.querySelector(`#${p} .dialogue-bubble, #${p}-area .dialogue-bubble`);
     if (bubble) bubble.classList.remove('show');
   });
 
@@ -2423,11 +2429,12 @@ function updateControlsOnly() {
 }
 
 function showCharacterDialogue(player, text) {
-  if (!text || player === 'player') return;
-  const box = document.getElementById(player);
+  if (!text) return;
+  const isPlayer = (player === 'player');
+  const box = document.getElementById(isPlayer ? 'player-area' : player);
   if (!box) return;
 
-  const targetAnchor = box.querySelector('.cpu2-layout-plate') || box.querySelector('.player-layout-plate') || box.querySelector('.char-row') || box;
+  const targetAnchor = box.querySelector('.player-layout-plate') || box.querySelector('.cpu2-layout-plate') || box.querySelector('.char-row') || box;
   const portrait = document.getElementById(`${player}-portrait`);
   if (!portrait) return;
 
@@ -2435,6 +2442,9 @@ function showCharacterDialogue(player, text) {
   if (!bubble) {
     bubble = document.createElement('div');
     bubble.className = 'dialogue-bubble';
+    if (isPlayer) {
+      bubble.classList.add('player-dialogue-bubble');
+    }
     targetAnchor.appendChild(bubble);
   }
 
@@ -2459,9 +2469,26 @@ function showCharacterDialogue(player, text) {
 }
 
 function checkAndTriggerDialogue(player, eventType, extraCards = []) {
-  if (player === 'player') return;
-  const def = assignedCharacters[player];
-  if (!def) return;
+  const isPlayer = (player === 'player');
+  let charKey = null;
+
+  if (isPlayer) {
+    const isScenario = (typeof ScenarioManager !== 'undefined' && ScenarioManager.isActive);
+    if (isScenario) {
+      charKey = ScenarioManager.getCurrentAvatar()?.id || 'boy';
+    } else {
+      charKey = StartSetupManager.selectedPlayerCharId || assignedCharacters.player?.id || 'boy';
+      if (!CHARACTER_DIALOGUES[charKey]) {
+        charKey = 'boy';
+      }
+    }
+  } else {
+    const def = assignedCharacters[player];
+    if (!def) return;
+    charKey = def.id;
+  }
+
+  if (!CHARACTER_DIALOGUES[charKey]) return;
 
   if (cpuCooldowns[player] > 0 && ['NORMAL', 'MULTI', 'STRONG', 'PASS'].includes(eventType)) {
     cpuCooldowns[player]--;
@@ -2469,10 +2496,21 @@ function checkAndTriggerDialogue(player, eventType, extraCards = []) {
   }
 
   const rates = {
-    NORMAL: 0.25, MULTI: 0.35, STRONG: 0.45, PASS: 0.35,
-    EIGHT_CUT: 0.90, ELEVEN_BACK: 0.90, REVOLUTION: 1.0,
-    ENEMY_FEW: 0.70, MY_FEW: 0.80, WIN: 1.0, LOSE: 1.0,
-    GAME_START: 1.0, EXCHANGE: 1.0, NEXT_GAME: 1.0
+    NORMAL: isPlayer ? 0.35 : 0.25,
+    MULTI: isPlayer ? 0.45 : 0.35,
+    STRONG: isPlayer ? 0.55 : 0.45,
+    PASS: isPlayer ? 0.40 : 0.35,
+    EIGHT_CUT: 0.95,
+    ELEVEN_BACK: 0.95,
+    REVOLUTION: 1.0,
+    ENEMY_FEW: 0.75,
+    MY_FEW: 0.85,
+    WIN: 1.0,
+    LOSE: 1.0,
+    GAME_START: isPlayer ? 0.90 : 1.0,
+    EXCHANGE: 1.0,
+    NEXT_GAME: 1.0,
+    AUTO_ON: 1.0
   };
 
   const enemyLens = PLAYERS.filter(p => p !== player && !finishedPlayers.includes(p)).map(p => (hands[p] ? hands[p].length : 0));
@@ -2480,7 +2518,7 @@ function checkAndTriggerDialogue(player, eventType, extraCards = []) {
 
   let cat = eventType;
   if (eventType === 'PLAY_CARD') {
-    if (hands[player].length <= 2) cat = 'MY_FEW';
+    if (hands[player] && hands[player].length <= 2) cat = 'MY_FEW';
     else if (minEnemy <= 2) cat = 'ENEMY_FEW';
     else if (extraCards.some(c => {
       const r = normalizeCardRank(c);
@@ -2491,11 +2529,46 @@ function checkAndTriggerDialogue(player, eventType, extraCards = []) {
   }
 
   if (RandomManager.random() <= (rates[cat] || 0.3)) {
-    const list = CHARACTER_DIALOGUES[def.id]?.[cat] || CHARACTER_DIALOGUES[def.id]?.NORMAL;
+    const list = CHARACTER_DIALOGUES[charKey]?.[cat] || CHARACTER_DIALOGUES[charKey]?.NORMAL;
     if (list && list.length > 0) {
       const text = list[Math.floor(RandomManager.random() * list.length)];
       showCharacterDialogue(player, text);
-      cpuCooldowns[player] = 2;
+      cpuCooldowns[player] = isPlayer ? 1 : 2;
+    }
+  }
+}
+
+function triggerAutoPlayReaction() {
+  checkAndTriggerDialogue('player', 'AUTO_ON');
+
+  const activeCpus = ['cpu1', 'cpu2', 'cpu3'].filter(c => !finishedPlayers.includes(c));
+  if (activeCpus.length === 0) return;
+
+  const bossPriority = ['GILGAMESH', 'SUPER_AI', 'KING', 'AWAKENED_KING', 'NOBUNAGA', 'SHI_HUANGDI', 'ALEXANDER', 'SHOTOKU'];
+  let chosenCpu = null;
+
+  for (const bId of bossPriority) {
+    const found = activeCpus.find(c => assignedCharacters[c]?.id === bId);
+    if (found) {
+      chosenCpu = found;
+      break;
+    }
+  }
+
+  if (!chosenCpu) {
+    chosenCpu = activeCpus[Math.floor(RandomManager.random() * activeCpus.length)];
+  }
+
+  if (chosenCpu) {
+    const cDef = assignedCharacters[chosenCpu];
+    const reactList = CHARACTER_DIALOGUES[cDef?.id]?.AUTO_REACT;
+    if (reactList && reactList.length > 0) {
+      GameTimer.set(() => {
+        if (!gameEnded && isAutoPlayMode) {
+          const reactText = reactList[Math.floor(RandomManager.random() * reactList.length)];
+          showCharacterDialogue(chosenCpu, reactText);
+        }
+      }, 700 / getSpeedMultiplier());
     }
   }
 }
@@ -2523,7 +2596,12 @@ function getPlayerDisplayName(player, withIcon = false) {
 
     if (typeof ScenarioManager !== 'undefined' && ScenarioManager.isActive) {
       const a = ScenarioManager.getCurrentAvatar();
-      const short = a ? (a.shortName || a.name.split(' ')[0]) : '自分';
+      let short = '自分';
+      if (a) {
+        if (a.id === 'charlotte') short = '幼姫';
+        else if (a.id === 'franz') short = '科学者';
+        else short = a.shortName || a.name.split(' ')[0];
+      }
       if (isUsingAuto) {
         return withIcon ? `👤 ${short} [🤖代行]` : `${short} [🤖代行]`;
       }
@@ -2533,6 +2611,8 @@ function getPlayerDisplayName(player, withIcon = false) {
     const def = assignedCharacters.player;
     let pName = def ? (def.name || '自分') : '自分';
     if (def?.id === 'GILGAMESH') pName = 'ギルガメ';
+    else if (def?.id === 'charlotte') pName = '幼姫';
+    else if (def?.id === 'franz') pName = '科学者';
 
     if (isSpectate) {
       const icon = def ? (def.icon || '👤') : '👤';
@@ -2551,6 +2631,10 @@ function getPlayerDisplayName(player, withIcon = false) {
   let charDisplayName = char.name;
   if (char.id === 'GILGAMESH') {
     charDisplayName = 'ギルガメ';
+  } else if (char.id === 'charlotte') {
+    charDisplayName = '幼姫';
+  } else if (char.id === 'franz') {
+    charDisplayName = '科学者';
   }
   return withIcon ? `${char.icon} ${charDisplayName}` : charDisplayName;
 }
@@ -2962,7 +3046,7 @@ function renderNextGameInterimDashboard() {
 
   if (isScenario) {
     curGame = ScenarioManager.data.currentMatchIndex || 1;
-    totGames = ScenarioManager.data.matchesPerStage || 1;
+    totGames = ScenarioManager.data.matchesPerStage || 5;
     const statsList = Object.values(ScenarioManager.data.stageMatchStats || {});
     resultsList = statsList.map(st => {
       const g = Math.max(1, st.games);
@@ -3027,7 +3111,7 @@ function renderNextGameInterimDashboard() {
         <td style="text-align: center;">${rankBadge}</td>
         <td>
           <div style="display: flex; align-items: center; gap: 4px;">
-            <img src="${avatarSrc}" onerror="this.onerror=null; this.src='boy.png';" style="width: 20px; aspect-ratio: 2/3; border-radius: 3px; border: 1px solid rgba(212,175,55,0.4);" alt="">
+            <img src="${avatarSrc}" onerror="this.onerror=null; this.src='fugo-絵柄/king.png';" style="width: 20px; aspect-ratio: 2/3; border-radius: 3px; border: 1px solid rgba(212,175,55,0.4);" alt="">
             <span style="color: ${isMe ? '#fff3a8' : '#e0e6ed'}; font-size: 11.5px;">${displayName}</span>
           </div>
         </td>
@@ -3202,9 +3286,9 @@ function renderSharedRankChart(canvas, legendEl, rankHistory, totalGames, player
     });
   });
 }
- /* ====================================================================
+/* ====================================================================
  * ROYAL DAIFUGO - main.js 【第3部 / 全3回】
- * [Version: v4.1.4 - セーブ完全保護・モード越境防御・構文完全修復版]
+ * [Version: v4.1.5 - 幼姫＆科学者（あなた）完全対応・音響アンロック堅牢版]
  * ※「8.2 対局リプレイ ＆ 勝敗因分析マネージャー」からファイル末尾まで。
  * ==================================================================== */
 
@@ -5154,7 +5238,6 @@ const StartSetupManager = {
       };
     }
 
-    /* シナリオ選択時：中間プレートを挟まず直接シナリオ画面へ遷移 */
     if (sBtn) {
       sBtn.onclick = () => {
         soundMgr.playSelect();
@@ -5988,7 +6071,7 @@ const SaveLoadManager = {
     });
 
     const cleanField = (fieldCards || []).map(c => this.sanitizeCardForSave(c)).filter(Boolean);
-    const cleanPendingReceived = (pendingReceivedCards || []).map(c => this.sanitizeCardForSave(c)).filter(Boolean);
+    const cleanPendingReceivedCards = (pendingReceivedCards || []).map(c => this.sanitizeCardForSave(c)).filter(Boolean);
 
     const cleanAssigned = {};
     PLAYERS.forEach(p => {
@@ -6025,7 +6108,7 @@ const SaveLoadManager = {
       playerPassCounts: { ...playerPassCounts },
       hasPassedInRound: { ...hasPassedInRound },
       fieldCards: cleanField,
-      pendingReceivedCards: cleanPendingReceived,
+      pendingReceivedCards: cleanPendingReceivedCards,
       lastPlayedPlayer: lastPlayedPlayer,
       currentTurnIndex: currentTurnIndex,
       consecutivePasses: consecutivePasses,
@@ -6176,7 +6259,7 @@ const SaveLoadManager = {
       playedCardsHistory = [];
       currentRoundCards = [];
       clearedCardsHistory = [];
-      cpuCooldowns = { cpu1: 0, cpu2: 0, cpu3: 0 };
+      cpuCooldowns = { player: 0, cpu1: 0, cpu2: 0, cpu3: 0 };
       selectedIndices = [];
       gameEnded = !!data.gameEnded;
 
@@ -7108,6 +7191,7 @@ function initEvents() {
       isAutoPlayMode = !isAutoPlayMode;
       if (isAutoPlayMode) {
         hasPlayerUsedAutoInMatch = true;
+        triggerAutoPlayReaction();
       }
 
       if (!isAutoPlayMode) {
@@ -7215,7 +7299,7 @@ function initEvents() {
       soundMgr.playSelect();
       document.querySelectorAll('.btn-scenario-game-count').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      const count = parseInt(btn.getAttribute('data-games'), 10) || 1;
+      const count = parseInt(btn.getAttribute('data-games'), 10) || 5;
       ScenarioManager.data.matchesPerStage = count;
       ScenarioManager.save();
       const hintEl = document.getElementById('scenario-games-hint');
@@ -7333,7 +7417,6 @@ function initEvents() {
   if (btnRuleHelp2) btnRuleHelp2.onclick = () => ScenarioManager.openRulesModal();
   if (btnMapRuleHelp) btnMapRuleHelp.onclick = () => ScenarioManager.openRulesModal();
 
-/* === 【第3部 結合部】 === */
   const mScenarioCharsCloseX = document.getElementById('modal-scenario-chars-close-x');
   const btnScenarioCharsClose = document.getElementById('btn-scenario-chars-close');
   if (mScenarioCharsCloseX) mScenarioCharsCloseX.onclick = () => { soundMgr.playDeselect(); const m = document.getElementById('modal-scenario-chars'); if (m) m.classList.remove('active'); updateFullscreenButtonsUI(); };

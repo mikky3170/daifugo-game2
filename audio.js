@@ -1,6 +1,6 @@
 /* ====================================================================
  * ROYAL DAIFUGO - audio.js
- * [Version: v4.1.0 - オープニング排他保護・完全消音ガード＆シームレス音響版]
+ * [Version: v4.1.5 - 音響確実アンロック・オープニング排他保護＆完全消音ガード版]
  * ==================================================================== */
 
 /* ★最小化・裏画面での完全消音ガードを備えたSoundManager★ */
@@ -9,11 +9,15 @@ class SoundManager {
     this.ctx = null;
     const initAudio = () => {
       this.init();
-      window.removeEventListener('click', initAudio);
-      window.removeEventListener('touchstart', initAudio);
+      if (this.ctx && this.ctx.state === 'running') {
+        window.removeEventListener('click', initAudio);
+        window.removeEventListener('touchstart', initAudio);
+        window.removeEventListener('touchend', initAudio);
+      }
     };
-    window.addEventListener('click', initAudio);
-    window.addEventListener('touchstart', initAudio);
+    window.addEventListener('click', initAudio, { passive: true });
+    window.addEventListener('touchstart', initAudio, { passive: true });
+    window.addEventListener('touchend', initAudio, { passive: true });
 
     const handleSuspend = () => {
       if (this.ctx && this.ctx.state === 'running') {
@@ -43,7 +47,9 @@ class SoundManager {
   init() {
     if (!this.ctx) {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
-      this.ctx = new AudioContext();
+      if (AudioContext) {
+        this.ctx = new AudioContext();
+      }
     }
     if (this.ctx && this.ctx.state === 'suspended' && !document.hidden && (typeof isSoundMuted === 'undefined' || !isSoundMuted)) {
       this.ctx.resume().catch(() => {});
@@ -145,7 +151,7 @@ class SoundManager {
   }
 }
 
-/* ★排他制御と完全消音ガードを備えたBgmManager（オープニング排他保護版）★ */
+/* ★排他制御と完全消音ガードを備えたBgmManager（確実アンロック版）★ */
 class BgmManager {
   constructor() {
     this.audioA = new Audio();
@@ -193,7 +199,6 @@ class BgmManager {
 
     const handleShow = () => {
       this.isBackgrounded = false;
-      // オープニング画面が表示中のときはメインBGMを再開させない
       if (typeof OpeningManager !== 'undefined' && OpeningManager.isOpen) {
         return;
       }
@@ -218,12 +223,11 @@ class BgmManager {
 
     const unlockAudio = () => {
       if (this.isBackgrounded || document.hidden) return;
-      // ★オープニング再生中はメインBGMの割り込みアンロックを完全にブロック
       if (typeof OpeningManager !== 'undefined' && OpeningManager.isOpen) return;
 
       if (typeof isSoundMuted === 'undefined' || !isSoundMuted) {
         const src = (this.isCharSelectPhase && !this.isHeroAdvMode) ? this.tracks.charSelect : this.currentBattleBaseSrc;
-        if (!this.activeAudio.src || this.currentSrc !== src) {
+        if (!this.activeAudio.src || !this.activeAudio.src.includes(src)) {
           this.activeAudio.src = src;
           this.currentSrc = src;
         }
@@ -234,6 +238,7 @@ class BgmManager {
         }).catch(() => {});
       }
     };
+
     window.addEventListener('click', unlockAudio, { passive: true });
     window.addEventListener('touchend', unlockAudio, { passive: true });
   }
@@ -254,13 +259,13 @@ class BgmManager {
 
   crossFade(nextSrc, forceRestart = false) {
     if (!nextSrc) return;
-    // オープニング画面が表示中のときはメインBGMのフェードを拒絶
     if (typeof OpeningManager !== 'undefined' && OpeningManager.isOpen) return;
 
     if (this.isBackgrounded || document.hidden) {
       this.currentSrc = nextSrc;
       return;
     }
+
     if (!forceRestart && this.currentSrc === nextSrc && !this.activeAudio.paused) return;
     this.currentSrc = nextSrc;
 

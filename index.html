@@ -317,7 +317,6 @@
         </div>
 
         <div class="setup-guidance-bar" id="setup-guidance-bar">
-          <span class="guidance-icon">💬</span>
           <span class="guidance-text" id="setup-guidance-text">対戦条件を設定して、あなたの分身となるキャラクターを選択してください</span>
         </div>
 
@@ -347,11 +346,9 @@
               <div class="setup-box-title">② カード交換</div>
               <div class="setup-toggle-group">
                 <button type="button" class="btn-setup-toggle active" id="btn-exchange-yes" data-exchange="yes">
-                  <span class="toggle-icon">👑</span>
                   <span class="toggle-text">あり<br><small>(座席継続)</small></span>
                 </button>
                 <button type="button" class="btn-setup-toggle" id="btn-exchange-no" data-exchange="no">
-                  <span class="toggle-icon">⚡</span>
                   <span class="toggle-text">なし<br><small>(毎回席替え)</small></span>
                 </button>
               </div>
@@ -388,11 +385,9 @@
               <div class="setup-box-title">⑥ 禁止あがり警告アシスト</div>
               <div class="setup-toggle-group">
                 <button type="button" class="btn-setup-toggle active" id="btn-forbidden-assist-on" data-assist="on">
-                  <span class="toggle-icon">🛡️</span>
                   <span class="toggle-text">ON<br><small>(自爆防止警告)</small></span>
                 </button>
                 <button type="button" class="btn-setup-toggle" id="btn-forbidden-assist-off" data-assist="off">
-                  <span class="toggle-icon">⚔️</span>
                   <span class="toggle-text">OFF<br><small>(競技無効化)</small></span>
                 </button>
               </div>
@@ -417,7 +412,7 @@
       </div>
     </div>
 
-    <!-- シナリオ画面①：勝負師キャラクター選択画面 -->
+    <!-- シナリオ画面①：勝負師キャラクター選択画面（上部設定 ➔ 下部勝負師選択 統合レイアウト） -->
     <div class="scenario-screen is-hidden" id="screen-avatar-select">
       <div class="scenario-panel-container">
         
@@ -439,93 +434,28 @@
 
         <div class="setup-guidance-bar scenario-guide-bar">
           <span class="guidance-icon">👑</span>
-          <span class="guidance-text">あなたの分身となる勝負師と対戦条件（試合数・カード交換）を選択してください</span>
+          <span class="guidance-text">対戦ルールを設定し、あなたの分身となる勝負師を選択してください</span>
         </div>
 
-        <div class="avatar-select-grid-large" id="avatar-select-grid">
-          <div class="avatar-card-large" data-avatar-id="boy">
-            <div class="avatar-large-img-wrap">
-              <img src="fugo-絵柄/boy.png" onerror="this.onerror=null;" alt="若き天才勝負師">
-              <span class="avatar-type-tag">若き天才系</span>
-            </div>
-            <div class="avatar-large-info">
-              <div class="avatar-header-row">
-                <div class="avatar-name-large">少年 (Leo)</div>
-                <div class="avatar-age-badge">知性と野心</div>
-              </div>
-              <div class="avatar-card-divider"></div>
-              <div class="avatar-desc-large">若くして頭角を現した天才勝負師。知的で鋭い眼差しと冷静沈着な手札構築で、並み居る強豪を手玉に取る。</div>
-              <div class="avatar-quote-large">「盤面を支配する理は、僕の手の中にある。」</div>
-            </div>
-          </div>
-
-          <div class="avatar-card-large" data-avatar-id="girl">
-            <div class="avatar-large-img-wrap">
-              <img src="fugo-絵柄/girl.png" onerror="this.onerror=null;" alt="ミステリアスな少女">
-              <span class="avatar-type-tag">ミステリアス系</span>
-            </div>
-            <div class="avatar-large-info">
-              <div class="avatar-header-row">
-                <div class="avatar-name-large">少女 (Iris)</div>
-                <div class="avatar-age-badge">底知れぬ実力</div>
-              </div>
-              <div class="avatar-card-divider"></div>
-              <div class="avatar-desc-large">神秘的な瞳と淡いアッシュヘアの勝負師。どこか影がありながらも、場の流れを完全に見透かす直感を持つ。</div>
-              <div class="avatar-quote-large">「カードの声が聞こえる……あなたの次の一手もね。」</div>
-            </div>
-          </div>
-
-          <div class="avatar-card-large" data-avatar-id="guy">
-            <div class="avatar-large-img-wrap">
-              <img src="fugo-絵柄/guy.png" onerror="this.onerror=null;" alt="熟練の勝負師">
-              <span class="avatar-type-tag">歴戦の勝負師系</span>
-            </div>
-            <div class="avatar-large-info">
-              <div class="avatar-header-row">
-                <div class="avatar-name-large">歴戦の男 (Gale)</div>
-                <div class="avatar-age-badge">百戦錬磨</div>
-              </div>
-              <div class="avatar-card-divider"></div>
-              <div class="avatar-desc-large">数多の修羅場を潜り抜けてきたベテラン。渋みと包容力のある顔つきの裏に、冷徹なまでの勝負勘を秘めている。</div>
-              <div class="avatar-quote-large">「小細工はいらねぇ。修羅場をくぐった数がモノを言うのさ。」</div>
-            </div>
-          </div>
-
-          <div class="avatar-card-large" data-avatar-id="lady">
-            <div class="avatar-large-img-wrap">
-              <img src="fugo-絵柄/lady.png" onerror="this.onerror=null;" alt="妖艶なギャンブラー">
-              <span class="avatar-type-tag">妖艶ギャンブラー系</span>
-            </div>
-            <div class="avatar-large-info">
-              <div class="avatar-header-row">
-                <div class="avatar-name-large">麗人 (Carmilla)</div>
-                <div class="avatar-age-badge">華麗なる支配</div>
-              </div>
-              <div class="avatar-card-divider"></div>
-              <div class="avatar-desc-large">深紅とゴールドのドレスを纏う大人の女性。卓越した話術と大胆不敵な駆け引きで、対戦相手の心を狂わせる。</div>
-              <div class="avatar-quote-large">「ふふ、そんな熱い視線を向けられたら……全部奪いたくなっちゃうわ。」</div>
-            </div>
-          </div>
-        </div>
-
+        <!-- ① 上部に配置された対戦条件（試合数・カード交換）※デフォルト5試合 -->
         <div class="scenario-settings-row-group">
           <div class="scenario-games-select-container">
             <div class="scenario-games-select-title">
               <span>⚔️ 規定対戦数</span>
-              <span class="scenario-games-hint" id="scenario-games-hint">（現在: 1試合勝負）</span>
+              <span class="scenario-games-hint" id="scenario-games-hint">（現在: 5試合勝負）</span>
             </div>
             <div class="scenario-games-btn-grid" id="scenario-games-btn-grid">
-              <button type="button" class="btn btn-scenario-game-count active" data-games="1">
-                <span class="game-num">1</span><span class="game-unit">試合勝負</span>
+              <button type="button" class="btn btn-scenario-game-count" data-games="1">
+                <span class="game-num">1</span><span class="game-unit">試合</span>
               </button>
               <button type="button" class="btn btn-scenario-game-count" data-games="2">
-                <span class="game-num">2</span><span class="game-unit">試合勝負</span>
+                <span class="game-num">2</span><span class="game-unit">試合</span>
               </button>
-              <button type="button" class="btn btn-scenario-game-count" data-games="5">
-                <span class="game-num">5</span><span class="game-unit">試合勝負</span>
+              <button type="button" class="btn btn-scenario-game-count active" data-games="5">
+                <span class="game-num">5</span><span class="game-unit">試合</span>
               </button>
               <button type="button" class="btn btn-scenario-game-count" data-games="10">
-                <span class="game-num">10</span><span class="game-unit">試合勝負</span>
+                <span class="game-num">10</span><span class="game-unit">試合</span>
               </button>
             </div>
           </div>
@@ -542,12 +472,118 @@
               </button>
               <button type="button" class="btn btn-scenario-exchange" id="btn-scenario-exchange-no" data-exchange="no">
                 <span class="exchange-icon">⚡</span>
-                <span class="exchange-text">なし <small>(毎回席替え)</small></span>
+                <span class="exchange-text">なし <small>(毎回席替)</small></span>
               </button>
             </div>
           </div>
         </div>
 
+        <!-- ② その下に配置された勝負師選択グリッド（全6名：絵柄左・情報右の完全2グループ構造） -->
+        <div class="avatar-select-grid-large" id="avatar-select-grid">
+          <!-- 1. 少年 (Leo) -->
+          <div class="avatar-card-large" data-avatar-id="boy">
+            <div class="avatar-large-img-wrap">
+              <img src="fugo-絵柄/boy.png" onerror="this.onerror=null;" alt="若き天才勝負師">
+              <span class="avatar-type-tag">若き天才系</span>
+            </div>
+            <div class="avatar-large-info">
+              <div class="avatar-header-row">
+                <div class="avatar-name-large">少年 (Leo)</div>
+                <div class="avatar-age-badge">知性と野心</div>
+              </div>
+              <div class="avatar-card-divider"></div>
+              <div class="avatar-quote-large">「盤面を支配する理は、僕の手の中にある。」</div>
+              <div class="avatar-desc-large">若くして頭角を現した天才勝負師。知的で鋭い眼差しと冷静沈着な手札構築で、並み居る強豪を手玉に取る。</div>
+            </div>
+          </div>
+
+          <!-- 2. 少女 (Iris) -->
+          <div class="avatar-card-large" data-avatar-id="girl">
+            <div class="avatar-large-img-wrap">
+              <img src="fugo-絵柄/girl.png" onerror="this.onerror=null;" alt="ミステリアスな少女">
+              <span class="avatar-type-tag">ミステリアス系</span>
+            </div>
+            <div class="avatar-large-info">
+              <div class="avatar-header-row">
+                <div class="avatar-name-large">少女 (Iris)</div>
+                <div class="avatar-age-badge">底知れぬ実力</div>
+              </div>
+              <div class="avatar-card-divider"></div>
+              <div class="avatar-quote-large">「カードの声が聞こえる……あなたの次の一手もね。」</div>
+              <div class="avatar-desc-large">神秘的な瞳と淡いアッシュヘアの勝負師。どこか影がありながらも、場の流れを完全に見透かす直感を持つ。</div>
+            </div>
+          </div>
+
+          <!-- 3. 歴戦の男 (Gale) -->
+          <div class="avatar-card-large" data-avatar-id="guy">
+            <div class="avatar-large-img-wrap">
+              <img src="fugo-絵柄/guy.png" onerror="this.onerror=null;" alt="熟練の勝負師">
+              <span class="avatar-type-tag">歴戦の勝負師系</span>
+            </div>
+            <div class="avatar-large-info">
+              <div class="avatar-header-row">
+                <div class="avatar-name-large">歴戦の男 (Gale)</div>
+                <div class="avatar-age-badge">百戦錬磨</div>
+              </div>
+              <div class="avatar-card-divider"></div>
+              <div class="avatar-quote-large">「小細工はいらねぇ。修羅場をくぐった数がモノを言うのさ。」</div>
+              <div class="avatar-desc-large">数多の修羅場を潜り抜けてきたベテラン。渋みと包容力のある顔つきの裏に、冷徹なまでの勝負勘を秘めている。</div>
+            </div>
+          </div>
+
+          <!-- 4. 麗人 (Carmilla) -->
+          <div class="avatar-card-large" data-avatar-id="lady">
+            <div class="avatar-large-img-wrap">
+              <img src="fugo-絵柄/lady.png" onerror="this.onerror=null;" alt="妖艶なギャンブラー">
+              <span class="avatar-type-tag">妖艶ギャンブラー系</span>
+            </div>
+            <div class="avatar-large-info">
+              <div class="avatar-header-row">
+                <div class="avatar-name-large">麗人 (Carmilla)</div>
+                <div class="avatar-age-badge">華麗なる支配</div>
+              </div>
+              <div class="avatar-card-divider"></div>
+              <div class="avatar-quote-large">「ふふ、そんな熱い視線を向けられたら……全部奪いたくなっちゃうわ。」</div>
+              <div class="avatar-desc-large">深紅とゴールドのドレスを纏う大人の女性。卓越した話術と大胆不敵な駆け引きで、対戦相手の心を狂わせる。</div>
+            </div>
+          </div>
+
+          <!-- 5. 幼姫 / シャーロット (Charlotte) -->
+          <div class="avatar-card-large" data-avatar-id="charlotte">
+            <div class="avatar-large-img-wrap">
+              <img src="fugo-絵柄/charlotte.png" onerror="this.onerror=null; this.src='fugo-絵柄/girl.png';" alt="幼姫シャーロット">
+              <span class="avatar-type-tag">おてんば策士系</span>
+            </div>
+            <div class="avatar-large-info">
+              <div class="avatar-header-row">
+                <div class="avatar-name-large">幼姫 (Charlotte)</div>
+                <div class="avatar-age-badge">名門の末娘</div>
+              </div>
+              <div class="avatar-card-divider"></div>
+              <div class="avatar-quote-large">「ふふん！ シャーロットちゃんに勝てると思ってんの？ 負けないんだから！」</div>
+              <div class="avatar-desc-large">名門公爵家の末娘。おてんばで生意気盛りの美少女。相手の心理を逆撫でする煽りと意表を突く奇襲が得意。</div>
+            </div>
+          </div>
+
+          <!-- 6. 科学者 / フランツ (Franz) -->
+          <div class="avatar-card-large" data-avatar-id="franz">
+            <div class="avatar-large-img-wrap">
+              <img src="fugo-絵柄/franz.png" onerror="this.onerror=null; this.src='fugo-絵柄/guy.png';" alt="科学者フランツ">
+              <span class="avatar-type-tag">狂気の実験系</span>
+            </div>
+            <div class="avatar-large-info">
+              <div class="avatar-header-row">
+                <div class="avatar-name-large">科学者 (Franz)</div>
+                <div class="avatar-age-badge">アルケミスト</div>
+              </div>
+              <div class="avatar-card-divider"></div>
+              <div class="avatar-quote-large">「ククク……勝利の方程式は完成している。実験を開始しよう！」</div>
+              <div class="avatar-desc-large">白衣を纏いフラスコを携えたマッドサイエンティスト。大富豪を神の理を暴く実験と捉え、数式で盤面を解体する。</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ③ 最下部に配置された出陣決定アクション -->
         <div class="scenario-footer-actions">
           <button class="btn btn-gold btn-avatar-decide" id="btn-avatar-decide" disabled>
             <span>この勝負師で宮廷へ挑む ⚔️</span>
@@ -602,7 +638,7 @@
               <div class="stage-header-top-row">
                 <span class="stage-num-badge">STAGE 1</span>
                 <div class="stage-title">宮廷予選トーナメント（全3関門）</div>
-                <span class="stage-condition-badge" id="map-stage-1-condition">1試合勝負</span>
+                <span class="stage-condition-badge" id="map-stage-1-condition">5試合勝負</span>
               </div>
               <div class="stage-sub">初期9人の貴族・戦略家がA/B/Cチームに分かれて立ちはだかる（クリックで選択可能）</div>
             </div>
@@ -614,7 +650,7 @@
               <div class="stage-header-top-row">
                 <span class="stage-num-badge">STAGE 2</span>
                 <div class="stage-title">王宮の頂点・四連戦</div>
-                <span class="stage-condition-badge" id="map-stage-2-condition">1試合勝負</span>
+                <span class="stage-condition-badge" id="map-stage-2-condition">5試合勝負</span>
               </div>
               <div class="stage-sub">若き俊英「新王」、父たる君主「王」、母たる最高峰「女王」、そして苦難の果てに覚醒せし「真の新王」</div>
             </div>
@@ -663,7 +699,7 @@
               <div class="stage-header-top-row">
                 <span class="stage-num-badge stage-badge-epic">STAGE 3</span>
                 <div class="stage-title">歴史の英傑（神話への到達）</div>
-                <span class="stage-condition-badge" id="map-stage-3-condition">1試合勝負</span>
+                <span class="stage-condition-badge" id="map-stage-3-condition">5試合勝負</span>
               </div>
               <div class="stage-sub">王宮制圧後、時空を超えて顕現した人類最強の覇王たち</div>
             </div>
@@ -792,7 +828,7 @@
       </div>
     </div>
 
-    <!-- キャラクター紹介モーダル -->
+    <!-- キャラクター紹介モーダル（新マイキャラ2名追加・完全網羅版） -->
     <div class="modal-overlay" id="char-modal">
       <div class="modal-content">
         <div class="modal-header">
@@ -929,6 +965,22 @@
             </div>
           </div>
 
+          <!-- 新マイキャラ2名追加 -->
+          <div class="char-intro-item" data-char-id="CHARLOTTE">
+            <img class="char-intro-portrait" data-char-img="CHARLOTTE" src="fugo-絵柄/charlotte.png" onerror="this.onerror=null; this.src='fugo-絵柄/girl.png';" alt="幼姫">
+            <div class="char-intro-text">
+              <div class="rule-item-title">🎀 幼姫 (Charlotte) - おてんば策士系</div>
+              <div>名門公爵家の末娘。生意気盛りの美少女勝負師。相手の心理を逆撫でする煽りと意表を突く奇襲で盤面をかき乱します。</div>
+            </div>
+          </div>
+          <div class="char-intro-item" data-char-id="FRANZ">
+            <img class="char-intro-portrait" data-char-img="FRANZ" src="fugo-絵柄/franz.png" onerror="this.onerror=null; this.src='fugo-絵柄/guy.png';" alt="科学者">
+            <div class="char-intro-text">
+              <div class="rule-item-title">🧪 科学者 (Franz) - 狂気の実験系</div>
+              <div>白衣を纏いフラスコを携えたマッドサイエンティスト。大富豪を神の理を暴く実験と捉え、厳密な数式と情報理論で盤面を解体します。</div>
+            </div>
+          </div>
+
         </div>
         <div class="modal-footer">
           <button class="btn-modal-close" id="modal-char-close-btn">閉じる</button>
@@ -1019,7 +1071,7 @@
               </li>
               <li>
                 <strong>📜 シナリオモード (物語出陣 ＆ 完全自力勝負):</strong><br>
-                4人の勝負師から分身を選び、予選から王族、歴史の英雄たちを打ち倒して真の【大富豪王】を目指す物語モードです。公平な実力勝負のため「AI代行」は完全禁止となっています。
+                6人の勝負師から分身を選び、予選から王族、歴史の英雄たちを打ち倒して真の【大富豪王】を目指す物語モードです。公平な実力勝負のため「AI代行」は完全禁止となっています。
               </li>
             </ul>
           </div>
@@ -1407,7 +1459,7 @@
           <div class="rule-item">
             <div class="rule-item-title">👑 シナリオモードの目的と進行手順</div>
             <div>
-              あなたの分身となる勝負師（少年・少女・歴戦の男・麗人）と規定試合数を選び、宮廷の予選トーナメントから始まり、王族、そして時空を超えて顕現した歴史の英雄たちを打ち倒して真の【大富豪王】を目指すストーリーモードです。
+              あなたの分身となる勝負師（少年・少女・歴戦の男・麗人・幼姫・科学者）と規定試合数を選び、宮廷の予選トーナメントから始まり、王族、そして時空を超えて顕現した歴史の英雄たちを打ち倒して真の【大富豪王】を目指すストーリーモードです。
             </div>
           </div>
 

@@ -1,6 +1,6 @@
 /* ====================================================================
  * ROYAL DAIFUGO - game.css
- * [CSS Version: v4.1.4 - 対戦盤面・トランプ・演出・スマホ極小画面完全適正化版]
+ * [CSS Version: v4.1.5 - 対戦盤面・トランプ・演出・マイキャラセリフ完全1行化版]
  * ==================================================================== */
 
 /* ============================================================
@@ -426,7 +426,8 @@
   z-index: 2800 !important;
 }
 
-.player-box.is-speaking-parent .cpu-side-upper-anchor {
+.player-box.is-speaking-parent .cpu-side-upper-anchor,
+.player-box.is-speaking-parent .player-layout-plate {
   z-index: 2850 !important;
 }
 
@@ -466,6 +467,10 @@
 .portrait-cpu-left.portrait-talk,
 .portrait-cpu-right.portrait-talk {
   transform-origin: top center !important;
+}
+
+#player-portrait.portrait-talk {
+  transform-origin: bottom center !important;
 }
 
 .cpu-side-upper-anchor {
@@ -1022,7 +1027,7 @@
 }
 
 /* ============================================================
- * 8. 吹き出し（拡大絵柄直下配置 ＆ カード束被り防止）
+ * 8. 吹き出し（拡大絵柄直下配置 ＆ プレイヤー安全空域・完全1行化版）
  * ============================================================ */
 .dialogue-bubble {
   position: absolute;
@@ -1034,7 +1039,7 @@
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1.3;
-  pointer-events: none;
+  pointer-events: none !important; /* タッチ吸い込み絶対防止 */
   z-index: 2900 !important;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.95), 0 0 12px rgba(212, 175, 55, 0.45);
   opacity: 0;
@@ -1082,6 +1087,48 @@
 #cpu3 .dialogue-bubble.show {
   opacity: 1;
   transform: scale(1);
+}
+
+/* プレイヤー席（手前側）専用の完全1行化・改行撲滅スタイル */
+#player-area .dialogue-bubble,
+.player-dialogue-bubble {
+  bottom: calc(100% + 4px) !important;
+  top: auto !important;
+  left: 48px !important;
+  right: auto !important;
+  transform: translateX(0) scale(0.9) !important;
+  transform-origin: bottom left !important;
+  text-align: left !important;
+  background: linear-gradient(180deg, rgba(20, 36, 60, 0.98) 0%, rgba(10, 18, 30, 0.99) 100%) !important;
+  border: 1.5px solid #ffd700 !important;
+  box-shadow: 0 0 16px rgba(255, 215, 0, 0.7), 0 4px 14px rgba(0, 0, 0, 0.95) !important;
+  color: #fffadb !important;
+  max-width: calc(100vw - 110px) !important;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  line-height: 1.25 !important;
+  padding: 3.5px 10px !important;
+}
+
+#player-area .dialogue-bubble::after,
+.player-dialogue-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 14px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #ffd700;
+}
+
+#player-area .dialogue-bubble.show,
+.player-dialogue-bubble.show {
+  opacity: 1 !important;
+  transform: translateX(0) scale(1) !important;
 }
 
 /* ============================================================
@@ -3812,7 +3859,7 @@
     margin-left: 0 !important;
   }
 
-  /* ⑥ 中央祭壇：カード上下切れを完全解消（高さを88pxに拡張＆overflowをvisibleに設定） */
+  /* ⑥ 中央祭壇：カード上下切れを完全解消 */
   .field-altar {
     width: 220px !important;
     min-width: 220px !important;
@@ -3914,6 +3961,28 @@
     line-height: 1.2;
   }
 
+  /* ⑧ スマホ時プレイヤー吹き出し配置（完全1行・改行撲滅スタイル） */
+  #player-area .dialogue-bubble,
+  .player-dialogue-bubble {
+    bottom: calc(100% + 4px) !important;
+    top: auto !important;
+    left: 42px !important;
+    right: auto !important;
+    transform: translateX(0) scale(0.9) !important;
+    font-size: 10.5px !important;
+    padding: 3px 8px !important;
+    max-width: calc(100vw - 110px) !important;
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  #player-area .dialogue-bubble.show,
+  .player-dialogue-bubble.show {
+    transform: translateX(0) scale(1) !important;
+  }
+
   .scene-title { font-size: 17.5px; }
   .caption-main { font-size: 11.5px; }
   .carousel-view { height: clamp(145px, 23vh, 175px); }
@@ -3976,7 +4045,6 @@
   #cpu1 { justify-self: center !important; }
   #cpu3 { justify-self: center !important; }
 
-  /* タブレット時：CPU1・CPU3のカード束をキャラ名プレート幅（114px）いっぱいにゆったり展開 */
   #cpu1-stack, #cpu3-stack {
     width: 114px !important;
     max-width: 114px !important;
@@ -4033,6 +4101,28 @@
   .player-info-col .char-badge-container {
     width: 146px !important;
     max-width: 154px !important;
+  }
+
+  /* タブレット時プレイヤー吹き出し配置（完全1行・改行なし優雅表示） */
+  #player-area .dialogue-bubble,
+  .player-dialogue-bubble {
+    bottom: calc(100% + 6px) !important;
+    top: auto !important;
+    left: 56px !important;
+    right: auto !important;
+    transform: translateX(0) scale(0.9) !important;
+    font-size: 12px !important;
+    padding: 5px 14px !important;
+    max-width: 480px !important;
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  #player-area .dialogue-bubble.show,
+  .player-dialogue-bubble.show {
+    transform: translateX(0) scale(1) !important;
   }
 
   .field-altar {

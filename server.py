@@ -1,15 +1,15 @@
 # ==============================================================================
 # [Python Server] server.py - 大富豪 ROYAL CARD GAME 本番統合サーバー
-# 👑 ギルガメッシュ【全知全能透視15,000回MCTS ＆ パス病根絶 ＆ 完全版アンカー逆算】
+# 👑 ギルガメッシュ【序盤自爆根絶 ＆ MCTS候補プール浄化 ＆ 15,000回深層MCTS】
 # ＆ 覚醒新王【APEX-v3直感×7,500回MCTS完全体 ＆ 手札形成 ＆ 完全版アンカー逆算】
-# ＆ 女王【正統派5,000回知能化MCTS全権委任 ＆ 大貧民回避 ＆ 完全版アンカー逆算】
+# ＆ 👸 女王【正統派5,000回知能化MCTS全権委任 ＆ 大貧民回避 ＆ 完全版アンカー逆算】
 # ＆ 🏰 王【APEX-v3直感×手札形成0.8×深さ5詰み＆絶対防衛】
 # ＆ 🤴 新王【俊英マルチ×手札形成0.6×深さ5詰み】
-# ＆ 🏛️ 始皇帝【法家統制・11自滅完全抑止＆深さ6詰み】
-# ＆ ⚔️ 織田信長【長篠の弾薬連動・親権強奪＆犬死に根絶】
-# ＆ 🔮 聖徳太子【天意の刻・勝ち確親権強奪＆完全傾聴】
-# ＆ 🛡️ アレク王【ファランクス突撃・殿確保＆深さ7詰み】
-# ＆ 確定シンプル統一反則判定（11バック通常扱い・スペ3共通化・純粋革命フラグ完全整合）
+# ＆ ⚔️ 織田信長【2段階シフト型: 天下布武・親権強奪＆ハメ殺し・合理的温存】
+# ＆ 🛡️ アレク王【ファランクス型: 8枚以上掃射 ➔ 親番100%複数出し面制圧 ➔ 深さ7完全詰み】
+# ＆ 🏛️ 秦の始皇帝【法家統制・万里の長城型: 度量衡掃射 ＆ 11バック恐怖撤廃 ＆ 深さ6確定読み】
+# ＆ 🔮 聖徳太子【天耳通・完全傾聴搭載 ＆ 確定親権強奪 ＆ 深さ7詰み】
+# ＆ 🎭 下位9キャラ固有ロジック完全統合（公爵〜道化師の実力個性完全同期）
 # ＆ 高速MCTS（差分クローン最適化） ＆ 直感モデルAPEX-v3完全統一版
 # ＆ ログ一括直接格納（PC logs/ フォルダ完全直結版）
 # ==============================================================================
@@ -158,7 +158,7 @@ CHARACTER_TACTICAL_PROFILES = {
         'R2_reachBlock': 0.80, 'R3_capitalFallDefense': 0.85, 'R4_leadMulti': 1.00,
         'R5_trashCardClear': 0.80, 'R6_eightCutBridge': 0.95, 'R7_elevenBackControl': 0.80,
         'R8_plannedRevolution': 0.85, 'R9_revolutionCounter': 0.40, 'R10_suitLockAwareness': 0.50,
-        'R11_spade3Alert': 0.85, 'R12_smartPass': 0.75, 'R14_endgameSolverDepth': 0.60
+        'R11_spade3Alert': 0.85, 'R12_smartPass': 0.75, 'R14_endgameSolverDepth': 0.70
     },
     'SHOTOKU': {
         'R2_reachBlock': 1.00, 'R3_capitalFallDefense': 0.85, 'R4_leadMulti': 0.80,
@@ -1074,10 +1074,10 @@ def get_nn_scores(hand, field, rev=False, eb=False, cleared=None, model_choice='
         return target_model(t).squeeze(0).tolist()
 
 # ----------------------------------------------------
-# 5. キャラクター別 本番思考ルーチン
+# 5. キャラクター別 本番思考ルーチン（英雄実証済み完全同期版）
 # ----------------------------------------------------
 
-# [0] 👑 ギルガメッシュ
+# [0] 👑 ギルガメッシュ（序盤自爆根絶 ＆ MCTS候補プール浄化 ＆ 15,000回深層MCTS）
 def decide_gilgamesh(seat, hand, field, valid, rev, eb, cleared, all_hands, finished, last_p, pass_cnt):
     hand = [parse_card_obj(c) for c in hand]
     field = [parse_card_obj(c) for c in field]
@@ -1087,6 +1087,7 @@ def decide_gilgamesh(seat, hand, field, valid, rev, eb, cleared, all_hands, fini
     hand_len = len(hand)
     is_field_empty = (len(field) == 0)
 
+    # 1. 反則上がり判定（即座上がり可能なら最優先）
     instant_win = next((m for m in valid if len(m) == hand_len and not is_forbidden_finish_move(m, rev)), None)
     if instant_win: return instant_win
 
@@ -1094,6 +1095,7 @@ def decide_gilgamesh(seat, hand, field, valid, rev, eb, cleared, all_hands, fini
     use_valid = safe_valid if safe_valid else [m for m in valid if not (len(m) == hand_len and is_forbidden_finish_move(m, rev))]
     if not use_valid: use_valid = valid
 
+    # 2. 反則トラップ破棄（残り2〜3枚時）
     if hand_len in (2, 3):
         non_forbidden = [c for c in hand if not is_forbidden_finish_move([c], rev)]
         if len(non_forbidden) >= 1:
@@ -1107,9 +1109,8 @@ def decide_gilgamesh(seat, hand, field, valid, rev, eb, cleared, all_hands, fini
                 return dump_trap_moves[0]
 
     unrevealed = get_unrevealed_cards(hand, field, cleared)
-    endgame_m = solve_endgame_winning_sequence(hand, field, unrevealed, eff_rev, max_depth=6)
-    if endgame_m and not will_lead_to_forbidden_trap(endgame_m, hand, rev): return endgame_m
 
+    # 3. スペード3返し（場がJOKER単騎の時）
     if len(field) == 1 and field[0].is_joker:
         spade3 = next((c for c in hand if not c.is_joker and c.suit == '♠' and c.display == '3'), None)
         if spade3: return [spade3]
@@ -1118,11 +1119,16 @@ def decide_gilgamesh(seat, hand, field, valid, rev, eb, cleared, all_hands, fini
     min_opp_len = min(other_lens) if other_lens else 99
     is_opp_reach = (min_opp_len <= 2)
 
+    # 4. 終盤確定読み＆全知全能詰み探索（手札8枚以下または相手リーチ時）
     if hand_len <= 8 or min_opp_len <= 3:
+        endgame_m = solve_endgame_winning_sequence(hand, field, unrevealed, eff_rev, max_depth=6)
+        if endgame_m and not will_lead_to_forbidden_trap(endgame_m, hand, rev): return endgame_m
+
         base_sim = FastSimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
         win, exact_m = king_solve_exact(base_sim, seat, depth=0, max_depth=8, budget=[4000])
         if win and exact_m and not will_lead_to_forbidden_trap(exact_m, hand, rev): return exact_m
 
+    # 5. 相手リーチ時の緊急迎撃
     if is_opp_reach and field:
         reach_seats = [s for s in range(4) if s != seat and s not in finished and len(all_hands[s]) <= 2]
         threat_cards = [c for rs in reach_seats for c in all_hands[rs]]
@@ -1136,27 +1142,54 @@ def decide_gilgamesh(seat, hand, field, valid, rev, eb, cleared, all_hands, fini
             solid_blockers.sort(key=lambda m: (len(m) * 100) - m[0].strength(eff_rev))
             return solid_blockers[0]
 
-    filtered_valid = [m for m in use_valid if not is_joker_waste_move(m, hand)]
+    groups = defaultdict(list)
+    for c in hand:
+        if not c.is_joker: groups[c.display].append(c)
+
+    # 6. 【MCTS探索候補プールの健全化 ＆ 序盤自爆根絶】
+    # 序盤（手札8枚以上）での「11バック自爆」および「無意味なペア破壊」をMCTS候補から剪定
+    has_dominant = any(c.is_joker or (c.display == '3' if eff_rev else c.display in ['2', 'A']) for c in hand)
+    filtered_valid = []
+    for m in use_valid:
+        if is_joker_waste_move(m, hand): continue
+
+        # 支配札がある状況での11バック自爆を防止
+        if hand_len >= 6 and not eff_rev and has_dominant and any(c.display == 'J' for c in m):
+            continue
+
+        # 序盤陣形保護: 手札8枚以上の親番または通常手で、ペア・トリプルを崩す単騎出しを抑制
+        if hand_len >= 8 and len(m) == 1 and not m[0].is_joker:
+            disp = m[0].display
+            if len(groups.get(disp, [])) >= 2:
+                continue
+
+        filtered_valid.append(m)
+
+    if not filtered_valid:
+        filtered_valid = [m for m in use_valid if not is_joker_waste_move(m, hand)]
+    if not filtered_valid:
+        filtered_valid = use_valid
+
     if is_field_empty:
         non_eight = [m for m in filtered_valid if not (any(c.display == '8' for c in m) and hand_len > len(m))]
         if non_eight: filtered_valid = non_eight
-    pool = filtered_valid if filtered_valid else use_valid
 
+    # 7. 全知全能透視 15,000回深層MCTS（最終決定権を委任）
     mcts_res = run_mcts_core(seat, hand, field, rev, eb, all_hands, finished, last_p, pass_cnt, max_iters=15000, time_budget=0.25)
     if mcts_res:
         if not (len(mcts_res) == hand_len and is_forbidden_finish_move(mcts_res, rev)) and not will_lead_to_forbidden_trap(mcts_res, hand, rev):
             return mcts_res
 
-    pool.sort(key=lambda m: (len(m) * 100) - m[0].strength(eff_rev), reverse=True)
-    return pool[0]
+    # 8. MCTSフォールバック（パス病根絶: 確実な打牌選択）
+    filtered_valid.sort(key=lambda m: (len(m) * 100) - m[0].strength(eff_rev), reverse=True)
+    return filtered_valid[0]
 
-# [1] 🤴 覚醒新王
+# [1] 🤴 覚醒新王 (真正ベースライン維持)
 def decide_awakened_young_king(seat, hand, field, valid, rev, eb, cleared, all_hands, finished, last_p, pass_cnt):
     hand = [parse_card_obj(c) for c in hand]
     field = [parse_card_obj(c) for c in field]
     if not valid: return None
 
-    profile = get_tactical_profile('AWAKENED_KING')
     eff_rev = (rev != eb)
     hand_len = len(hand)
     is_field_empty = (len(field) == 0)
@@ -1181,24 +1214,26 @@ def decide_awakened_young_king(seat, hand, field, valid, rev, eb, cleared, all_h
                 return dump_trap_moves[0]
 
     unrevealed = get_unrevealed_cards(hand, field, cleared)
-    endgame_m = solve_endgame_winning_sequence(hand, field, unrevealed, eff_rev, max_depth=5)
-    if endgame_m and not will_lead_to_forbidden_trap(endgame_m, hand, rev): return endgame_m
-
-    if len(field) == 1 and field[0].is_joker:
-        spade3 = next((c for c in hand if not c.is_joker and c.suit == '♠' and c.display == '3'), None)
-        if spade3: return [spade3]
+    random.shuffle(unrevealed)
+    sim_hands = {seat: list(hand)}
+    curr_idx = 0
+    for p in range(4):
+        if p == seat: continue
+        req_len = len(all_hands.get(p, []))
+        sim_hands[p] = unrevealed[curr_idx : curr_idx + req_len]
+        curr_idx += req_len
 
     other_lens = [len(all_hands[s]) for s in range(4) if s != seat and s not in finished]
     min_opp_len = min(other_lens) if other_lens else 99
 
     if hand_len <= 7 or min_opp_len <= 3:
-        base_sim = FastSimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
+        base_sim = FastSimGame(sim_hands, field, rev, eb, last_p, pass_cnt, finished)
         win, exact_m = king_solve_exact(base_sim, seat, depth=0, max_depth=7)
         if win and exact_m and not will_lead_to_forbidden_trap(exact_m, hand, rev): return exact_m
 
     if hand_len <= 8:
         mcts_move = run_mcts_core(
-            seat, hand, field, rev, eb, all_hands, finished, last_p, pass_cnt,
+            seat, hand, field, rev, eb, sim_hands, finished, last_p, pass_cnt,
             max_iters=7500, time_budget=0.15
         )
         if mcts_move:
@@ -1211,10 +1246,10 @@ def decide_awakened_young_king(seat, hand, field, valid, rev, eb, cleared, all_h
     best_m, best_s = None, -float('inf')
     for m in use_valid:
         card_sc = [scores[card_to_idx(c)] for c in m if 0 <= card_to_idx(c) < 53]
-        s = (sum(card_sc) / max(1, len(card_sc))) + (len(m) * 10.0 * profile['R4_leadMulti'])
+        s = (sum(card_sc) / max(1, len(card_sc))) + (len(m) * 10.0)
 
         if len(m) >= 4:
-            s += (25.0 * profile['R8_plannedRevolution'])
+            s += 25.0
 
         if is_joker_waste_move(m, hand):
             s -= 500.0
@@ -1233,7 +1268,7 @@ def decide_awakened_young_king(seat, hand, field, valid, rev, eb, cleared, all_h
         return None
     return chosen
 
-# [2] 👸 女王 (SUPER_AI)
+# [2] 👸 女王 (SUPER_AI - 真正ベースライン維持)
 def decide_queen_mcts_fair(seat, hand, field, rev, eb, cleared, all_hands, finished, last_p, pass_cnt):
     hand = [parse_card_obj(c) for c in hand]
     field = [parse_card_obj(c) for c in field]
@@ -1264,13 +1299,6 @@ def decide_queen_mcts_fair(seat, hand, field, rev, eb, cleared, all_hands, finis
                 return dump_trap_moves[0]
 
     unrevealed = get_unrevealed_cards(hand, field, cleared)
-    endgame_m = solve_endgame_winning_sequence(hand, field, unrevealed, eff_rev, max_depth=4)
-    if endgame_m and not will_lead_to_forbidden_trap(endgame_m, hand, rev): return endgame_m
-
-    if len(field) == 1 and field[0].is_joker:
-        spade3 = next((c for c in hand if not c.is_joker and c.suit == '♠' and c.display == '3'), None)
-        if spade3: return [spade3]
-
     random.shuffle(unrevealed)
     sim_hands = {seat: list(hand)}
     curr_idx = 0
@@ -1310,7 +1338,7 @@ def decide_queen_mcts_fair(seat, hand, field, rev, eb, cleared, all_hands, finis
         return None
     return chosen
 
-# [3] 🏰 王
+# [3] 🏰 王 (真正ベースライン維持)
 def decide_king_apex_direct(seat, hand, field, valid, rev, eb, cleared, all_hands, finished, last_p, pass_cnt):
     hand = [parse_card_obj(c) for c in hand]
     field = [parse_card_obj(c) for c in field]
@@ -1340,19 +1368,25 @@ def decide_king_apex_direct(seat, hand, field, valid, rev, eb, cleared, all_hand
                 return dump_trap_moves[0]
 
     unrevealed = get_unrevealed_cards(hand, field, cleared)
-    endgame_m = solve_endgame_winning_sequence(hand, field, unrevealed, eff_rev, max_depth=5)
-    if endgame_m and not will_lead_to_forbidden_trap(endgame_m, hand, rev): return endgame_m
-
-    if len(field) == 1 and field[0].is_joker:
-        spade3 = next((c for c in hand if not c.is_joker and c.suit == '♠' and c.display == '3'), None)
-        if spade3: return [spade3]
+    random.shuffle(unrevealed)
+    sim_hands = {seat: list(hand)}
+    curr_idx = 0
+    for p in range(4):
+        if p == seat: continue
+        req_len = len(all_hands.get(p, []))
+        sim_hands[p] = unrevealed[curr_idx : curr_idx + req_len]
+        curr_idx += req_len
 
     other_lens = [len(all_hands[s]) for s in range(4) if s != seat and s not in finished]
     min_opp_len = min(other_lens) if other_lens else 99
     is_opp_reach = (min_opp_len <= 2)
 
+    groups = defaultdict(list)
+    for c in hand:
+        if not c.is_joker: groups[c.display].append(c)
+
     if hand_len <= 6 or min_opp_len <= 3:
-        base_sim = FastSimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
+        base_sim = FastSimGame(sim_hands, field, rev, eb, last_p, pass_cnt, finished)
         win, exact_m = king_solve_exact(base_sim, seat, depth=0, max_depth=5)
         if win and exact_m and not will_lead_to_forbidden_trap(exact_m, hand, rev): return exact_m
 
@@ -1361,10 +1395,6 @@ def decide_king_apex_direct(seat, hand, field, valid, rev, eb, cleared, all_hand
         if eight_m: return eight_m
         use_valid.sort(key=lambda m: (len(m) * 100) + m[0].strength(eff_rev), reverse=True)
         return use_valid[0]
-
-    groups = defaultdict(list)
-    for c in hand:
-        if not c.is_joker: groups[c.display].append(c)
 
     if not field:
         quads = [m for m in use_valid if len(m) >= 4]
@@ -1417,7 +1447,7 @@ def decide_king_apex_direct(seat, hand, field, valid, rev, eb, cleared, all_hand
         return None
     return chosen
 
-# [4] ⚔️ 織田信長
+# [4] ⚔️ 織田信長 (2段階シフト型: 天下布武・親権強奪＆ハメ殺し・合理的温存)
 def decide_nobunaga(seat, hand, field, valid, rev, eb, cleared, all_hands, finished, last_p, pass_cnt):
     hand = [parse_card_obj(c) for c in hand]
     field = [parse_card_obj(c) for c in field]
@@ -1447,32 +1477,75 @@ def decide_nobunaga(seat, hand, field, valid, rev, eb, cleared, all_hands, finis
                 return dump_trap_moves[0]
 
     unrevealed = get_unrevealed_cards(hand, field, cleared)
-    endgame_m = solve_endgame_winning_sequence(hand, field, unrevealed, eff_rev, max_depth=4)
-    if endgame_m and not will_lead_to_forbidden_trap(endgame_m, hand, rev): return endgame_m
+    other_lens = [len(all_hands[s]) for s in range(4) if s != seat and s not in finished]
+    min_opp_len = min(other_lens) if other_lens else 99
+    is_opp_reach = (min_opp_len <= 2)
 
     if len(field) == 1 and field[0].is_joker:
         spade3 = next((c for c in hand if not c.is_joker and c.suit == '♠' and c.display == '3'), None)
         if spade3: return [spade3]
 
-    other_lens = [len(all_hands[s]) for s in range(4) if s != seat and s not in finished]
-    min_opp_len = min(other_lens) if other_lens else 99
-
-    if hand_len <= 6 or min_opp_len <= 3:
-        base_sim = FastSimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
-        win, em = king_solve_exact(base_sim, seat, 0, 5)
-        if win and em and not will_lead_to_forbidden_trap(em, hand, rev): return em
-
     groups = defaultdict(list)
     for c in hand:
         if not c.is_joker: groups[c.display].append(c)
 
-    has_ammo = any(len(cards) >= 2 for cards in groups.values()) or any(c.display == '8' for c in hand)
+    # フェーズ3【手札4枚以下：完全詰み】
+    if hand_len <= 4:
+        endgame_m = solve_endgame_winning_sequence(hand, field, unrevealed, eff_rev, max_depth=5)
+        if endgame_m and not will_lead_to_forbidden_trap(endgame_m, hand, rev): return endgame_m
 
+        random.shuffle(unrevealed)
+        sim_hands = {seat: list(hand)}
+        curr_idx = 0
+        for p in range(4):
+            if p == seat: continue
+            req_len = len(all_hands.get(p, []))
+            sim_hands[p] = unrevealed[curr_idx : curr_idx + req_len]
+            curr_idx += req_len
+
+        base_sim = FastSimGame(sim_hands, field, rev, eb, last_p, pass_cnt, finished)
+        win, em = king_solve_exact(base_sim, seat, 0, 5)
+        if win and em and not will_lead_to_forbidden_trap(em, hand, rev): return em
+
+    # フェーズ1【手札8枚以上：電撃掃射（陣形キープ）】
+    if hand_len >= 8:
+        scored = []
+        for m in use_valid:
+            m_len = len(m)
+            disp = m[0].display if not m[0].is_joker else 'JOKER'
+            orig_cnt = len(groups.get(disp, []))
+            score = -get_play_strength(m, eff_rev)
+
+            if m_len == 1 and not m[0].is_joker and orig_cnt >= 2:
+                score -= 1000.0
+            elif m_len == 1 and not m[0].is_joker and orig_cnt == 1:
+                if m[0].strength(eff_rev) <= 8:
+                    score += 50.0
+
+            if m_len >= 4: score += 100.0
+            elif m_len == 3: score += 40.0
+            elif m_len == 2: score += 20.0
+
+            if is_joker_waste_move(m, hand): score -= 500.0
+            scored.append((score, m))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+        best_candidate = scored[0][1]
+
+        # 乱数運任せパスを撤廃: 相手リーチがなく場が低いならボス単騎を戦略温存
+        if not is_field_empty and not is_opp_reach and len(best_candidate) == 1:
+            if best_candidate[0].is_joker or best_candidate[0].display == ('3' if eff_rev else '2'):
+                field_top_str = field[0].strength(eff_rev)
+                if field_top_str <= 10:
+                    return None
+        return best_candidate
+
+    # フェーズ2【手札7〜5枚：親権強奪＆中盤手札形成】
     quads = [m for m in use_valid if len(m) >= 4]
     if quads:
         if hand_len == len(quads[0]): return quads[0]
         remaining = [c for c in hand if c not in quads[0]]
-        if rev:
+        if eff_rev:
             normal_high = sum(1 for c in remaining if c.is_joker or c.val() >= 11)
             rev_high = sum(1 for c in remaining if not c.is_joker and c.val() <= 5)
             if normal_high >= rev_high or min_opp_len <= 2: return quads[0]
@@ -1483,15 +1556,11 @@ def decide_nobunaga(seat, hand, field, valid, rev, eb, cleared, all_hands, finis
 
     eight_moves = [m for m in use_valid if any(c.display == '8' for c in m)]
     if eight_moves and field:
-        if min_opp_len <= 2 or hand_len <= 5 or has_ammo: return eight_moves[0]
+        if min_opp_len <= 2 or hand_len <= 5: return eight_moves[0]
+        has_multi = any(len(cards) >= 2 for cards in groups.values())
+        if has_multi: return eight_moves[0]
 
     if not field:
-        if min_opp_len == 1:
-            multi = [m for m in use_valid if len(m) >= 2]
-            if multi:
-                multi.sort(key=lambda m: (len(m), -m[0].strength(eff_rev)), reverse=True)
-                return multi[0]
-
         triples = [m for m in use_valid if len(m) == 3]
         if triples:
             triples.sort(key=lambda m: m[0].strength(eff_rev))
@@ -1502,10 +1571,8 @@ def decide_nobunaga(seat, hand, field, valid, rev, eb, cleared, all_hands, finis
             return pairs[0]
 
     scores = get_nn_scores(hand, field, rev, eb, cleared, model_choice='apex')
-    cands = use_valid
-
     best_m, best_s = None, -float('inf')
-    for m in cands:
+    for m in use_valid:
         card_sc = [scores[card_to_idx(c)] for c in m if 0 <= card_to_idx(c) < 53]
         s = sum(card_sc) / max(1, len(card_sc))
         m_len = len(m)
@@ -1516,17 +1583,10 @@ def decide_nobunaga(seat, hand, field, valid, rev, eb, cleared, all_hands, finis
         elif m_len == 2: s += 18.0
         elif m_len == 1:
             if disp in groups and len(groups[disp]) >= 2: s -= 48.0
-            is_boss_card = m[0].is_joker or (m[0].display == '3' if eff_rev else m[0].display == '2')
-            if is_boss_card and not has_ammo and hand_len >= 4 and min_opp_len > 2:
-                s -= 70.0
-            elif m[0].strength(eff_rev) <= 7: s += 10.0
+            if m[0].strength(eff_rev) <= 7: s += 10.0
 
-        if is_joker_waste_move(m, hand):
-            s -= 500.0
-
-        if is_field_empty and any(c.display == '8' for c in m) and hand_len > m_len:
-            s -= 45.0
-
+        if is_joker_waste_move(m, hand): s -= 500.0
+        if is_field_empty and any(c.display == '8' for c in m) and hand_len > m_len: s -= 45.0
         if s > best_s: best_s, best_m = s, m
 
     chosen = best_m or use_valid[0]
@@ -1534,7 +1594,7 @@ def decide_nobunaga(seat, hand, field, valid, rev, eb, cleared, all_hands, finis
         return None
     return chosen
 
-# [5] 🏛️ 秦の始皇帝
+# [5] 🏛️ 秦の始皇帝 (法家統制・度量衡掃射 ＆ 11バック恐怖撤廃 ＆ 万里の長城深さ6)
 def decide_shi_huangdi(seat, hand, field, valid, rev, eb, cleared, all_hands, finished, last_p, pass_cnt):
     hand = [parse_card_obj(c) for c in hand]
     field = [parse_card_obj(c) for c in field]
@@ -1564,26 +1624,50 @@ def decide_shi_huangdi(seat, hand, field, valid, rev, eb, cleared, all_hands, fi
                 return dump_trap_moves[0]
 
     unrevealed = get_unrevealed_cards(hand, field, cleared)
-    endgame_m = solve_endgame_winning_sequence(hand, field, unrevealed, eff_rev, max_depth=6)
-    if endgame_m and not will_lead_to_forbidden_trap(endgame_m, hand, rev): return endgame_m
+
+    # 万里の長城【手札5枚以下：不完全情報型確定読み 深さ6】
+    if hand_len <= 5:
+        endgame_m = solve_endgame_winning_sequence(hand, field, unrevealed, eff_rev, max_depth=6)
+        if endgame_m and not will_lead_to_forbidden_trap(endgame_m, hand, rev): return endgame_m
 
     if len(field) == 1 and field[0].is_joker:
         spade3 = next((c for c in hand if not c.is_joker and c.suit == '♠' and c.display == '3'), None)
         if spade3: return [spade3]
 
-    other_lens = [len(all_hands[s]) for s in range(4) if s != seat and s not in finished]
-    min_opp_len = min(other_lens) if other_lens else 99
-    is_opp_reach = (min_opp_len <= 2)
-
-    if hand_len <= 6 or min_opp_len <= 3:
-        base_sim = FastSimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
-        win, em = king_solve_exact(base_sim, seat, 0, 6)
-        if win and em and not will_lead_to_forbidden_trap(em, hand, rev): return em
-
     groups = defaultdict(list)
     for c in hand:
         if not c.is_joker: groups[c.display].append(c)
 
+    other_lens = [len(all_hands[s]) for s in range(4) if s != seat and s not in finished]
+    min_opp_len = min(other_lens) if other_lens else 99
+    is_opp_reach = (min_opp_len <= 2)
+
+    # 度量衡統一【手札8枚以上：孤立カス札掃射 ＆ 規格ペア維持】
+    if hand_len >= 8:
+        scored = []
+        for m in use_valid:
+            m_len = len(m)
+            disp = m[0].display if not m[0].is_joker else 'JOKER'
+            orig_cnt = len(groups.get(disp, []))
+            score = -get_play_strength(m, eff_rev)
+
+            if m_len == 1 and not m[0].is_joker and orig_cnt >= 2:
+                score -= 1000.0
+            elif m_len == 1 and not m[0].is_joker and orig_cnt == 1:
+                if m[0].strength(eff_rev) <= 8:
+                    score += 45.0
+
+            if m_len >= 4: score += 100.0
+            elif m_len == 3: score += 40.0
+            elif m_len == 2: score += 20.0
+
+            if is_joker_waste_move(m, hand): score -= 500.0
+            scored.append((score, m))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+        return scored[0][1]
+
+    # 法家革命
     quads = [m for m in use_valid if len(m) >= 4]
     if quads:
         if hand_len == len(quads[0]): return quads[0]
@@ -1608,7 +1692,6 @@ def decide_shi_huangdi(seat, hand, field, valid, rev, eb, cleared, all_hands, fi
             if multi:
                 multi.sort(key=lambda m: (len(m), -m[0].strength(eff_rev)), reverse=True)
                 return multi[0]
-
         triples = [m for m in use_valid if len(m) == 3]
         if triples:
             triples.sort(key=lambda m: m[0].strength(eff_rev))
@@ -1619,15 +1702,8 @@ def decide_shi_huangdi(seat, hand, field, valid, rev, eb, cleared, all_hands, fi
             return pairs[0]
 
     scores = get_nn_scores(hand, field, rev, eb, cleared, model_choice='apex')
-    exit_t = identify_exit_ticket(hand)
-
-    cands = use_valid
-    if field and hand_len > 3:
-        non_ticket = [m for m in use_valid if not (len(m) == 1 and (m[0].is_joker or (m[0].display == '3' if eff_rev else m[0].display == '2')))]
-        if non_ticket: cands = non_ticket
-
     best_m, best_s = None, -float('inf')
-    for m in cands:
+    for m in use_valid:
         card_sc = [scores[card_to_idx(c)] for c in m if 0 <= card_to_idx(c) < 53]
         s = sum(card_sc) / max(1, len(card_sc))
         m_len = len(m)
@@ -1638,18 +1714,11 @@ def decide_shi_huangdi(seat, hand, field, valid, rev, eb, cleared, all_hands, fi
         elif m_len == 2: s += 18.0
         elif m_len == 1:
             if disp in groups and len(groups[disp]) >= 2: s -= 48.0
-            if exit_t is not None and exit_t in m:
-                if hand_len >= 4: s -= 45.0
-            elif m[0].strength(eff_rev) <= 8: s += 8.0
+            if m[0].strength(eff_rev) <= 8: s += 8.0
 
         if is_joker_waste_move(m, hand): s -= 500.0
 
-        if any(c.display == 'J' for c in m):
-            high_noble_count = sum(1 for c in hand if c.is_joker or c.val() >= 12)
-            low_trash_count = sum(1 for c in hand if not c.is_joker and c.val() <= 5)
-            if not eff_rev and high_noble_count >= 2 and low_trash_count <= 1:
-                s -= 80.0
-
+        # 焚書坑儒: 11バック過剰ペナルティ撤廃
         s += evaluate_eight_bridge(m, hand, min_opp_len, is_opp_reach, is_field_empty, rev)
         s += evaluate_eleven_back_balance(m, hand, eff_rev)
 
@@ -1660,8 +1729,8 @@ def decide_shi_huangdi(seat, hand, field, valid, rev, eb, cleared, all_hands, fi
         return None
     return chosen
 
-# [6] 🔮 聖徳太子
-def decide_shotoku(seat, hand, field, rev, allHands, finished, played, other_lens, last_p, pass_cnt, cleared=None, is_eb=False):
+# [6] 🔮 聖徳太子 (天耳通・完全傾聴 ＆ 確定親権強奪 ＆ 深さ7詰み)
+def decide_shotoku(seat, hand, field, rev, all_hands, finished, played, other_lens, last_p, pass_cnt, cleared=None, is_eb=False):
     hand = [parse_card_obj(c) for c in hand]
     field = [parse_card_obj(c) for c in field]
     eff_rev = (rev != is_eb)
@@ -1701,8 +1770,9 @@ def decide_shotoku(seat, hand, field, rev, allHands, finished, played, other_len
     min_len = min(other_lens) if other_lens else 99
     is_opp_reach = (min_len <= 2)
 
+    # ★千里眼(天耳通): 相手の手札(all_hands)を完全傾聴して深さ7逆算
     if hand_len <= 6 or min_len <= 3:
-        base_sim = FastSimGame(allHands, field, rev, is_eb, last_p, pass_cnt, finished)
+        base_sim = FastSimGame(all_hands, field, rev, is_eb, last_p, pass_cnt, finished)
         win, em = king_solve_exact(base_sim, seat, 0, 7)
         if win and em and not will_lead_to_forbidden_trap(em, hand, rev): return em
 
@@ -1755,11 +1825,30 @@ def decide_shotoku(seat, hand, field, rev, allHands, finished, played, other_len
             best_m = m
 
     chosen = best_m or cands[0]
-    if field and should_strategic_pass_on_high_card(chosen, hand, field, eff_rev, min_len):
-        return None
+    if not field or not chosen: return chosen
+    if min_len <= 2 or len(hand) <= 3 or len(chosen) == len(hand): return chosen
+    if is_joker_waste_move(chosen, hand) and len(hand) >= 4: return None
+
+    # 透視に基づく親権強奪判定（盲目パスの完全排除）
+    if len(chosen) == 1:
+        c = chosen[0]
+        is_boss = c.is_joker or (c.display == '3' if eff_rev else c.display == '2')
+        if is_boss:
+            active_opps = [s for s in range(4) if s != seat and s not in finished]
+            opp_higher_cards = any(
+                any(oc.strength(eff_rev) > c.strength(eff_rev) for oc in all_hands.get(os, []))
+                for os in active_opps
+            )
+            # 相手に上乗せできるカードがないなら、親確定のため堂々と切る
+            if not opp_higher_cards:
+                return chosen
+
+            weak_count = sum(1 for hc in hand if hc.strength(eff_rev) <= 6)
+            if weak_count >= 2 and field[0].strength(eff_rev) <= 10:
+                return None
     return chosen
 
-# [7] 🛡️ アレク王
+# [7] 🛡️ アレク王 (ファランクス型・複数枚出し特化ハイブリッド)
 def decide_alexander_hybrid(seat, hand, field, rev, eb, cleared, all_hands, finished, played, last_p, pass_cnt):
     hand = [parse_card_obj(c) for c in hand]
     field = [parse_card_obj(c) for c in field]
@@ -1777,69 +1866,63 @@ def decide_alexander_hybrid(seat, hand, field, rev, eb, cleared, all_hands, fini
     use_valid = safe_valid if safe_valid else [m for m in valid if not (len(m) == hand_len and is_forbidden_finish_move(m, rev))]
     if not use_valid: use_valid = valid
 
-    if hand_len in (2, 3):
-        non_forbidden = [c for c in hand if not is_forbidden_finish_move([c], rev)]
-        if len(non_forbidden) >= 1:
-            dump_trap_moves = [
-                m for m in use_valid
-                if any(is_forbidden_finish_move([c], rev) for c in m)
-                and any(c not in m for c in non_forbidden)
-            ]
-            if dump_trap_moves:
-                dump_trap_moves.sort(key=lambda m: (len(m) * 100) + m[0].strength(eff_rev), reverse=True)
-                return dump_trap_moves[0]
-
     unrevealed = get_unrevealed_cards(hand, field, cleared)
-    endgame_m = solve_endgame_winning_sequence(hand, field, unrevealed, eff_rev, max_depth=7)
-    if endgame_m and not will_lead_to_forbidden_trap(endgame_m, hand, rev): return endgame_m
-
-    if len(field) == 1 and field[0].is_joker:
-        spade3 = next((c for c in hand if not c.is_joker and c.suit == '♠' and c.display == '3'), None)
-        if spade3: return [spade3]
-
     other_lens = [len(all_hands[s]) for s in range(4) if s != seat and s not in finished]
     min_opp_len = min(other_lens) if other_lens else 99
     is_opp_reach = (min_opp_len <= 2)
-
-    if hand_len <= 6 or min_opp_len <= 3:
-        base_sim = FastSimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
-        win, exact_m = king_solve_exact(base_sim, seat, depth=0, max_depth=7)
-        if win and exact_m and not will_lead_to_forbidden_trap(exact_m, hand, rev): return exact_m
 
     groups = defaultdict(list)
     for c in hand:
         if not c.is_joker: groups[c.display].append(c)
 
-    quads = [m for m in use_valid if len(m) >= 4]
-    if quads:
-        if hand_len == len(quads[0]): return quads[0]
-        remaining = [c for c in hand if c not in quads[0]]
-        if rev:
-            normal_high = sum(1 for c in remaining if c.is_joker or c.val() >= 11)
-            rev_high = sum(1 for c in remaining if not c.is_joker and c.val() <= 5)
-            if normal_high >= rev_high or min_opp_len <= 2: return quads[0]
-        else:
-            low_count = sum(1 for c in remaining if not c.is_joker and c.val() <= 5)
-            high_count = sum(1 for c in remaining if c.is_joker or c.val() >= 12)
-            if low_count >= high_count or min_opp_len <= 2: return quads[0]
+    # 終盤【手札4枚以下：深さ7完全包囲詰み】
+    if hand_len <= 4:
+        endgame_m = solve_endgame_winning_sequence(hand, field, unrevealed, eff_rev, max_depth=7)
+        if endgame_m and not will_lead_to_forbidden_trap(endgame_m, hand, rev): return endgame_m
 
-    eight_moves = [m for m in use_valid if any(c.display == '8' for c in m)]
-    if eight_moves and field:
-        if is_opp_reach or hand_len <= 5: return eight_moves[0]
-        if evaluate_eight_bridge(eight_moves[0], hand, min_opp_len, is_opp_reach, is_field_empty, rev) > 0: return eight_moves[0]
+        random.shuffle(unrevealed)
+        sim_hands = {seat: list(hand)}
+        curr_idx = 0
+        for p in range(4):
+            if p == seat: continue
+            req_len = len(all_hands.get(p, []))
+            sim_hands[p] = unrevealed[curr_idx : curr_idx + req_len]
+            curr_idx += req_len
 
+        base_sim = FastSimGame(sim_hands, field, rev, eb, last_p, pass_cnt, finished)
+        win, exact_m = king_solve_exact(base_sim, seat, depth=0, max_depth=7)
+        if win and exact_m and not will_lead_to_forbidden_trap(exact_m, hand, rev): return exact_m
+
+    # 序盤【手札8枚以上：手札を複数出しに純化させる単騎カス札掃射（ペアは絶対キープ）】
+    if hand_len >= 8:
+        scored = []
+        for m in use_valid:
+            m_len = len(m)
+            disp = m[0].display if not m[0].is_joker else 'JOKER'
+            orig_cnt = len(groups.get(disp, []))
+            score = -get_play_strength(m, eff_rev)
+
+            # ファランクス陣形保護: ペア・トリプルは絶対に壊さない
+            if m_len == 1 and not m[0].is_joker and orig_cnt >= 2:
+                score -= 1000.0
+            elif m_len == 1 and not m[0].is_joker and orig_cnt == 1:
+                if m[0].strength(eff_rev) <= 8:
+                    score += 50.0
+
+            if m_len >= 4: score += 100.0
+            elif m_len == 3: score += 40.0
+            elif m_len == 2: score += 20.0
+
+            if is_joker_waste_move(m, hand): score -= 500.0
+            scored.append((score, m))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+        return scored[0][1]
+
+    # 中盤【手札7〜5枚：親番での100%複数枚出し面制圧】
     if not field:
-        multi = [m for m in use_valid if len(m) >= 2]
-        if multi:
-            best_multi = None
-            for m in multi:
-                rem = [c for c in hand if c not in m]
-                has_rear_guard = any(c.is_joker or c.display == '8' or (c.display == '3' if eff_rev else c.display == '2') for c in rem)
-                if has_rear_guard or len(rem) <= 1:
-                    best_multi = m
-                    break
-            if best_multi: return best_multi
-
+        quads = [m for m in use_valid if len(m) >= 4]
+        if quads: return quads[0]
         triples = [m for m in use_valid if len(m) == 3]
         if triples:
             triples.sort(key=lambda m: m[0].strength(eff_rev))
@@ -1849,31 +1932,29 @@ def decide_alexander_hybrid(seat, hand, field, rev, eb, cleared, all_hands, fini
             pairs.sort(key=lambda m: m[0].strength(eff_rev))
             return pairs[0]
 
-    scores = get_nn_scores(hand, field, rev, eb, cleared, model_choice='apex')
-    cands = [m for m in use_valid if not (len(m) == 1 and not m[0].is_joker and len(groups[m[0].display]) >= 2 and hand_len > 2)]
-    if not cands: cands = use_valid
+    eight_moves = [m for m in use_valid if any(c.display == '8' for c in m)]
+    if eight_moves and field:
+        if is_opp_reach or hand_len <= 5: return eight_moves[0]
+        if evaluate_eight_bridge(eight_moves[0], hand, min_opp_len, is_opp_reach, is_field_empty, rev) > 0: return eight_moves[0]
 
+    scores = get_nn_scores(hand, field, rev, eb, cleared, model_choice='apex')
     best_m, best_s = None, -float('inf')
-    for m in cands:
+    for m in use_valid:
         card_sc = [scores[card_to_idx(c)] for c in m if 0 <= card_to_idx(c) < 53]
         s = sum(card_sc) / max(1, len(card_sc))
         m_len = len(m)
         disp = m[0].display if not m[0].is_joker else 'JOKER'
 
-        if m_len >= 4: s += 60.0
-        elif m_len == 3: s += 28.0
-        elif m_len == 2: s += 18.0
+        if m_len >= 4: s += 65.0
+        elif m_len == 3: s += 30.0
+        elif m_len == 2: s += 20.0
         elif m_len == 1:
-            if disp in groups and len(groups[disp]) >= 2: s -= 45.0
-            if (m[0].is_joker or (m[0].val() <= 4 if eff_rev else m[0].val() >= 13)) and hand_len >= 4 and min_opp_len >= 3:
-                s -= 45.0
+            if disp in groups and len(groups[disp]) >= 2: s -= 50.0
             elif m[0].strength(eff_rev) <= 8: s += 8.0
 
         if is_joker_waste_move(m, hand): s -= 500.0
-
         s += evaluate_eight_bridge(m, hand, min_opp_len, is_opp_reach, is_field_empty, rev)
         s += evaluate_eleven_back_balance(m, hand, eff_rev)
-
         if s > best_s: best_s, best_m = s, m
 
     chosen = best_m or use_valid[0]
@@ -1881,7 +1962,7 @@ def decide_alexander_hybrid(seat, hand, field, rev, eb, cleared, all_hands, fini
         return None
     return chosen
 
-# [8] 🤴 新王
+# [8] 🤴 新王 (真正ベースライン維持)
 def decide_young_king(seat, hand, field, valid, rev, eb, cleared, all_hands, finished, last_p, pass_cnt):
     hand = [parse_card_obj(c) for c in hand]
     field = [parse_card_obj(c) for c in field]
@@ -1911,14 +1992,20 @@ def decide_young_king(seat, hand, field, valid, rev, eb, cleared, all_hands, fin
                 return dump_trap_moves[0]
 
     unrevealed = get_unrevealed_cards(hand, field, cleared)
-    endgame_m = solve_endgame_winning_sequence(hand, field, unrevealed, eff_rev, max_depth=4)
-    if endgame_m and not will_lead_to_forbidden_trap(endgame_m, hand, rev): return endgame_m
+    random.shuffle(unrevealed)
+    sim_hands = {seat: list(hand)}
+    curr_idx = 0
+    for p in range(4):
+        if p == seat: continue
+        req_len = len(all_hands.get(p, []))
+        sim_hands[p] = unrevealed[curr_idx : curr_idx + req_len]
+        curr_idx += req_len
 
     other_lens = [len(all_hands[s]) for s in range(4) if s != seat and s not in finished]
     min_opp_len = min(other_lens) if other_lens else 99
 
     if hand_len <= 6 or min_opp_len <= 3:
-        base_sim = FastSimGame(all_hands, field, rev, eb, last_p, pass_cnt, finished)
+        base_sim = FastSimGame(sim_hands, field, rev, eb, last_p, pass_cnt, finished)
         win, exact_m = king_solve_exact(base_sim, seat, depth=0, max_depth=5)
         if win and exact_m and not will_lead_to_forbidden_trap(exact_m, hand, rev): return exact_m
 
@@ -2042,8 +2129,17 @@ def predict():
 
         char_key = str(char_id).upper()
         role_name = CHARACTER_NAMES.get(char_key, '超級AI')
-        profile = get_tactical_profile(char_key)
+        hand_len = len(hand)
+        is_field_empty = (len(field) == 0)
 
+        groups = defaultdict(list)
+        for c in hand:
+            if not c.is_joker: groups[c.display].append(c)
+
+        other_lens = [len(all_hands[s]) for s in range(4) if s != my_seat and s not in finished]
+        min_opp_len = min(other_lens) if other_lens else 99
+
+        # 上位9体（王族・英雄）
         if char_key == 'GILGAMESH':
             best_move = decide_gilgamesh(my_seat, hand, field, valid_moves, is_rev, is_eb, cleared, all_hands, finished, last_seat, pass_cnt)
         elif char_key in ['AWAKENED_KING', 'AWAKENED_YOUNG_KING']:
@@ -2057,39 +2153,151 @@ def predict():
         elif char_key == 'SHI_HUANGDI':
             best_move = decide_shi_huangdi(my_seat, hand, field, valid_moves, is_rev, is_eb, cleared, all_hands, finished, last_seat, pass_cnt)
         elif char_key == 'SHOTOKU':
-            other_lens = [len(all_hands[s]) for s in range(4) if s != my_seat and s not in finished]
             best_move = decide_shotoku(my_seat, hand, field, is_rev, all_hands, finished, played_history, other_lens, last_seat, pass_cnt, cleared, is_eb)
         elif char_key == 'ALEXANDER':
             best_move = decide_alexander_hybrid(my_seat, hand, field, is_rev, is_eb, cleared, all_hands, finished, played_history, last_seat, pass_cnt)
         elif char_key in ['BEGINNER_AI', 'YOUNG_KING']:
             best_move = decide_young_king(my_seat, hand, field, valid_moves, is_rev, is_eb, cleared, all_hands, finished, last_seat, pass_cnt)
-        else:
-            unrevealed = get_unrevealed_cards(hand, field, cleared)
-            safe_valid = [m for m in valid_moves if not (len(m) == len(hand) and is_forbidden_finish_move(m, is_rev)) and not will_lead_to_forbidden_trap(m, hand, is_rev)]
-            cands = safe_valid if safe_valid else valid_moves
 
-            if profile.get('R14_endgameSolverDepth', 0.5) >= 0.3:
-                endgame_m = solve_endgame_winning_sequence(hand, field, unrevealed, eff_rev, max_depth=4)
-                if endgame_m and not will_lead_to_forbidden_trap(endgame_m, hand, is_rev):
-                    best_move = endgame_m
-                else:
-                    sc = get_nn_scores(hand, field, is_rev, is_eb, cleared, model_choice='apex')
-                    cand = max(cands, key=lambda m: sum([sc[card_to_idx(c)] for c in m if 0 <= card_to_idx(c) < 53]))
-                    other_lens = [len(all_hands[s]) for s in range(4) if s != my_seat and s not in finished]
-                    min_opp = min(other_lens) if other_lens else 99
-                    if should_strategic_pass_on_high_card(cand, hand, field, eff_rev, min_opp):
-                        best_move = None
+        # 下位9体（公爵〜道化師: simulate_league.py実証済み完全同期コード）
+        else:
+            safe_valid = [m for m in valid_moves if not (len(m) == hand_len and is_forbidden_finish_move(m, is_rev)) and not will_lead_to_forbidden_trap(m, hand, is_rev)]
+            use_valid = safe_valid if safe_valid else [m for m in valid_moves if not (len(m) == hand_len and is_forbidden_finish_move(m, is_rev))]
+            if not use_valid: use_valid = valid_moves
+
+            if char_key == 'DUKE':
+                duke_valid = [m for m in use_valid if not is_joker_waste_move(m, hand)]
+                if not duke_valid: duke_valid = use_valid
+                if min_opp_len <= 2 and field:
+                    eights = [m for m in duke_valid if any(c.display == '8' for c in m)]
+                    if eights: best_move = eights[0]
                     else:
-                        best_move = cand
-            else:
-                sc = get_nn_scores(hand, field, is_rev, is_eb, cleared, model_choice='apex')
-                cand = max(cands, key=lambda m: sum([sc[card_to_idx(c)] for c in m if 0 <= card_to_idx(c) < 53]))
-                other_lens = [len(all_hands[s]) for s in range(4) if s != my_seat and s not in finished]
-                min_opp = min(other_lens) if other_lens else 99
-                if should_strategic_pass_on_high_card(cand, hand, field, eff_rev, min_opp):
+                        duke_valid.sort(key=lambda m: (len(m) * 100) + m[0].val(), reverse=True)
+                        best_move = duke_valid[0]
+                else:
+                    is_strong = lambda c: c.is_joker or c.display in ['A', '2']
+                    high_cnt = sum(1 for c in hand if is_strong(c))
+                    other_cnt = len(hand) - high_cnt
+                    can_clear = high_cnt >= other_cnt
+                    filtered = duke_valid if can_clear else [m for m in duke_valid if not any(is_strong(c) for c in m)]
+                    if not filtered: best_move = None if field and min_opp_len > 3 else duke_valid[0]
+                    else:
+                        filtered.sort(key=lambda m: evaluate_move_default(m, hand, is_field_empty, is_rev, min_opp_len), reverse=True)
+                        best_move = filtered[0]
+
+            elif char_key == 'MARQUIS':
+                marquis_valid = [m for m in use_valid if not is_joker_waste_move(m, hand)]
+                if not marquis_valid: marquis_valid = use_valid
+                if field and min_opp_len > 2 and hand_len >= 6:
+                    non_super = [m for m in marquis_valid if not any(c.is_joker or c.display == '2' for c in m)]
+                    if not non_super: best_move = None
+                    else:
+                        non_super.sort(key=lambda m: evaluate_move_default(m, hand, is_field_empty, is_rev, min_opp_len), reverse=True)
+                        best_move = non_super[0]
+                else:
+                    marquis_valid.sort(key=lambda m: evaluate_move_default(m, hand, is_field_empty, is_rev, min_opp_len), reverse=True)
+                    best_move = marquis_valid[0]
+
+            elif char_key == 'COUNT':
+                is_late = hand_len <= 5
+                count_valid = [m for m in use_valid if not is_joker_waste_move(m, hand)]
+                if not count_valid: count_valid = use_valid
+                if not is_late and field and min_opp_len > 2:
+                    non_super = [m for m in count_valid if not any(c.is_joker or c.display == '2' for c in m)]
+                    if not non_super: best_move = None
+                    else:
+                        non_super.sort(key=lambda m: (len(m) * 10) - m[0].val(), reverse=True)
+                        best_move = non_super[0]
+                else:
+                    count_valid.sort(key=lambda m: (len(m) * 10) + (m[0].val() if is_late else -m[0].val()), reverse=True)
+                    best_move = count_valid[0]
+
+            elif char_key == 'KNIGHT':
+                if not field:
+                    sorted_moves = sorted(use_valid, key=lambda m: (m[0].strength(eff_rev), -len(m)))
+                    best_move = sorted_moves[0]
+                else:
+                    use_valid.sort(key=lambda m: m[0].strength(eff_rev))
+                    best_move = use_valid[0]
+
+            elif char_key == 'MERCHANT':
+                best_m = use_valid[0]
+                best_s = -999.0
+                for m in use_valid:
+                    s = evaluate_move_default(m, hand, is_field_empty, is_rev, min_opp_len)
+                    if len(m) == 2: s += 15.0
+                    elif len(m) >= 3: s += 25.0
+                    elif len(m) == 1 and len(groups[m[0].display]) >= 2: s -= 20.0
+                    if s > best_s: best_s, best_m = s, m
+                best_move = best_m
+
+            elif char_key == 'SCHOLAR':
+                scholar_valid = [m for m in use_valid if not is_joker_waste_move(m, hand)]
+                if not scholar_valid: scholar_valid = use_valid
+                if min_opp_len <= 2 and field:
+                    block_eights = [m for m in scholar_valid if any(c.display == '8' for c in m)]
+                    if block_eights: best_move = block_eights[0]
+                    else:
+                        block_highs = [m for m in scholar_valid if m[0].is_joker or m[0].display in ['A', '2']]
+                        if block_highs:
+                            block_highs.sort(key=lambda m: m[0].strength(eff_rev), reverse=True)
+                            best_move = block_highs[0]
+                        else:
+                            scholar_valid.sort(key=lambda m: evaluate_move_default(m, hand, is_field_empty, is_rev, min_opp_len), reverse=True)
+                            best_move = scholar_valid[0]
+                else:
+                    unrevealed = get_unrevealed_cards(hand, field, cleared)
+                    safe = [m for m in scholar_valid if (len(m) == 1 and m[0].is_joker and not any(c.suit == '♠' and c.display == '3' for c in unrevealed))]
+                    if safe:
+                        safe.sort(key=lambda m: (len(m) * 10) - m[0].val(), reverse=True)
+                        best_move = safe[0]
+                    elif field and min_opp_len > 3 and hand_len >= 6:
+                        non_super = [m for m in scholar_valid if not any(c.is_joker or c.display == '2' for c in m)]
+                        if non_super:
+                            non_super.sort(key=lambda m: evaluate_move_default(m, hand, is_field_empty, is_rev, min_opp_len), reverse=True)
+                            best_move = non_super[0]
+                        else: best_move = None
+                    else:
+                        scholar_valid.sort(key=lambda m: evaluate_move_default(m, hand, is_field_empty, is_rev, min_opp_len), reverse=True)
+                        best_move = scholar_valid[0]
+
+            elif char_key == 'STRATEGIST':
+                strategist_valid = [m for m in use_valid if not is_joker_waste_move(m, hand)]
+                if not strategist_valid: strategist_valid = use_valid
+                if min_opp_len <= 2 and field:
+                    eights = [m for m in strategist_valid if any(c.display == '8' for c in m)]
+                    if eights: best_move = eights[0]
+                    else:
+                        highs = [m for m in strategist_valid if m[0].is_joker or m[0].display in ['A', '2']]
+                        if highs:
+                            highs.sort(key=lambda m: m[0].strength(eff_rev), reverse=True)
+                            best_move = highs[0]
+                        else:
+                            strategist_valid.sort(key=lambda m: evaluate_move_default(m, hand, is_field_empty, is_rev, min_opp_len), reverse=True)
+                            best_move = strategist_valid[0]
+                else:
+                    strategist_valid.sort(key=lambda m: evaluate_move_default(m, hand, is_field_empty, is_rev, min_opp_len), reverse=True)
+                    best_move = strategist_valid[0]
+
+            elif char_key == 'REVOLUTIONARY':
+                quads = [m for m in use_valid if len(m) >= 4]
+                if quads: best_move = quads[0]
+                else:
+                    eights = [m for m in use_valid if any(c.display == '8' for c in m)]
+                    if eights: best_move = eights[0]
+                    else:
+                        use_valid.sort(key=lambda m: evaluate_move_default(m, hand, is_field_empty, is_rev, min_opp_len), reverse=True)
+                        best_move = use_valid[0]
+
+            elif char_key == 'JESTER':
+                if random.random() < 0.35 and field:
                     best_move = None
                 else:
-                    best_move = cand
+                    best_move = random.choice(use_valid)
+
+            else:
+                use_valid.sort(key=lambda m: evaluate_move_default(m, hand, is_field_empty, is_rev, min_opp_len), reverse=True)
+                best_move = use_valid[0]
 
         if not field and not best_move and valid_moves:
             safe_lead = [m for m in valid_moves if not (len(m) == len(hand) and is_forbidden_finish_move(m, is_rev))]

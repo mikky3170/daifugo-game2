@@ -1,12 +1,24 @@
 /* ====================================================================
  * ROYAL DAIFUGO - config.js
- * [Version: v4.1.5 - カード交換セーブ完全保護・禁止あがり警告残留解消＆極小画面レスポンシブ適正化]
+ * [Version: v4.1.6 - マイキャラ選択美術刷新・プレイヤーセリフ完全1行化＆音響確実アンロック版]
  * ==================================================================== */
 
-const APP_VERSION = 'v4.1.5';
+const APP_VERSION = 'v4.1.6';
 const VERSION_HISTORY = [
-
-{
+  {
+    ver: 'v4.1.6',
+    date: '2026-10-16',
+    title: 'マイキャラ選択美術刷新・プレイヤーセリフ完全1行化＆音響確実アンロック版',
+    changes: [
+      'シナリオモードのマイキャラ選択画面を宮廷美術調へ刷新（スマホ時の左右2分割化による空白根絶、タブレット時の縦間延び解消＆肖像画拡大）',
+      '対局中のプレイヤー吹き出し（セリフ）が絵柄右上から改行されず1行で堂々と表示されるようCSSおよび表示幅を最適化',
+      'ブラウザ自動再生制限（Autoplay）対策を強化し、初回タップ・対戦開始時のBGM再生を100%確実にアンロックするよう音響エンジンを修復',
+      'シナリオモードで幼姫（シャーロット）および科学者（フランツ）選択時の座席キャラ名表示を「幼姫（あなた）」「科学者（あなた）」へ完全統一',
+      'シナリオモードの初期規定対戦数を「5試合勝負」に同期固定し、キャラ紹介モーダルに新マイキャラ2名の解説カードを正式配備'
+    ],
+    files: ['config.js', 'common.css', 'game.css', 'audio.js', 'index.html', 'scenario.js', 'main.js']
+  },
+  {
     ver: 'v4.1.5',
     date: '2026-10-15',
     title: 'カード交換セーブ完全保護・禁止あがり警告残留解消＆極小画面レスポンシブ適正化',
@@ -19,7 +31,7 @@ const VERSION_HISTORY = [
     ],
     files: ['config.js', 'game.css', 'main.js']
   },
- {
+  {
     ver: 'v4.1.4',
     date: '2026-10-15',
     title: 'スマホ対戦盤面完全修復・ギルガメッシュ直通エピローグ＆プロ総点検バグ一掃',
@@ -35,7 +47,7 @@ const VERSION_HISTORY = [
     ],
     files: ['config.js', 'game.css', 'scenario.js', 'main.js']
   },
- {
+  {
     version: 'v4.1.3',
     date: '2026-10-14',
     title: '初期画面カルーセル配置修復 ＆ 実質逆転判定基盤配備',
@@ -127,19 +139,6 @@ const VERSION_HISTORY = [
       '【敵軍の脅威】および【勝敗を分けた最大の山場】を盤面ファクト直結の6〜7パターンへ拡充'
     ],
     files: ['main.js']
-  },
-  {
-    ver: 'v3.9.6',
-    date: '2026-10-04',
-    title: '終盤確定読みEndgame Solver黄金版＆王宮ヒエラルキー最高記録正式確立',
-    changes: [
-      '【最高峰三強バランス確立】10,000試合大規模均等リーグ戦の実証を経て、ギルガメッシュ42.5%（第1位）、女王36.4%（第2位）、覚醒新王33.0%（第3位）の歴代最高峰バランスを公式確立',
-      '【健全な終盤確定読み（Endgame Solver）】不完全情報下の推測自滅を排し、安全・確実なあがりルートのみを探索・実行する健全型Endgame Solverを正式統合',
-      '【初期貴族9名の個性完全保護】騎士（愚直最弱順）、商人（ペア至上主義）、侯爵（スマートパス）、道化師（奇抜トリッキー）等の愛されるプレイスタイルを完全維持',
-      '【伯爵フェーズ制御適正化】伯爵の手札5枚以下での強札解禁（策略フェーズ）を最適化し、中盤から終盤への主導権奪還精度を向上',
-      '【全プラットフォーム黄金状態同期】Webフロントエンド（rules.js/ai.js/config.js）およびPythonサーバー・シミュレータ間の完全整合を保証'
-    ],
-    files: ['config.js', 'rules.js', 'ai.js', 'server.py', 'simulate_league.py']
   }
 ];
 
@@ -300,19 +299,11 @@ const GameTimer = {
 const RENDER_BACKEND_URL = 'https://daifugo-game2.onrender.com';
 const LOCAL_BACKEND_URL = 'http://127.0.0.1:5000';
 
-/**
- * サーバー接続先URL動的解決アーキテクチャ
- * 1. HTTPアクセス時（Tailscale経由 http://100.x.y.z:5000 や http://localhost:5000）：
- *    アクセス元ホスト（PC自身）を最優先ターゲットとし、PCの logs/ フォルダへ100%直接格納する。
- * 2. file: プロトコル時：ローカルPCの 127.0.0.1:5000 をターゲットとする。
- * 3. HTTPSアクセス時（Render本番ホスティング）：Mixed Contentブロックを回避するためRender宛てとする。
- */
 function resolveBackendBaseUrl() {
   const origin = window.location.origin;
   const hostname = window.location.hostname;
   const protocol = window.location.protocol;
 
-  // Tailscale IPやローカルホストのHTTPアクセス時は、アクセス先サーバー自身を完全直結ターゲットとする
   if (protocol === 'http:' && origin && origin !== 'null') {
     return origin.includes(':5000') ? origin : `http://${hostname}:5000`;
   }
@@ -343,14 +334,14 @@ const CONFIG = {
  * 大富豪基幹ルール設定（動的ON/OFF切り替え対応）
  * ---------------------------------------------------- */
 const DEFAULT_GAME_RULES = {
-  eightCut: true,          // 8切り
-  elevenBack: true,        // 11バック
-  revolution: true,        // 革命
-  spade3: true,            // スペ3返し
-  suitBinding: false,      // スート縛り（初期設定: OFF）
-  capitalFall: true,       // 都落ち（本格競技ルール: ON）
-  forbiddenFinish: true,   // 禁止あがり（本格競技ルール: ON）
-  sequence: false          // 階段（初期設定: OFF）
+  eightCut: true,
+  elevenBack: true,
+  revolution: true,
+  spade3: true,
+  suitBinding: false,
+  capitalFall: true,
+  forbiddenFinish: true,
+  sequence: false
 };
 
 let gameRules = { ...DEFAULT_GAME_RULES };
@@ -359,7 +350,7 @@ let gameRules = { ...DEFAULT_GAME_RULES };
  * プレイヤー操作アシスト・ゲーム設定
  * ---------------------------------------------------- */
 const GAME_SETTINGS = {
-  forbiddenFinishAlert: true // 禁止あがり警告アシスト（初期値: ON）
+  forbiddenFinishAlert: true
 };
 
 /* ----------------------------------------------------
@@ -381,10 +372,9 @@ const RULE_EXPLANATIONS = {
 };
 
 /* ----------------------------------------------------
- * キャラクター別 定石パーセント設定値（個性整合 ＆ 弱体化ゼロ保証）
+ * キャラクター別 定石パーセント設定値
  * ---------------------------------------------------- */
 const CHARACTER_TACTICAL_PROFILES = {
-  // ① 原初の覇王：全知全能（透視15,000手読み・天の鎖）
   GILGAMESH: {
     R2_reachBlock: 1.00,
     R3_capitalFallDefense: 1.00,
@@ -399,8 +389,6 @@ const CHARACTER_TACTICAL_PROFILES = {
     R12_smartPass: 0.90,
     R14_endgameSolverDepth: 1.00
   },
-
-  // ② 秦の始皇帝：法家統制手札圧縮 ＆ 11自滅抑制
   SHI_HUANGDI: {
     R2_reachBlock: 0.85,
     R3_capitalFallDefense: 0.90,
@@ -415,8 +403,6 @@ const CHARACTER_TACTICAL_PROFILES = {
     R12_smartPass: 0.85,
     R14_endgameSolverDepth: 0.60
   },
-
-  // ③ 女王 (SUPER_AI)：正統派冷徹知性（5,000回MCTS・優雅な温存）
   SUPER_AI: {
     R2_reachBlock: 0.85,
     R3_capitalFallDefense: 0.85,
@@ -431,8 +417,6 @@ const CHARACTER_TACTICAL_PROFILES = {
     R12_smartPass: 0.95,
     R14_endgameSolverDepth: 0.70
   },
-
-  // ④ アレク王：ファランクス重装突撃 ＆ 8架け橋
   ALEXANDER: {
     R2_reachBlock: 0.80,
     R3_capitalFallDefense: 0.85,
@@ -447,8 +431,6 @@ const CHARACTER_TACTICAL_PROFILES = {
     R12_smartPass: 0.75,
     R14_endgameSolverDepth: 0.60
   },
-
-  // ⑤ 聖徳太子：完全傾聴カウンター ＆ 大調和
   SHOTOKU: {
     R2_reachBlock: 1.00,
     R3_capitalFallDefense: 0.85,
@@ -463,8 +445,6 @@ const CHARACTER_TACTICAL_PROFILES = {
     R12_smartPass: 0.80,
     R14_endgameSolverDepth: 0.70
   },
-
-  // ⑥ 織田信長：親番三段撃ち速攻 ＆ 電撃8切り
   NOBUNAGA: {
     R2_reachBlock: 0.85,
     R3_capitalFallDefense: 0.85,
@@ -479,8 +459,6 @@ const CHARACTER_TACTICAL_PROFILES = {
     R12_smartPass: 0.50,
     R14_endgameSolverDepth: 0.60
   },
-
-  // ⑦ 新王 (BEGINNER_AI)：俊英マルチセット ＆ 堅実思考
   BEGINNER_AI: {
     R2_reachBlock: 0.80,
     R3_capitalFallDefense: 0.80,
@@ -495,8 +473,6 @@ const CHARACTER_TACTICAL_PROFILES = {
     R12_smartPass: 0.80,
     R14_endgameSolverDepth: 0.75
   },
-
-  // ⑧ 王 (KING)：163次元APEX大局観 ＆ 君主の迎撃
   KING: {
     R2_reachBlock: 0.95,
     R3_capitalFallDefense: 0.90,
@@ -511,8 +487,6 @@ const CHARACTER_TACTICAL_PROFILES = {
     R12_smartPass: 0.85,
     R14_endgameSolverDepth: 0.85
   },
-
-  // ⑨ 覚醒新王 (AWAKENED_KING)：修練の果て覚醒 ＆ PUCT融合
   AWAKENED_KING: {
     R2_reachBlock: 0.85,
     R3_capitalFallDefense: 0.85,
@@ -527,8 +501,6 @@ const CHARACTER_TACTICAL_PROFILES = {
     R12_smartPass: 0.80,
     R14_endgameSolverDepth: 0.80
   },
-
-  // ⑩ 公爵 (DUKE)：徹底温存 ＆ リーチ防衛動員令
   DUKE: {
     R2_reachBlock: 1.00,
     R3_capitalFallDefense: 0.85,
@@ -543,8 +515,6 @@ const CHARACTER_TACTICAL_PROFILES = {
     R12_smartPass: 0.95,
     R14_endgameSolverDepth: 0.40
   },
-
-  // ⑪ 侯爵 (MARQUIS)：スマートパス重視 ＆ エレガント手札保存
   MARQUIS: {
     R2_reachBlock: 0.75,
     R3_capitalFallDefense: 0.80,
@@ -559,8 +529,6 @@ const CHARACTER_TACTICAL_PROFILES = {
     R12_smartPass: 1.00,
     R14_endgameSolverDepth: 0.30
   },
-
-  // ⑫ 伯爵 (COUNT)：フェーズ可変策略家（手札5枚以下で強札連打）
   COUNT: {
     R2_reachBlock: 0.75,
     R3_capitalFallDefense: 0.80,
@@ -575,8 +543,6 @@ const CHARACTER_TACTICAL_PROFILES = {
     R12_smartPass: 0.90,
     R14_endgameSolverDepth: 0.40
   },
-
-  // ⑬ 騎士 (KNIGHT)：愚直最弱順（駆け引き・パス嫌い）
   KNIGHT: {
     R2_reachBlock: 0.40,
     R3_capitalFallDefense: 0.50,
@@ -591,8 +557,6 @@ const CHARACTER_TACTICAL_PROFILES = {
     R12_smartPass: 0.00,
     R14_endgameSolverDepth: 0.10
   },
-
-  // ⑭ 商人 (MERCHANT)：ペア至上主義・まとめ売り
   MERCHANT: {
     R2_reachBlock: 0.40,
     R3_capitalFallDefense: 0.50,
@@ -607,8 +571,6 @@ const CHARACTER_TACTICAL_PROFILES = {
     R12_smartPass: 0.60,
     R14_endgameSolverDepth: 0.10
   },
-
-  // ⑮ 学者 (SCHOLAR)：残存カード分析 ＆ 確定詰み特化
   SCHOLAR: {
     R2_reachBlock: 0.80,
     R3_capitalFallDefense: 0.80,
@@ -623,8 +585,6 @@ const CHARACTER_TACTICAL_PROFILES = {
     R12_smartPass: 0.80,
     R14_endgameSolverDepth: 0.90
   },
-
-  // ⑯ 軍師 (STRATEGIST)：親権妨害 ＆ 8切りコントロール
   STRATEGIST: {
     R2_reachBlock: 1.00,
     R3_capitalFallDefense: 0.85,
@@ -639,8 +599,6 @@ const CHARACTER_TACTICAL_PROFILES = {
     R12_smartPass: 0.80,
     R14_endgameSolverDepth: 0.30
   },
-
-  // ⑰ 革命家 (REVOLUTIONARY)：革命 ＆ 8切り特化
   REVOLUTIONARY: {
     R2_reachBlock: 0.50,
     R3_capitalFallDefense: 0.50,
@@ -655,8 +613,6 @@ const CHARACTER_TACTICAL_PROFILES = {
     R12_smartPass: 0.20,
     R14_endgameSolverDepth: 0.10
   },
-
-  // ⑱ 道化師 (JESTER)：予測不能トリッキー（カオス）
   JESTER: {
     R2_reachBlock: 0.15,
     R3_capitalFallDefense: 0.10,
@@ -709,14 +665,11 @@ const RANK_VALUE_MAP = {
 
 const PLAYERS = ['player', 'cpu1', 'cpu2', 'cpu3'];
 
-/* 初期解放キャラクター10名の定数定義（一元管理） */
 const DEFAULT_UNLOCKED_CHARS = [
   'DUKE', 'MARQUIS', 'COUNT', 'KNIGHT', 'MERCHANT', 'SCHOLAR', 'STRATEGIST', 'REVOLUTIONARY', 'JESTER', 'KING'
 ];
 
-/* キャラクター定義順：初期貴族9名 ➔ 王族4名 ➔ 歴史の英傑5名 */
 const CHARACTER_DEFS = {
-  // ① 初期宮廷貴族・戦略家（9名）
   DUKE: { id: 'DUKE', name: '公爵', fullName: '公爵', icon: '👑' },
   MARQUIS: { id: 'MARQUIS', name: '侯爵', fullName: '侯爵', icon: '🍷' },
   COUNT: { id: 'COUNT', name: '伯爵', fullName: '伯爵', icon: '📜' },
@@ -727,13 +680,11 @@ const CHARACTER_DEFS = {
   REVOLUTIONARY: { id: 'REVOLUTIONARY', name: '革命家', fullName: '革命家', icon: '🔥' },
   JESTER: { id: 'JESTER', name: '道化師', fullName: '道化師', icon: '🤡' },
 
-  // ② 王宮の頂点グループ（4名：王族）
   BEGINNER_AI: { id: 'BEGINNER_AI', name: '新王', fullName: '新王', icon: '🤴' },
   KING: { id: 'KING', name: '王', fullName: '王', icon: '🏰' },
   SUPER_AI: { id: 'SUPER_AI', name: '女王', fullName: '女王', icon: '👸' },
   AWAKENED_KING: { id: 'AWAKENED_KING', name: '覚醒新王', fullName: '覚醒新王', icon: '👑' },
 
-  // ③ 歴史の英傑・神話（5名）
   NOBUNAGA: { id: 'NOBUNAGA', name: '織田信長', fullName: '織田信長', icon: '⚔️' },
   SHOTOKU: { id: 'SHOTOKU', name: '聖徳太子', fullName: '聖徳太子', icon: '🔮' },
   SHI_HUANGDI: { id: 'SHI_HUANGDI', name: '始皇帝', fullName: '秦の始皇帝', icon: '🏛️' },
@@ -766,7 +717,9 @@ const CHAR_IMAGES = {
   boy: "fugo-絵柄/boy.png",
   girl: "fugo-絵柄/girl.png",
   guy: "fugo-絵柄/guy.png",
-  lady: "fugo-絵柄/lady.png"
+  lady: "fugo-絵柄/lady.png",
+  charlotte: "fugo-絵柄/charlotte.png",
+  franz: "fugo-絵柄/franz.png"
 };
 
 const CHAR_SHORT_DESC = {
@@ -793,6 +746,97 @@ const CHAR_SHORT_DESC = {
 };
 
 const CHARACTER_DIALOGUES = {
+  // ==========================================
+  // ① プレイヤー（マイキャラ6名）専用セリフテーブル
+  // ==========================================
+  boy: {
+    NORMAL: ['計算通りだ。このカードで整える。', '一手一手、確実に詰めていくよ。', '焦らない……盤面の主導権を握るんだ。'],
+    STRONG: ['勝負手だ！ ここで一気に戦況を動かす！', '切り札を解き放つ！ 返せるかい？'],
+    MULTI: ['重装セットで面を制圧する！', 'ペアの連携、崩せるかな？'],
+    EIGHT_CUT: ['ここで断ち切る！ 親番は僕がもらうよ！', '8切り成立！ 流れを引き寄せる！'],
+    ELEVEN_BACK: ['強弱の反転！ 僕の計算に狂いはない！'],
+    REVOLUTION: ['秩序の転換……革命だ！ 世界をひっくり返す！'],
+    PASS: ['ここは静観だ。次の好機を待つよ。', '無理な応戦はしない。パスだ。'],
+    ENEMY_FEW: ['相手の上がりが見えた……全力で防ぐ！', '油断は禁物だ、絶対に逃がさない！'],
+    MY_FEW: ['勝ち筋は完全に導き出された！', '終局へ……チェックメイトだ！'],
+    WIN: ['僕の計算と閃きの完全勝利だ！', '信じたカードが道を切り拓いてくれたよ！'],
+    LOSE: ['くっ……変数を読み違えたか。次は必ず勝つ！'],
+    AUTO_ON: ['頼むよ、オートマタ！ 思考ルーチンを展開して！', '僕の代わりに最善手を計算してくれ！']
+  },
+  girl: {
+    NORMAL: ['カードたちが囁いているわ……ここよ。', '静かに、けれど確かに進めるわ。', '場の呼吸を感じて……この一枚。'],
+    STRONG: ['光よ、盤面を照らして……これが私の導き！', '強い意志を込めて……受けてみて！'],
+    MULTI: ['絆を束ねて……連撃よ！', '重なる光は遮れないわ！'],
+    EIGHT_CUT: ['立ち止まる刻……ここで場を浄化します！', '8切り……親権は私に。'],
+    ELEVEN_BACK: ['世界の影が反転する……今よ！'],
+    REVOLUTION: ['優しき者たちよ立ち上がれ……革命の祈りを！'],
+    PASS: ['風を受け流すわ……今はパス。', '静かに時を待ちましょう。'],
+    ENEMY_FEW: ['危うい気配……逃がしはしないわ！', '光の障壁で食い止めてみせる！'],
+    MY_FEW: ['ゴールの導きが見える……あと少し！', '運命の糸が結ばれたわ……！'],
+    WIN: ['カードたちの優しい声が届いたわ……ありがとう！', '光の道は正しかった……勝利ね。'],
+    LOSE: ['暗雲が立ち込めたわね……でも、私の心は曇らないわ！'],
+    AUTO_ON: ['神秘の直感をあなたに預けるわ……お願いね。', '星の運行に身を任せましょう……代行、頼んだわ。']
+  },
+  guy: {
+    NORMAL: ['へっ、まずは小手調べといこうじゃねぇか。', '焦るなよ、修羅場はこれからだ。', '地道に削っていくのが俺の流儀さ。'],
+    STRONG: ['オラァッ！ 歴戦の一撃、骨の髄まで味わいな！', '出し惜しみなしだ！ 真正面から受けてみろ！'],
+    MULTI: ['束になってかかってきやがれ！ ドカンと一発だ！', '強固な布陣でぶち破るぜ！'],
+    EIGHT_CUT: ['へっ、通行止めだ！ 8切りで親権強奪！', 'グダグダな場は俺がぶった斬るぜ！'],
+    ELEVEN_BACK: ['上下が逆さまだぁ？ 荒波なんざ慣れっこよ！'],
+    REVOLUTION: ['野郎ども歓べぇ！ 革命で世界をひっくり返してやるぜ！'],
+    PASS: ['ケッ、ここは引くのが大人の分別ってもんよ。', '無理はしねぇ、パスだパス！'],
+    ENEMY_FEW: ['おいおい、一人で逃げ切れると思ってんのか？', 'ケツに火がついたぜ！ 全力で止める！'],
+    MY_FEW: ['王手だ！ てめぇら、覚悟はいいか！？', '修羅場を越えた男のゴールが見えたぜ！'],
+    WIN: ['ガハハ！ 見たかよ、これが場数を踏んだ男の勝ちっぷりだ！', '最高の勝負だったぜ！ 美酒が美味い！'],
+    LOSE: ['チッ、一杯食わされたか！ だが次はこうはいかねぇぞ！'],
+    AUTO_ON: ['おう、あとは任せたぜ！ キリキリ働いてくれよな！', 'ちっと肩を休めるか……AIさんよ、バシッと決めてくれ！']
+  },
+  lady: {
+    NORMAL: ['ふふ、優雅に参りましょうか。', '焦りは禁物よ、坊やたち。', 'わたくしの指先に惑わされないでね？'],
+    STRONG: ['うふふ、激しいのがお好みかしら？ いただきよ！', '身の程を弁えなさいな、これが大人の切り札よ。'],
+    MULTI: ['重なる罠……抜け出せるかしら？', '華麗なる連撃で酔わせて差し上げるわ。'],
+    EIGHT_CUT: ['小競り合いはおしまい。8切りでお流しあそばせ。', '親権はわたくしのものよ。おとなしくしててね。'],
+    ELEVEN_BACK: ['あら、逆転の夜宴の始まりですこと！'],
+    REVOLUTION: ['ウフフ……秩序が崩れ去る瞬間って、ゾクゾクするわね！ 革命よ！'],
+    PASS: ['ここは優雅に見送らせていただくわ。', 'お先にどうぞ？ 追いついて差し上げますから。'],
+    ENEMY_FEW: ['あらあら、抜け駆けは淑女が許しませんことよ？', '逃がすとでも思いましたの？ 捕まえたわ。'],
+    MY_FEW: ['チェックメイトの準備は整いましたわ。観念なさい？', 'フィナーレの幕を下ろしますわよ。'],
+    WIN: ['オホホホ！ わたくしが勝つのは世界の必然ですこと！', '極上のスリルでしたわ。ご褒美をよろしくて？'],
+    LOSE: ['まあ……わたくしを負かすなんて、罪な方たちね。'],
+    AUTO_ON: ['あら、少しお化粧直しをしてきますわ。よろしくね？', '有能な執事に託しますわ……華麗に勝ち取ってちょうだい。']
+  },
+  charlotte: {
+    NORMAL: ['え〜いっ！ シャーロットちゃんの一手、くらえ〜！', 'ふんっ、こんなの朝飯前なんだから！', '退屈させないでよね！ もっと本気出しなさいよ！'],
+    STRONG: ['どっか〜ん！ これが名門の超絶切り札よ！ 参った！？', 'ふふん！ 庶民には返せない最強のカードよっ！'],
+    MULTI: ['お揃いでポイッ！ ペア攻撃、痛いでしょ〜！', '束ねてドーン！ 息つく暇なんてあげないんだから！'],
+    EIGHT_CUT: ['はいスト〜ップ！ 8切りでぜ〜んぶ没収〜！ 親番はアタシの！', 'あっかんべ〜！ 場を流してアタシの独壇場よ！'],
+    ELEVEN_BACK: ['クルッと反転！ 下克上しちゃうんだから！'],
+    REVOLUTION: ['きゃはは！ ひっくり返っちゃえ〜！ 革命大爆発っ！'],
+    PASS: ['ふ〜ん、ここはパスしてあげる。感謝しなさいよね！', 'ちょっと様子見！ 次でギャフンと言わせてやるんだから！'],
+    ENEMY_FEW: ['あがりそうなヤツ発見！ 絶対に逃がさないんだからねっ！', '調子に乗るな〜！ アタシが阻止してやる〜！'],
+    MY_FEW: ['もう手札がないもんね〜！ アタシの完全勝利は目前よ！', 'ゴールはすぐそこ！ 誰もアタシを止められないわ！'],
+    WIN: ['わ〜い大勝利〜！ さすがシャーロットちゃん！ 天才美少女の勝ち〜！', 'へへ〜んだ！ アタシに敵うわけないでしょ！ ひれ伏しなさ〜い！'],
+    LOSE: ['ぎゃ〜ん！ なんでアタシが負けるのよ〜！ ずるい〜っ！'],
+    AUTO_ON: ['あとはよろしくね、からくり人形！ アタシの代わりにやっつけちゃって！', 'ちょっとジュース飲んでくるから、完璧に勝っときなさいよね！']
+  },
+  franz: {
+    NORMAL: ['ふむ、仮説検証のステップだ。この数値を投入しよう。', '観測を継続する……ふむ、悪くない確率分布だ。', '実験サンプルとしては極めて興味深い一手だな。'],
+    STRONG: ['臨界点突破！ これが我が叡智のフラスコから生まれた劇薬だ！', 'ククク……逃れられんぞ！ 確定理論の一撃を受けたまえ！'],
+    MULTI: ['分子結合完了！ 多重連撃のエネルギーを喰らえ！', '規格化されたセット打牌……美しい対称性だ！'],
+    EIGHT_CUT: ['反応停止！ 8切りによってエントロピーを極小化する！ 親権掌握！', '実験場を強制リセットだ！ 我が親番から再開する！'],
+    ELEVEN_BACK: ['磁場の逆転現象を確認！ 逆転ベクトルを計算せよ！'],
+    REVOLUTION: ['天地崩壊！ 既存の物理法則を破壊する……これぞ革命的パラダイムシフトだ！'],
+    PASS: ['ふむ、この局面での消費は熱力学的に無駄だな。パスだ。', 'データの収集に専念しよう……ここは見送りだ。'],
+    ENEMY_FEW: ['被検体のゴールが近いな……容赦なく阻害実験を開始する！', '逃走ルートはすべて方程式で封鎖済みだ！'],
+    MY_FEW: ['証明完了（Q.E.D.）まであと1手……解はすでに導かれた！', '勝利の方程式、ここに完結せり！'],
+    WIN: ['ハハハ！ 実験大成功だ！ 我が数式に一片の狂いなし！ 完全勝利！', '神の理を暴いたぞ！ これぞ純粋知性の勝利だ！'],
+    LOSE: ['バカな……想定外の特異点が存在したというのか！？ ぐぬぬ……！'],
+    AUTO_ON: ['演算プロセッサ起動！ オートマタよ、至高の解を導き出したまえ！', '自動実験モードへ移行する……機械知性の実力、見せてもらおう！']
+  },
+
+  // ==========================================
+  // ② CPUキャラクター（対戦相手）セリフテーブル
+  // ==========================================
   GILGAMESH: {
     NORMAL: ['フハハハ！ 我が威光の前に平伏すがよい！', 'この程度の盤面、我が太古の奥義を繰り出すまでもない。', '人の子よ、存分に我を楽しませてみよ。'],
     STRONG: ['万象を切り裂く神話の天罰！ 塵も残さず消え去るがよい！', '原初の覇王の力、その身に刻め！'],
@@ -807,7 +851,8 @@ const CHARACTER_DIALOGUES = {
     LOSE: ['……見事だ。この我を卓上に沈める者がおるとはな。天晴れぞ、その名を記憶しておこう。'],
     GAME_START: ['原初の覇王が直々に相手をしてやろう。光栄に思うがよい！'],
     EXCHANGE: ['我が宝器より授けてやろう。身に余る栄誉と知れ。', '良き貢ぎ物を差し出すがよい。'],
-    NEXT_GAME: ['次の盤面へ参るぞ！ 我の進撃を止められる者がおるか！']
+    NEXT_GAME: ['次の盤面へ参るぞ！ 我の進撃を止められる者がおるか！'],
+    AUTO_REACT: ['ほう？ からくり人形に知恵を借りるか。だが我が宝器の前には無力ぞ！', '機械仕掛けの代行など、神話の威光で叩き潰してくれるわ！']
   },
   AWAKENED_KING: {
     NORMAL: ['積年の修練が私を変えた……この一手、決して退きはしない！', '盤面の全て、読み切っている。焦る必要はない。', '父の無念、母の想い……全てを背負って指す！'],
@@ -823,7 +868,8 @@ const CHARACTER_DIALOGUES = {
     LOSE: ['見事だ……だが、この敗北すらも私をさらに研ぎ澄ます！'],
     GAME_START: ['過酷な修練を越え、君主として帰還した。全力で相手をしよう！'],
     EXCHANGE: ['このカードに我が王家の未来を託そう。大切にしてくれ。'],
-    NEXT_GAME: ['さあ、次の盤面へ進もう。私の歩みは止まらない！']
+    NEXT_GAME: ['さあ、次の盤面へ進もう。私の歩みは止まらない！'],
+    AUTO_REACT: ['知略の代行か……面白い。君の真意、盤上で見極めさせてもらおう！']
   },
   BEGINNER_AI: {
     NORMAL: ['僕の番だね。一手一手、誠実に指すよ。', '玉座の間の第一の門番として、隙のない手を見せるよ。'],
@@ -839,7 +885,8 @@ const CHARACTER_DIALOGUES = {
     LOSE: ['完敗だ……父上、申し訳ありません！ でも、僕はもっと強くなる！'],
     GAME_START: ['玉座の間へようこそ！ 若き王子の力、受けてみてほしい！'],
     EXCHANGE: ['このカードを託すよ。良き未来を切り拓いてくれ。'],
-    NEXT_GAME: ['次はもっと良い手を指してみせるよ！']
+    NEXT_GAME: ['次はもっと良い手を指してみせるよ！'],
+    AUTO_REACT: ['知謀の代行を使うんだね！ 僕も負けないように考えるよ！']
   },
   KING: {
     NORMAL: ['愛息の未熟を補うは父の務め。余の番であるな。', '盤上は余の庭ぞ。慌てるでない。', 'すべて計算の内である。'],
@@ -855,7 +902,8 @@ const CHARACTER_DIALOGUES = {
     LOSE: ['見事であった……余の読みを上回るとはな！ 妻よ、すまぬ……！'],
     GAME_START: ['愛息を破った挑戦者よ、王としての威厳、その目に焼き付けるがよい！'],
     EXCHANGE: ['王家の温情ぞ。大切に用いるがよい。'],
-    NEXT_GAME: ['さあ、次の対局にて再び相見えよう！']
+    NEXT_GAME: ['さあ、次の対局にて再び相見えよう！'],
+    AUTO_REACT: ['軍師を召し抱えたか。どれ、余の王道が通じるか試してみよ！']
   },
   SUPER_AI: {
     NORMAL: ['ふふ、息子も夫も手こずらせて……わたくしの出番ですね。', '優雅に進めましょう。王宮の真の主はわたくしですもの。'],
@@ -871,7 +919,8 @@ const CHARACTER_DIALOGUES = {
     LOSE: ['まあ……わたくしまで破るなんて。息子よ……王家の未来を頼みますわよ。'],
     GAME_START: ['息子と夫を退けた挑戦者よ、冷徹で優雅な洗礼をお受けなさい！'],
     EXCHANGE: ['これはわたくしからの温情よ。大切にお使いなさい。'],
-    NEXT_GAME: ['さあ、次の盤面でも踊っていただきますわ。']
+    NEXT_GAME: ['さあ、次の盤面でも踊っていただきますわ。'],
+    AUTO_REACT: ['機械仕掛けの知性ですの？ わたくしの冷徹な計算に敵うかしら。']
   },
   NOBUNAGA: {
     NORMAL: ['天下布武の布石ぞ。', '撃ち放てい！', '遅い、ぬるいわ！'],
@@ -887,7 +936,8 @@ const CHARACTER_DIALOGUES = {
     LOSE: ['無念……だが、天下の夢は潰えぬ！', '是非に及ばず……見事であった。'],
     GAME_START: ['天下布武の戦、始めるぞ！', '余の覇道、その目に焼き付けるがよい！'],
     EXCHANGE: ['良き弾薬（カード）を献上せよ。', '褒美をとらすぞ。'],
-    NEXT_GAME: ['次の戦場へ参ろうぞ！', 'まだ余の進撃は止まらぬ！']
+    NEXT_GAME: ['次の戦場へ参ろうぞ！', 'まだ余の進撃は止まらぬ！'],
+    AUTO_REACT: ['ほう！ 軍師を呼んだか！ 面白い、まとめて叩き斬ってくれる！']
   },
   SHOTOKU: {
     NORMAL: ['和を以て貴しと為す。これにて進めましょう。', '世の理に従うまで。', '静かに指す一手です。'],
@@ -903,7 +953,8 @@ const CHARACTER_DIALOGUES = {
     LOSE: ['これもまた一つの学び。深く感謝いたします。', '見事なる智慧でした。感服いたしました。'],
     GAME_START: ['争いの中にも和を見出しましょう。', '皆様の心の声を聴き、盤を進めます。'],
     EXCHANGE: ['互いに良き縁を結ぶ交換といたしましょう。', '大切に生かさせていただきます。'],
-    NEXT_GAME: ['新たな巡り合わせへ参りましょう。', 'いつでもお相手いたしますよ。']
+    NEXT_GAME: ['新たな巡り合わせへ参りましょう。', 'いつでもお相手いたしますよ。'],
+    AUTO_REACT: ['新たな声が聴こえますね。それもまた一つの調和、受けて立ちましょう。']
   },
   SHI_HUANGDI: {
     NORMAL: ['我が法に従え。', '度量衡は統一された。', '秩序を乱すな。'],
@@ -919,7 +970,8 @@ const CHARACTER_DIALOGUES = {
     LOSE: ['……朕を討つとは、項羽か劉邦の類か。', 'だが朕の帝国は不滅である！'],
     GAME_START: ['中華統一の号令を下す！', '朕の法に平伏せよ！'],
     EXCHANGE: ['租税として納めよ。', '皇帝の慈悲を受け取るが良い。'],
-    NEXT_GAME: ['さらなる遠征を命ずる！', '次の地も朕が平定しよう。']
+    NEXT_GAME: ['さらなる遠征を命ずる！', '次の地も朕が平定しよう。'],
+    AUTO_REACT: ['異国の策士に頼るか。法家統制の鉄壁を崩せると思うな！']
   },
   ALEXANDER: {
     NORMAL: ['東方遠征の第一歩だ！', '突き進むのみ！', '陣形を崩すな！'],
@@ -935,7 +987,8 @@ const CHARACTER_DIALOGUES = {
     LOSE: ['見事だ……我が軍を退ける英雄に出会えるとは！', '熱き戦いだった！ 礼を言うぞ！'],
     GAME_START: ['世界の果てを目指して、出陣だ！', '不敗の進撃を始めよう！'],
     EXCHANGE: ['勝利のための良き物資を頼む！', '同盟の証を受け取れ！'],
-    NEXT_GAME: ['次の遠征へ向かうぞ！ 我に続け！', 'まだ見ぬ戦場が我らを呼んでいる！']
+    NEXT_GAME: ['次の遠征へ向かうぞ！ 我に続け！', 'まだ見ぬ戦場が我らを呼んでいる！'],
+    AUTO_REACT: ['新たな参謀を立ててきたか！ どんな知謀だろうと我が突撃で突破する！']
   },
   DUKE: {
     NORMAL: ['公爵の品格にふさわしい一手をお見せしよう。', '静かに、しかし着実に。'],
@@ -951,7 +1004,8 @@ const CHARACTER_DIALOGUES = {
     LOSE: ['ぬう、見事だ……我が領地を譲るわけにはいかんがな！'],
     GAME_START: ['礼儀正しく、かつ厳格に勝負いたそう。'],
     EXCHANGE: ['我が蔵からの贈り物だ。重宝するが良い。'],
-    NEXT_GAME: ['次の勝負も手加減は無用ぞ！']
+    NEXT_GAME: ['次の勝負も手加減は無用ぞ！'],
+    AUTO_REACT: ['代行の手を借りられたか。だが伝統の重み、崩せはしまい。']
   },
   MARQUIS: {
     NORMAL: ['ふふ、優雅に参りましょうか。', '計算通りの一手です。'],
@@ -967,7 +1021,8 @@ const CHARACTER_DIALOGUES = {
     LOSE: ['あら……わたくしが負けるなんて。お見事でしたわ。'],
     GAME_START: ['美しい対局を楽しませてくださいまし。'],
     EXCHANGE: ['エレガントにお使いになってね。'],
-    NEXT_GAME: ['次の夜会でもお相手願いますわ。']
+    NEXT_GAME: ['次の夜会でもお相手願いますわ。'],
+    AUTO_REACT: ['代理の方を立てられましたのね。スマートにお相手いたしますわ。']
   },
   COUNT: {
     NORMAL: ['我が策謀の糸、手繰り寄せてみせよう。', 'まずは様子見といったところか。'],
@@ -983,7 +1038,8 @@ const CHARACTER_DIALOGUES = {
     LOSE: ['まさか、我が読みを崩されるとは……天晴れだ。'],
     GAME_START: ['策謀の渦に呑まれぬよう、気をつけることだな。'],
     EXCHANGE: ['このカードがどんな意味を持つか……考えるが良い。'],
-    NEXT_GAME: ['次の一幕を始めるとしようか！']
+    NEXT_GAME: ['次の一幕を始めるとしようか！'],
+    AUTO_REACT: ['影の策士を雇ったか。どちらの罠が深いか試してやろう！']
   },
   KNIGHT: {
     NORMAL: ['我が剣にかけて！', '前進あるのみ！', '真っ直ぐに進む！'],
@@ -999,7 +1055,8 @@ const CHARACTER_DIALOGUES = {
     LOSE: ['我が敗北を認めよう……見事な太刀筋だった！'],
     GAME_START: ['正々堂々と勝負！ いざ参る！'],
     EXCHANGE: ['我が信頼の証を託す！'],
-    NEXT_GAME: ['次の戦場へ向かうぞ！ 続け！']
+    NEXT_GAME: ['次の戦場へ向かうぞ！ 続け！'],
+    AUTO_REACT: ['代理の武者か！ 相手が誰であれ真っ向から叩き伏せるのみ！']
   },
   MERCHANT: {
     NORMAL: ['商売繁盛、損のない手を打たせてもらいますよ。', '損得勘定はバッチリです。'],
@@ -1015,7 +1072,8 @@ const CHARACTER_DIALOGUES = {
     LOSE: ['痛たた……大赤字だ！ 見事な商談でしたよ。'],
     GAME_START: ['良い取引をいたしましょう！ よろしくどうぞ！'],
     EXCHANGE: ['掘り出し物のカードを融通しますよ。'],
-    NEXT_GAME: ['次の商談に向かいましょうかね！']
+    NEXT_GAME: ['次の商談に向かいましょうかね！'],
+    AUTO_REACT: ['代理人を立てましたかい！ 手数料負けしないよう腕を見せてもらいましょう！']
   },
   SCHOLAR: {
     NORMAL: ['場の確率を計算中……このカードが最適解です。', '観察を続けます。'],
@@ -1031,7 +1089,8 @@ const CHARACTER_DIALOGUES = {
     LOSE: ['想定外の変数があったか……実に興味深い敗北です。'],
     GAME_START: ['論理的で厳密な対局を期待しています。'],
     EXCHANGE: ['分析の結果、このカードをお渡しします。'],
-    NEXT_GAME: ['次の実験（対局）を開始しましょう。']
+    NEXT_GAME: ['次の実験（対局）を開始しましょう。'],
+    AUTO_REACT: ['外部演算アルゴリズムの介入ですか。興味深いデータを取らせていただきます。']
   },
   STRATEGIST: {
     NORMAL: ['布陣を敷く。焦るな。', '全ては我が陣形の中よ。'],
@@ -1047,7 +1106,8 @@ const CHARACTER_DIALOGUES = {
     LOSE: ['我が計略を打ち破るとは……見事な将器であった。'],
     GAME_START: ['盤上という名の戦場、いざ開戦！'],
     EXCHANGE: ['この一手、後で効いてくるぞ。受け取れ。'],
-    NEXT_GAME: ['次の戦場へ軍を進めるぞ！']
+    NEXT_GAME: ['次の戦場へ軍を進めるぞ！'],
+    AUTO_REACT: ['新たな軍師を立ててきたか。どちらの兵法が勝るか一手で示そう！']
   },
   REVOLUTIONARY: {
     NORMAL: ['変革の炎を燃やせ！', '既得権益を許すな！', '反逆の狼煙だ！'],
@@ -1063,7 +1123,8 @@ const CHARACTER_DIALOGUES = {
     LOSE: ['くそっ……だが、革命の炎は決して消えはしない！'],
     GAME_START: ['古い体制をぶっ壊す！ 覚悟しろ！'],
     EXCHANGE: ['変革のための武器だ！ 大切に使え！'],
-    NEXT_GAME: ['次の革命の火種を撒きに行くぞ！']
+    NEXT_GAME: ['次の革命の火種を撒きに行くぞ！'],
+    AUTO_REACT: ['機械の知恵を借りようが知ったことか！ 革命の熱で焼き尽くすまでだ！']
   },
   JESTER: {
     NORMAL: ['ヒャッハ〜！ どっちに出るかな〜？', 'ポンポンポ〜ンとこれだ！', 'ククク、面白くなってきた！'],
@@ -1079,6 +1140,7 @@ const CHARACTER_DIALOGUES = {
     LOSE: ['あちゃ〜！ やられちゃった！ でも楽しかったからOK〜！'],
     GAME_START: ['愉快なショーの始まり始まり〜！'],
     EXCHANGE: ['なにが出るかな〜？ ビックリ箱をあ・げ・る！'],
-    NEXT_GAME: ['次のイタズラは何にしようかな〜！']
+    NEXT_GAME: ['次のイタズラは何にしようかな〜！'],
+    AUTO_REACT: ['アハハ！ ロボット連れてきたの〜？ 一緒に遊ぼうよ〜！']
   }
 };

@@ -1,6 +1,6 @@
 /* ====================================================================
  * ROYAL DAIFUGO - scenario.js
- * [Version: v4.1.3 - 定義原本一元化・直通エピローグ＆周回完全復旧・完全版]
+ * [Version: v4.1.5 - デフォルト5試合同期・幼姫＆科学者完全両立・6名体制版]
  * ==================================================================== */
 
 const GUIDE_SPEAKER = '宮廷案内役';
@@ -23,10 +23,11 @@ const ScenarioManager = {
     boy: { id: 'boy', name: '少年 (Leo)', shortName: '少年', icon: '👦', gender: 'male', type: '若き天才系', image: 'fugo-絵柄/boy.png', desc: '若くして頭角を現した天才勝負師。知性と野心を秘めたクールで鋭い眼差し。' },
     girl: { id: 'girl', name: '少女 (Iris)', shortName: '少女', icon: '👧', gender: 'female', type: 'ミステリアス系', image: 'fugo-絵柄/girl.png', desc: '神秘的な瞳と淡いアッシュヘアの勝負師。場の流れを完全に見透かす直感を持つ。' },
     guy: { id: 'guy', name: '歴戦の男 (Gale)', shortName: '歴戦の男', icon: '🧔', gender: 'male', type: '熟練の勝負師系', image: 'fugo-絵柄/guy.png', desc: '数多の修羅場を潜り抜けてきたベテラン。渋みと包容力のある歴戦の顔つき。' },
-    lady: { id: 'lady', name: '麗人 (Carmilla)', shortName: '麗人', icon: '💃', gender: 'female', type: '妖艶ギャンブラー系', image: 'fugo-絵柄/lady.png', desc: '深紅とゴールドのドレスを纏う大人の女性。卓越した話術と駆け引きで勝負を支配する。' }
+    lady: { id: 'lady', name: '麗人 (Carmilla)', shortName: '麗人', icon: '💃', gender: 'female', type: '妖艶ギャンブラー系', image: 'fugo-絵柄/lady.png', desc: '深紅とゴールドのドレスを纏う大人の女性。卓越した話術と駆け引きで勝負を支配する。' },
+    charlotte: { id: 'charlotte', name: '幼姫 (Charlotte)', shortName: '幼姫', icon: '🎀', gender: 'female', type: 'おてんば策士系', image: 'fugo-絵柄/charlotte.png', desc: '名門公爵家の末娘。おてんばで生意気盛りの美少女。相手の心理を逆撫でする煽りと奇襲が得意。' },
+    franz: { id: 'franz', name: '科学者 (Franz)', shortName: '科学者', icon: '🧪', gender: 'male', type: '狂気の実験系', image: 'fugo-絵柄/franz.png', desc: '白衣を纏いフラスコを携えたマッドサイエンティスト。大富豪を神の理を暴く実験と捉え、数式で盤面を解体する。' }
   },
 
-  /* config.js の原本から動的に初期貴族リストを解決 */
   get PRELIM_NOBLES() {
     const nobleDefs = [
       { id: 'MARQUIS', gender: 'female', startLine: 'ふふ、若き挑戦者さん。ワインを傾けながら優雅に参りましょう。無理な背伸びは火傷をなさいますわよ？', defeatLine: 'あら……スマートに流すつもりが、完全に押し切られてしまいましたわ。お見事ね。' },
@@ -55,7 +56,6 @@ const ScenarioManager = {
     });
   },
 
-  /* 王族ボス定義 */
   get ROYAL_BOSSES() {
     return {
       YOUNG_KING: { id: 'BEGINNER_AI', name: '新王 (Young King)', title: '若き王子・玉座の間第一の試練', icon: '🤴', img: CHAR_IMAGES.BEGINNER_AI, secretImg: 'fugo-絵柄/young_bl.png', desc: '国王の愛息にして若き王子。父王への謁見を求める挑戦者の器を測るべく、玉座の間にて堂々と立ちはだかる。' },
@@ -65,7 +65,6 @@ const ScenarioManager = {
     };
   },
 
-  /* 歴史の英傑ボス定義 */
   get HEROIC_BOSSES() {
     return {
       NOBUNAGA: { id: 'NOBUNAGA', name: '織田信長', title: '第六天魔王', icon: '⚔️', img: CHAR_IMAGES.NOBUNAGA, desc: '天下布武を掲げる戦国の覇王。苛烈な三段撃ち連打と、親番を奪還する即死の8切りキルコンボを誇る。' },
@@ -92,7 +91,9 @@ const ScenarioManager = {
           boy: '若き王子、新王……！ 謁見の関門として不足はない。僕の計算と閃きで、突破してみせる！',
           girl: '澄んだ気品を感じるわ……。でも、国王陛下への道、ここで引き返すわけにはいかないわ！',
           guy: '父王にお目通りする前の腕試しってわけだな。上等だ、若大将！ 手加減なしで揉んでやるぜ！',
-          lady: 'あら、礼儀正しく凛々しい若君ですこと。わたくしの力量、存分にお見せいたしますわ。'
+          lady: 'あら、礼儀正しく凛々しい若君ですこと。わたくしの力量、存分にお見せいたしますわ。',
+          charlotte: '王子様だからって手加減しないんだから！ シャーロットちゃんがギャフンと言わせてあげる！',
+          franz: 'ふむ、王族の遺伝子がもたらす思考パターンか……実に興味深い実験体だ、解剖させてもらおう！'
         }
       }
     ],
@@ -109,7 +110,9 @@ const ScenarioManager = {
           boy: '父たる国王陛下……！ 王者の重圧だろうと、僕の頭脳で冷静に切り開いてみせる！',
           girl: '王よ、あなたの威光もカードの公平な流れには逆らえないわ。……静かに示してみせる。',
           guy: 'ついにお出ましだな、宮廷の主！ その高い玉座から引きずり下ろしてやるぜ！',
-          lady: 'ふふ、堂々たる玉座の主ですこと。けれど盤上をひれ伏させるのは、このわたくしですわ。'
+          lady: 'ふふ、堂々たる玉座の主ですこと。けれど盤上をひれ伏させるのは、このわたくしですわ。',
+          charlotte: '王様、でっか〜い！ でもカードの勝負は図体のデカさじゃないんだからねっ！',
+          franz: '163次元の直感ニューラルモデル……素晴らしい！ 我が方程式でその威厳を因数分解してやろう！'
         }
       },
       { speaker: '王 (King)', text: 'フハハ！ 威勢の良き挑戦者よ、存分に掛かってまいるがよい！' }
@@ -127,7 +130,9 @@ const ScenarioManager = {
           boy: '宮廷の真の主、女王……！ あなたの冷徹な読みの深さすら、僕の手札で凌駕してみせる！',
           girl: '冷たく美しい女王……あなたの支配も、この一筋の光で終わりを迎えるわ。',
           guy: '凄まじい気迫だ……だが、ここで退いちゃ勝負師の名が廃る。全力でぶつかるまでだ！',
-          lady: 'ふふ、冷え冷えとしたお言葉ですこと。どちらの手札がより華麗か、白黒つけましょう。'
+          lady: 'ふふ、冷え冷えとしたお言葉ですこと。どちらの手札がより華麗か、白黒つけましょう。',
+          charlotte: 'うわ、怖そうなオバ……お妃様！ でもアタシの生意気アタックで泣かせてやるんだから！',
+          franz: '5000回のモンテカルロ木探索か！ 極めてエレガントな知性だ、我が実験室へ標本として招きたい！'
         }
       }
     ],
@@ -145,7 +150,9 @@ const ScenarioManager = {
           boy: 'その眼差し、積み重ねてきた修練の凄みが伝わってくる……！ 望むところだ、全身全霊で挑む！',
           girl: '過酷な道を越えてきたのね……。でも、運命の風は私の背中を押しているわ！',
           guy: '髭を蓄えて、見違えるほどの面構えになったじゃねぇか。最高の決戦、始めようぜ！',
-          lady: 'あら、見違えるほど凛々しくなられて。成熟した王として、わたくしが美しく介錯して差し上げますわ。'
+          lady: 'あら、見違えるほど凛々しくなられて。成熟した王として、わたくしが美しく介錯して差し上げますわ。',
+          charlotte: 'ええっ！？ さっきの王子様がお髭生やしてパワーアップしてる！？ でも負けないもんね〜！',
+          franz: '修練による思考シナプスの再構築……見事な進化適応だ！ 最高強度のアルゴリズムで迎え撃とう！'
         }
       }
     ],
@@ -165,7 +172,9 @@ const ScenarioManager = {
           boy: '第六天魔王、織田信長……！ あなたの三段撃ち速攻すら、僕の計算で封殺する！',
           girl: '苛烈な炎を纏う覇王……でも、私の心は決して焼き尽くせはしないわ。',
           guy: '戦国の覇王と手合わせできるとはな！ 男冥利に尽きるぜ、真っ向勝負だ！',
-          lady: 'ふふ、荒々しい天下人ですこと。その激しい攻め手、わたくしの蠱惑の微笑みでいなして差し上げますわ。'
+          lady: 'ふふ、荒々しい天下人ですこと。その激しい攻め手、わたくしの蠱惑の微笑みでいなして差し上げますわ。',
+          charlotte: 'うわ〜！ 歴史の教科書から本物が出てきた〜！ でもアタシの8切りで天下布武ストップよ！',
+          franz: '戦国の火薬と鉄砲戦術か！ 物理化学の粋を集めた我がフラスコで、その猛攻を冷却中和してみせよう！'
         }
       }
     ],
@@ -183,7 +192,9 @@ const ScenarioManager = {
           boy: '盤上の全情報を傾聴する賢者……だが、僕の思考速度はあなたの調和をも上回る！',
           girl: 'あなたの静寂の奥にある深い慈悲……感じるわ。でも、私もこの道は譲れないわ！',
           guy: 'すべて見通しているような落ち着きだな。だが、修羅場の勝負は理屈だけじゃねぇぜ！',
-          lady: 'あら、カードの声をお聴きになるの？ ならば「降伏なさい」という囁きも聞こえていまして？'
+          lady: 'あら、カードの声をお聴きになるの？ ならば「降伏なさい」という囁きも聞こえていまして？',
+          charlotte: '十人の声を同時に聴けるの！？ じゃあアタシが大声でワガママ言ったらパニックになっちゃうね！',
+          franz: '音波と情報理論の極致、完全傾聴か……！ 我が数式との極限情報戦、ゾクゾクするぞ！'
         }
       }
     ],
@@ -201,7 +212,9 @@ const ScenarioManager = {
           boy: '初代皇帝……！ 僕の計算は、あなたの法の綻びすら見逃さない！',
           girl: '厳格な法で縛られた世界……。カードたちはもっと自由に羽ばたきたがっているわ！',
           guy: '堅苦しい法律なんぞ卓の上じゃ関係ねぇ！ あんたの城壁、俺がブチ破ってやるぜ！',
-          lady: '法で心を縛ることはできませんわ、皇帝陛下。わたくしの華麗な手札で翻弄して差し上げます。'
+          lady: '法で心を縛ることはできませんわ、皇帝陛下。わたくしの華麗な手札で翻弄して差し上げます。',
+          charlotte: '法律ばっかりでカタブツすぎ〜！ アタシのハチャメチャ戦法で長城を飛び越えちゃうもんね！',
+          franz: '法家思想による手札規格化か。だが絶対秩序など熱力学第二法則により必ず崩壊するのだよ！'
         }
       }
     ],
@@ -219,7 +232,9 @@ const ScenarioManager = {
           boy: '征服王アレクサンダー！ あなたの不敗の電撃戦、僕の頭脳で最短迎撃してみせる！',
           girl: '世界の果てを目指した純粋な覇気……眩しいわ。でも、私の旅路もここで止まりはしない！',
           guy: '全軍突撃の直球勝負か！ 気に入ったぜ大王様、どちらの気迫が勝つか勝負だ！',
-          lady: 'うふふ、疾風怒濤の英雄様。あまり急いて突撃なさると、わたくしの罠に足を取られますわよ？'
+          lady: 'うふふ、疾風怒濤の英雄様。あまり急いて突撃なさると、わたくしの罠に足を取られますわよ？',
+          charlotte: '突撃〜！ って、勢いだけならアタシだって負けないんだから！ 受けて立ちなさいよ！',
+          franz: 'ファランクス突撃の運動エネルギー……実に素晴らしい質量と速度だ！ 質量保存の法則で受け止めよう！'
         }
       }
     ],
@@ -237,7 +252,9 @@ const ScenarioManager = {
           boy: '神話の頂点、ギルガメッシュ！ 理論と直感、僕の持てるすべてを懸けて、あなたを超えてみせる！',
           girl: '原初の覇王……圧倒的な光ね。でも、私の小さな導きの光も、決して負けてはいないわ！',
           guy: 'お前さんが最後の壁か！ 相手が神話の覇王だろうと関係ねぇ！ 俺の勝負師の魂、全部叩きつけてやるぜ！！',
-          lady: 'あらあら、これ以上ない極上の獲物ですこと。太古の覇王すら屈服させてこそ、最高の麗人ですわ！'
+          lady: 'あらあら、これ以上ない極上の獲物ですこと。太古の覇王すら屈服させてこそ、最高の麗人ですわ！',
+          charlotte: 'きんぴかの王様〜！ どんなにお宝持ってても、大富豪で勝つのはこのアタシなんだからねっ！',
+          franz: '原初の神話にして最古の英雄王……！ 神の領域すら我が錬金術と科学方程式で解き明かしてみせる！'
         }
       }
     ],
@@ -255,7 +272,9 @@ const ScenarioManager = {
           boy: 'やり遂げた……！ 計算も直感も、僕が信じたカードはすべて正しかった。僕が、新たな時代の真の大富豪王だ！',
           girl: 'カードたちの優しい囁きが、世界の天辺まで届いたわ……。みんな、ありがとう。この光を胸に歩み続けるわ。',
           guy: 'ガハハ！ 勝ったぜ！ 神話の王様だろうと卓の上じゃ一人の勝負師だ。修羅場を潜り抜けた俺の勝ちだ！ 最高の旅だったぜ！',
-          lady: 'ふふふ……全時代の英雄たちをも、わたくしの手のひらの上で踊っていただきましたわ。今日からわたくしが、この世界の真の女王ですこと！'
+          lady: 'ふふふ……全時代の英雄たちをも、わたくしの手のひらの上で踊っていただきましたわ。今日からわたくしが、この世界の真の女王ですこと！',
+          charlotte: 'やった〜〜っ！ アタシが世界のてっぺん！ 神話の王様もみ〜んなアタシの家来よ！ えへへ、大勝利〜っ！',
+          franz: 'Q.E.D.！ 証明完了だ！ 神話すら数式で統御できることが実証された！ 科学の勝利、我がアルケミーの完全勝利だ！'
         }
       },
       { speaker: GUIDE_SPEAKER, text: '宮廷中の貴族、王族、そして時空を超えた歴史の英傑たちよ、称えよ！ 幾多の死闘を制し、ついに頂点へと君臨した新たなる王の誕生である！！' },
@@ -266,7 +285,7 @@ const ScenarioManager = {
   SAVE_KEY: 'royalScenarioSave_v10',
   data: {
     avatarId: null,
-    matchesPerStage: 1,
+    matchesPerStage: 5,
     enableCardExchange: true,
     currentMatchIndex: 1,
     currentPhase: 'STAGE_1_A',
@@ -282,7 +301,7 @@ const ScenarioManager = {
 
   init() {
     this.load();
-    if (!this.data.matchesPerStage) this.data.matchesPerStage = 1;
+    if (!this.data.matchesPerStage || this.data.matchesPerStage < 1) this.data.matchesPerStage = 5;
     if (this.data.enableCardExchange === undefined) this.data.enableCardExchange = true;
     if (!this.data.currentMatchIndex) this.data.currentMatchIndex = 1;
     if (!this.data.clearedPrelimGroups) this.data.clearedPrelimGroups = { A: false, B: false, C: false };
@@ -314,7 +333,10 @@ const ScenarioManager = {
   load() {
     try {
       const raw = localStorage.getItem(this.SAVE_KEY);
-      if (raw) this.data = JSON.parse(raw);
+      if (raw) {
+        this.data = JSON.parse(raw);
+        if (!this.data.matchesPerStage) this.data.matchesPerStage = 5;
+      }
     } catch (e) {}
   },
 
@@ -330,7 +352,7 @@ const ScenarioManager = {
 
     this.data = {
       avatarId: null,
-      matchesPerStage: 1,
+      matchesPerStage: 5,
       enableCardExchange: true,
       currentMatchIndex: 1,
       currentPhase: 'STAGE_1_A',
@@ -364,7 +386,7 @@ const ScenarioManager = {
   },
 
   getCurrentAvatar() {
-    return this.AVATARS[this.data.avatarId || 'boy'];
+    return this.AVATARS[this.data.avatarId || 'boy'] || this.AVATARS.boy;
   },
 
   getNemesisAI() {
@@ -416,9 +438,9 @@ const ScenarioManager = {
       if (dBtn) dBtn.disabled = false;
     }
 
-    const curMatches = this.data.matchesPerStage || 1;
+    const curMatches = this.data.matchesPerStage || 5;
     document.querySelectorAll('.btn-scenario-game-count').forEach(btn => {
-      const gNum = parseInt(btn.getAttribute('data-games'), 10) || 1;
+      const gNum = parseInt(btn.getAttribute('data-games'), 10) || 5;
       btn.classList.toggle('active', gNum === curMatches);
     });
     const hintEl = document.getElementById('scenario-games-hint');
@@ -626,7 +648,7 @@ const ScenarioManager = {
     const data = this.data;
     const p = data.currentPhase;
     const avatar = this.getCurrentAvatar();
-    const matches = data.matchesPerStage || 1;
+    const matches = data.matchesPerStage || 5;
 
     const uPort = document.getElementById('map-user-portrait');
     const uName = document.getElementById('map-user-name');
@@ -870,7 +892,7 @@ const ScenarioManager = {
   updateLaunchBar() {
     const data = this.data;
     const p = data.currentPhase;
-    const matches = data.matchesPerStage || 1;
+    const matches = data.matchesPerStage || 5;
     const stageLabel = document.getElementById('launch-stage-label');
     const ruleLabel = document.getElementById('launch-rule-label');
     const userStatus = document.getElementById('map-user-status');
@@ -1126,7 +1148,9 @@ const ScenarioManager = {
               boy: '誰が相手だろうと怯みはしない。僕の計算力で最初の関門を必ず突破してみせる！',
               girl: 'どんな相手でも恐れはしないわ。カードの導きと共に、必ず突破してみせる。',
               guy: 'へっ、相手が誰だろうと関係ねぇ。俺の流儀で真っ向から突破してやるぜ！',
-              lady: 'ふふ、どなたが相手でも怯みはいたしませんわ。華麗に越えさせていただきます。'
+              lady: 'ふふ、どなたが相手でも怯みはいたしませんわ。華麗に越えさせていただきます。',
+              charlotte: '公爵家の名にかけて、こんな予選サクッと突破しちゃうんだから！ おじさんたち、覚悟しなさい！',
+              franz: 'ふむ、予選グループの組み合わせか。未知の化学反応を起こすには絶好の舞台だな。出陣だ！'
             }
           }
         ];
@@ -1143,7 +1167,9 @@ const ScenarioManager = {
               boy: '連勝を掴み取り、本戦への足がかりを固める！ いざ勝負！',
               girl: '連勝を掴み取り、本戦への道を切り拓いてみせるわ！',
               guy: '連勝街道を突き進んでやるぜ！ まとめてかかってきな！',
-              lady: '勢いに乗って、次の勝利も美しくいただいて差し上げますわ。'
+              lady: '勢いに乗って、次の勝利も美しくいただいて差し上げますわ。',
+              charlotte: '次もアタシの圧勝に決まってるでしょ！ ほらほら、ビビってないでかかってきなさ〜い！',
+              franz: 'データは十分に集積された。次の実験標本たちよ、我が理論の踏み台となりたまえ！'
             }
           }
         ];
@@ -1160,7 +1186,9 @@ const ScenarioManager = {
               boy: 'ここを越えれば玉座の間だ……！ 予選完全制覇、成し遂げてみせる！',
               girl: 'ここを越えれば玉座の間……！ 予選完全制覇、成し遂げてみせるわ！',
               guy: 'ここを越えりゃ玉座の間のお出ましだな！ まとめて叩きのめしてやるぜ！',
-              lady: '玉座の間を開く鍵、わたくしが誇り高く手に入れて差し上げますわ。'
+              lady: '玉座の間を開く鍵、わたくしが誇り高く手に入れて差し上げますわ。',
+              charlotte: 'いよいよ玉座の間ね！ 王様にお目通りする前に、アンタたちをボッコボコにしちゃうわよ！',
+              franz: '予選の最終方程式か。解を導き出し、玉座の間という未踏の研究領域へ進出するとしよう！'
             }
           }
         ];
@@ -1323,10 +1351,11 @@ const ScenarioManager = {
       bgmMgr.setHeroBaseBgm('GILGAMESH');
     }
 
+    const currentAvatar = this.getCurrentAvatar();
     assignedCharacters.player = {
-      id: this.data.avatarId || 'boy',
-      name: this.getCurrentAvatar().shortName || this.getCurrentAvatar().name,
-      icon: this.getCurrentAvatar().icon || '👤'
+      id: currentAvatar.id,
+      name: currentAvatar.shortName || currentAvatar.name,
+      icon: currentAvatar.icon || '👤'
     };
     assignedCharacters.cpu1 = cpu1Def;
     assignedCharacters.cpu2 = cpu2Def;
@@ -1351,7 +1380,7 @@ const ScenarioManager = {
 
     updateCharacterUI();
     const pImg = document.getElementById('player-portrait');
-    if (pImg) pImg.src = this.getCurrentAvatar().image;
+    if (pImg) pImg.src = currentAvatar.image;
 
     bgmMgr.setCharSelectPhase(false);
     startNewGame();
@@ -1439,7 +1468,7 @@ const ScenarioManager = {
     this.save();
 
     const curM = this.data.currentMatchIndex || 1;
-    const totM = this.data.matchesPerStage || 1;
+    const totM = this.data.matchesPerStage || 5;
     const matchWinnerSeat = PLAYERS.find(s => statusMap[s] === '大富豪') || 'player';
 
     if (curM < totM) {
@@ -1529,7 +1558,6 @@ const ScenarioManager = {
     const isCleared = outcome.isCleared;
     const curPhase = this.data.currentPhase;
 
-    /* ギルガメッシュ撃破直後：直接エピローグADV会話を再生し、その後にGRAND FINALEを表示 */
     if (isCleared && (curPhase === 'STAGE_3_GILGAMESH' || curPhase === 'COMPLETED')) {
       this.advancePhase();
       this.playDialogue(this.STORIES.ENDING, this.HEROIC_BOSSES.GILGAMESH.img, () => {
@@ -1553,7 +1581,7 @@ const ScenarioManager = {
     const grandSaveBox = document.getElementById('scenario-grand-save-box');
 
     const rankHistorySnapshot = [...(this.data.stageRankHistory || [])];
-    const totalStageMatches = this.data.matchesPerStage || 1;
+    const totalStageMatches = this.data.matchesPerStage || 5;
 
     if (clearModal) {
       const modalContent = clearModal.querySelector('.modal-content') || clearModal.firstElementChild || clearModal;
